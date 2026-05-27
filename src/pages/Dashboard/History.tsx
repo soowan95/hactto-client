@@ -5,16 +5,17 @@ import { LottoBalls } from "../../components/LottoBall";
 import type { HistoryItem } from "../../types";
 
 export function History() {
-  const { appendAuth, showAlert } = useApp();
+  const { visitorId, appendAuth, showAlert } = useApp();
   const [historyList, setHistoryList] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHistoryList = async () => {
+      if (!visitorId) return;
       try {
-        const vid = localStorage.getItem("visitor_id");
+        setLoading(true);
         const res = await fetch(
-          appendAuth(`${API_BASE_URL}/algorithms/history?visitorId=${vid}`),
+          appendAuth(`${API_BASE_URL}/algorithms/history?visitorId=${visitorId}`),
         );
         if (!res.ok) throw new Error("당첨 이력을 가져오지 못했습니다.");
         const data = await res.json();
@@ -28,7 +29,7 @@ export function History() {
     };
 
     fetchHistoryList();
-  }, [appendAuth, showAlert]);
+  }, [visitorId, appendAuth, showAlert]);
 
   return (
     <div>

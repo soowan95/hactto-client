@@ -4,7 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { API_BASE_URL } from "../../utils";
 
 export function System() {
-  const { showAlert } = useApp();
+  const { showAlert, appendAuth } = useApp();
   const [fetchEpisodeInput, setFetchEpisodeInput] = useState("");
   const [fetchingWinningNumbers, setFetchingWinningNumbers] = useState(false);
   const [analyzingReliability, setAnalyzingReliability] = useState(false);
@@ -25,7 +25,7 @@ export function System() {
     try {
       setFetchingWinningNumbers(true);
       const res = await fetch(
-        `${API_BASE_URL}/winning-numbers/fetch?latestEpisode=${fetchEpisodeInput}&rmk=${encodeURIComponent(key)}`,
+        appendAuth(`${API_BASE_URL}/winning-numbers/fetch?latestEpisode=${fetchEpisodeInput}`),
         {
           method: "POST",
         },
@@ -54,7 +54,7 @@ export function System() {
     try {
       setAnalyzingReliability(true);
       const res = await fetch(
-        `${API_BASE_URL}/reliability/analyze?rmk=${encodeURIComponent(key)}`,
+        appendAuth(`${API_BASE_URL}/reliability/analyze`),
         {
           method: "POST",
         },
