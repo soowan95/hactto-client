@@ -1,0 +1,67 @@
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000/hactto/v1";
+
+export const ALGORITHM_NAMES: Record<string, string> = {
+  MIN_COUNT: "자리별 가장 적게 당첨된 번호",
+  TOTAL_MIN_COUNT: "전체에서 가장 적게 당첨된 번호",
+  MAX_COUNT: "자리별 가장 많이 당첨된 번호",
+};
+
+export const parseAlgorithmName = (type: string | null | undefined): string => {
+  if (!type) return "";
+  return ALGORITHM_NAMES[type] || type;
+};
+
+export const getAlgorithmDescription = (
+  type: string | null | undefined,
+): string => {
+  if (!type) return "";
+  switch (type) {
+    case "MIN_COUNT":
+      return "각 자리별 가장 적게 당첨된 번호를 오름차순으로 정렬한 결과입니다. 같은 번호가 반복될 수 있습니다. (당첨 횟수가 0인 번호는 제외)";
+    case "TOTAL_MIN_COUNT":
+      return "전체 당첨 번호 중 가장 적게 당첨된 번호입니다.";
+    case "MAX_COUNT":
+      return "각 자리별 가장 많이 당첨된 번호를 오름차순으로 정렬한 결과입니다. 같은 번호가 반복될 수 있습니다.";
+    default:
+      return "정의되지 않은 알고리즘입니다.";
+  }
+};
+
+export const getBallStyle = (num: number) => {
+  if (num <= 0)
+    return {
+      background: "rgba(255,255,255,0.05)",
+      color: "var(--text-dim)",
+      border: "1px dashed rgba(255,255,255,0.1)",
+    };
+  if (num <= 10)
+    return {
+      background: "linear-gradient(135deg, #fbc02d 0%, #f57f17 100%)",
+      color: "#000000",
+      boxShadow: "0 0 10px rgba(245, 127, 23, 0.3)",
+    };
+  if (num <= 20)
+    return {
+      background: "linear-gradient(135deg, #29b6f6 0%, #0288d1 100%)",
+      color: "#ffffff",
+      boxShadow: "0 0 10px rgba(2, 136, 209, 0.3)",
+    };
+  if (num <= 30)
+    return {
+      background: "linear-gradient(135deg, #ef5350 0%, #d32f2f 100%)",
+      color: "#ffffff",
+      boxShadow: "0 0 10px rgba(211, 47, 47, 0.3)",
+    };
+  if (num <= 40)
+    return {
+      background: "linear-gradient(135deg, #bdbdbd 0%, #616161 100%)",
+      color: "#ffffff",
+      boxShadow: "0 0 10px rgba(97, 97, 97, 0.3)",
+    };
+  return {
+    background: "linear-gradient(135deg, #66bb6a 0%, #388e3c 100%)",
+    color: "#ffffff",
+    boxShadow: "0 0 10px rgba(56, 142, 60, 0.3)",
+  };
+};
