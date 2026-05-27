@@ -7,8 +7,10 @@ import {
   getAlgorithmDescription,
 } from "../../utils";
 
+const DEFAULT_WEIGHTS = [25, 20, 15, 15, 10, 10, 5];
+
 export function Generate() {
-  const { appendAuth, showAlert } = useApp();
+  const { appendAuth, showAlert, visitorId } = useApp();
   const [algorithmTypes, setAlgorithmTypes] = useState<string[]>([]);
   const [generatingAlgo, setGeneratingAlgo] = useState("MIN_COUNT");
   const [generatedNumbers, setGeneratedNumbers] = useState<number[] | null>(
@@ -17,6 +19,92 @@ export function Generate() {
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Personal Weight States
+  const [weights, setWeights] = useState<number[]>(DEFAULT_WEIGHTS);
+  const [savingWeights, setSavingWeights] = useState(false);
+  const [weightStatus, setWeightStatus] = useState<"default" | "saved">("default");
+
+  // Fetch weights when algorithm or visitorId changes
+  useEffect(() => {
+    const fetchPersonalWeights = async () => {
+      if (!generatingAlgo || !visitorId) return;
+      try {
+        const res = await fetch(
+          appendAuth(
+            `${API_BASE_URL}/personal-weights?visitorId=${visitorId}&algorithm=${generatingAlgo}`,
+          ),
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const result = data.data || data;
+          if (result && Array.isArray(result.weights)) {
+            setWeights(result.weights);
+            setWeightStatus("saved");
+            return;
+          }
+        }
+        // If not found or failed, reset to default
+        setWeights(DEFAULT_WEIGHTS);
+        setWeightStatus("default");
+      } catch (err) {
+        console.error("가중치 조회 실패", err);
+        setWeights(DEFAULT_WEIGHTS);
+        setWeightStatus("default");
+      }
+    };
+    fetchPersonalWeights();
+  }, [generatingAlgo, visitorId, appendAuth]);
+
+  const currentWeightsSum = weights.reduce((a, b) => a + b, 0);
+  const remainingWeight = 100 - currentWeightsSum;
+
+  const handleWeightChange = (index: number, val: number) => {
+    const sumOfOthers = weights.reduce((sum, w, idx) => (idx === index ? sum : sum + w), 0);
+    const maxAllowed = 100 - sumOfOthers;
+    const finalVal = Math.min(val, maxAllowed);
+
+    const nextWeights = [...weights];
+    nextWeights[index] = finalVal;
+    setWeights(nextWeights);
+  };
+
+  const handleSaveWeights = async () => {
+    if (currentWeightsSum !== 100) {
+      showAlert("error", "가중치의 합계는 반드시 100이어야 합니다.");
+      return;
+    }
+    setSavingWeights(true);
+    try {
+      const res = await fetch(appendAuth(`${API_BASE_URL}/personal-weights`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          visitorId: visitorId,
+          algorithm: generatingAlgo,
+          weights: weights,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "가중치 저장에 실패했습니다.");
+      }
+      showAlert("success", "개인 가중치가 성공적으로 저장되었습니다. 번호 생성 시 이 가중치가 적용됩니다.");
+      setWeightStatus("saved");
+    } catch (err) {
+      const error = err as Error;
+      showAlert("error", error.message);
+    } finally {
+      setSavingWeights(false);
+    }
+  };
+
+  const handleResetWeights = () => {
+    setWeights(DEFAULT_WEIGHTS);
+    setWeightStatus("default");
+  };
 
   useEffect(() => {
     const fetchAlgorithmTypes = async () => {
@@ -57,10 +145,9 @@ export function Generate() {
     setGenerating(true);
     setGeneratedNumbers(null);
     try {
-      const vid = localStorage.getItem("visitor_id");
       const res = await fetch(
         appendAuth(
-          `${API_BASE_URL}/algorithms/${generatingAlgo}/generate?visitorId=${vid}`,
+          `${API_BASE_URL}/algorithms/${generatingAlgo}/generate?visitorId=${visitorId}`,
         ),
         {
           method: "POST",
@@ -385,6 +472,183 @@ export function Generate() {
               </div>
             </div>
           )}
+
+          {/* Personal Weights Adjustment Section */}
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.01)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "12px",
+              padding: "20px",
+              marginBottom: "20px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: "0.9rem",
+                    fontWeight: "bold",
+                    color: "var(--text-main)",
+                  }}
+                >
+                  개인 신뢰도 가중치 설정 (합계 100%)
+                </span>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    marginTop: "2px",
+                  }}
+                >
+                  {weightStatus === "saved" ? (
+                    <span style={{ color: "var(--success)" }}>● 개인화 가중치 적용됨</span>
+                  ) : (
+                    <span>기본 가중치 적용 중</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: "bold",
+                    color:
+                      currentWeightsSum === 100
+                        ? "var(--success)"
+                        : remainingWeight < 0
+                          ? "var(--error)"
+                          : "var(--primary-cyan)",
+                  }}
+                >
+                  합계: {currentWeightsSum}%
+                </span>
+                <div
+                  style={{
+                    fontSize: "0.72rem",
+                    color: remainingWeight === 0 ? "var(--success)" : remainingWeight < 0 ? "var(--error)" : "var(--text-muted)",
+                    marginTop: "2px",
+                  }}
+                >
+                  {remainingWeight === 0 ? (
+                    "완료"
+                  ) : remainingWeight < 0 ? (
+                    `${Math.abs(remainingWeight)}% 초과`
+                  ) : (
+                    `잔여: ${remainingWeight}% 가능`
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Weights Sliders */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {weights.map((weight, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    background: "rgba(255, 255, 255, 0.02)",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                      width: "60px",
+                    }}
+                  >
+                    {index < 6 ? (index + 1) + "번째" : "보너스"} 자리
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={weight}
+                    onChange={(e) => handleWeightChange(index, Number(e.target.value))}
+                    style={{
+                      flex: 1,
+                      accentColor: currentWeightsSum === 100 ? "var(--success)" : "var(--primary-cyan)",
+                      cursor: "pointer",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: "bold",
+                      color: "var(--text-main)",
+                      width: "35px",
+                      textAlign: "right",
+                    }}
+                  >
+                    {weight}%
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Save / Reset Actions */}
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginTop: "16px",
+                borderTop: "1px solid rgba(255,255,255,0.05)",
+                paddingTop: "14px",
+              }}
+            >
+              <button
+                type="button"
+                className="btn-neon btn-outline"
+                onClick={handleResetWeights}
+                style={{ flex: 1, height: "36px", padding: "0 12px", fontSize: "0.8rem" }}
+              >
+                기본값 재설정
+              </button>
+              <button
+                type="button"
+                className="btn-submit"
+                onClick={handleSaveWeights}
+                disabled={savingWeights || currentWeightsSum !== 100}
+                style={{
+                  flex: 2,
+                  height: "36px",
+                  padding: "0 12px",
+                  fontSize: "0.8rem",
+                  background: currentWeightsSum !== 100 ? "var(--bg-input)" : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
+                  color: currentWeightsSum !== 100 ? "var(--text-dim)" : "var(--text-main)",
+                  cursor: currentWeightsSum !== 100 ? "not-allowed" : "pointer",
+                  boxShadow: currentWeightsSum !== 100 ? "none" : "0 4px 15px var(--primary-purple-glow)",
+                }}
+              >
+                {savingWeights ? "저장 중..." : "개인 가중치 저장 및 적용"}
+              </button>
+            </div>
+          </div>
+          <p
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--text-muted)",
+              textAlign: "left",
+              marginBottom: "20px",
+              lineHeight: "1.4",
+            }}
+          >
+            ※ 설정한 가중치는 이번 예측번호 생성 시 적용되며, 이후 언제든 가중치를 다르게 조절하여 새로운 번호를 추출해 볼 수 있습니다.
+          </p>
+
 
           <button
             className="btn-neon btn-cyan"

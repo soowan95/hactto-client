@@ -23,6 +23,7 @@ interface AppContextType {
   setAdminKey: (val: string) => void;
   adminError: string;
   setAdminError: (val: string) => void;
+  visitorId: string;
   alert: AlertState | null;
   setAlert: (alert: AlertState | null) => void;
   showAlert: (type: "success" | "error", text: string) => void;
@@ -49,6 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [pending, setPending] = useState<boolean>(false);
   const [clientIp, setClientIp] = useState<string>("");
+  const [visitorId, setVisitorId] = useState<string>("");
 
   // Admin states
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
@@ -95,6 +97,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setAllowed(true);
           setPending(false);
           setClientIp(adminResult.ip || "unknown");
+          if (adminResult.visitorId) {
+            setVisitorId(adminResult.visitorId);
+            localStorage.setItem("visitor_id", adminResult.visitorId);
+          }
           setLoading(false);
           return;
         } else {
@@ -117,6 +123,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAllowed(!!result.allowed);
       setPending(!!result.pending);
       setClientIp(result.ip || "unknown");
+      if (result.visitorId) {
+        setVisitorId(result.visitorId);
+        localStorage.setItem("visitor_id", result.visitorId);
+      }
     } catch (err: unknown) {
       console.error(err);
       setAllowed(false);
@@ -288,6 +298,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setAdminKey,
         adminError,
         setAdminError,
+        visitorId,
         alert,
         setAlert,
         showAlert,

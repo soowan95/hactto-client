@@ -59,16 +59,6 @@ function AppContent() {
 
     window.addEventListener("keydown", handleKeyDown);
 
-    // Ensure visitor_id exists
-    let vid = localStorage.getItem("visitor_id");
-    if (!vid) {
-      vid =
-        "vis_" +
-        Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
-      localStorage.setItem("visitor_id", vid);
-    }
-
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     isAdminMode,
