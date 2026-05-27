@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/hact
 const ALGORITHM_NAMES: Record<string, string> = {
   MIN_COUNT: '자리별 가장 적게 당첨된 번호',
   TOTAL_MIN_COUNT: '전체에서 가장 적게 당첨된 번호',
+  MAX_COUNT: '자리별 가장 많이 당첨된 번호',
 };
 
 const parseAlgorithmName = (type: string | null | undefined): string => {
@@ -17,9 +18,11 @@ const getAlgorithmDescription = (type: string | null | undefined): string => {
   if (!type) return '';
   switch (type) {
     case 'MIN_COUNT':
-      return '각 자리별 가장 적게 당첨된 번호입니다. 동일한 횟수일 경우 당첨된지 가장 오래된 번호가 반환됩니다. (당첨 횟수가 0인 번호는 제외)'
+      return '각 자리별 가장 적게 당첨된 번호를 오름차순으로 정렬한 결과입니다. 같은 번호가 반복될 수 있습니다. (당첨 횟수가 0인 번호는 제외)'
     case 'TOTAL_MIN_COUNT':
       return '전체 당첨 번호 중 가장 적게 당첨된 번호입니다.'
+    case 'MAX_COUNT':
+      return '각 자리별 가장 많이 당첨된 번호를 오름차순으로 정렬한 결과입니다. 같은 번호가 반복될 수 있습니다.'
     default:
       return '정의되지 않은 알고리즘입니다.'
   }
@@ -1354,22 +1357,14 @@ function App() {
                 {localStorage.getItem('user_mk') ? (
                   <>
                     <p className="access-desc" style={{ maxWidth: '440px', margin: '0 auto 20px' }}>
-                      유효한 Master key 인증을 통해 hactto의 핵심 분석 도구와 대시보드에 접근하실 수 있습니다.
+                      유효한 Master key 인증을 통해 hactto의<br/>핵심 분석 도구와 대시보드에 접근하실 수 있습니다.
                     </p>
-                    <div className="ip-info" style={{ marginBottom: '0' }}>
-                      <span>인증된 Master key:</span>
-                      <span className="ip-value" style={{ color: 'var(--primary-purple)' }}>{maskKey(localStorage.getItem('user_mk'))}</span>
-                    </div>
                   </>
                 ) : (
                   <>
                     <p className="access-desc" style={{ maxWidth: '440px', margin: '0 auto 20px' }}>
-                      귀하의 IP가 안전한 화이트리스트에 등록되어 hactto의 핵심 분석 도구와 대시보드에 접근하실 수 있습니다.
+                      귀하의 IP가 안전한 화이트리스트에 등록되어 hactto의<br/>핵심 분석 도구와 대시보드에 접근하실 수 있습니다.
                     </p>
-                    <div className="ip-info" style={{ marginBottom: '0' }}>
-                      <span>인증된 클라이언트 IP:</span>
-                      <span className="ip-value">{clientIp}</span>
-                    </div>
                   </>
                 )}
               </div>
