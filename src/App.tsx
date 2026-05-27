@@ -4,14 +4,26 @@ import './App.css';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/hactto/v1';
 
 const ALGORITHM_NAMES: Record<string, string> = {
-  MIN_COUNT: '최소 빈도 조합 모델',
-  TOTAL_MIN_COUNT: '가중 분산 균형 모델',
+  MIN_COUNT: '자리별 가장 적게 당첨된 번호',
+  TOTAL_MIN_COUNT: '전체에서 가장 적게 당첨된 번호',
 };
 
 const parseAlgorithmName = (type: string | null | undefined): string => {
   if (!type) return '';
   return ALGORITHM_NAMES[type] || type;
 };
+
+const getAlgorithmDescription = (type: string | null | undefined): string => {
+  if (!type) return '';
+  switch (type) {
+    case 'MIN_COUNT':
+      return '각 자리별 가장 적게 당첨된 번호입니다. 동일한 횟수일 경우 당첨된지 가장 오래된 번호가 반환됩니다. (당첨 횟수가 0인 번호는 제외)'
+    case 'TOTAL_MIN_COUNT':
+      return '전체 당첨 번호 중 가장 적게 당첨된 번호입니다.'
+    default:
+      return '정의되지 않은 알고리즘입니다.'
+  }
+}
 
 const maskKey = (key: string | null): string => {
   if (!key) return '';
@@ -1145,9 +1157,7 @@ function App() {
                           <div style={{ width: `${score || 0}%`, height: '100%', background: 'linear-gradient(90deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)', borderRadius: '4px', transition: 'width 1s ease-out' }}></div>
                         </div>
                         <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                          {type === 'MIN_COUNT' 
-                            ? 'MIN_COUNT (최소 빈도 조합 가설): 역사적 당첨 데이터에서 가작 누적 출현 빈도가 낮았던 수들을 우선 조합하는 모델입니다. 평균 회귀 경향성을 추종합니다.' 
-                            : 'TOTAL_MIN_COUNT (가중 분산 가설): 전체 출현 비율의 불균형을 해소하기 위하여 가중 분산 비중을 적용, 각 번호대별 밸런스를 고려한 정교한 생성 기법입니다.'}
+                          {getAlgorithmDescription(type)}
                         </p>
                       </div>
                     );
