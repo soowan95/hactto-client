@@ -1,0 +1,78 @@
+import type { MatchResult } from "../types";
+import { getBallStyle } from "../utils";
+
+interface LottoBallsProps {
+  numbers: number[];
+  matchResult?: MatchResult | null;
+}
+
+export function LottoBalls({ numbers, matchResult }: LottoBallsProps) {
+  if (!numbers || numbers.length !== 7) return null;
+  const mainNumbers = numbers.slice(0, 6);
+  const bonusNumber = numbers[6];
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        flexWrap: "wrap",
+      }}
+    >
+      {mainNumbers.map((num, i) => {
+        const isMatched = matchResult?.matchedNumbers.includes(num);
+        const opacity = matchResult ? (isMatched ? 1 : 0.35) : 1;
+        const border = isMatched
+          ? "2px solid #ffffff"
+          : "1px solid rgba(255,255,255,0.15)";
+        const scale = isMatched ? "1.1" : "1";
+        return (
+          <div
+            key={i}
+            className="lotto-ball"
+            style={{
+              ...getBallStyle(num),
+              opacity,
+              border,
+              transform: `scale(${scale})`,
+            }}
+          >
+            {num}
+          </div>
+        );
+      })}
+      <div
+        style={{
+          fontSize: "1.2rem",
+          fontWeight: "bold",
+          color: "var(--text-muted)",
+          margin: "0 4px",
+        }}
+      >
+        +
+      </div>
+      {(() => {
+        const isBonusMatched = matchResult?.bonusMatch ?? false;
+        const bonusOpacity = matchResult ? (isBonusMatched ? 1 : 0.35) : 1;
+        const bonusBorder = isBonusMatched
+          ? "2px solid #ffffff"
+          : "1px solid rgba(255,255,255,0.15)";
+        const bonusScale = isBonusMatched ? "1.1" : "1";
+        return (
+          <div
+            className="lotto-ball"
+            style={{
+              ...getBallStyle(bonusNumber),
+              opacity: bonusOpacity,
+              border: bonusBorder,
+              transform: `scale(${bonusScale})`,
+            }}
+          >
+            {bonusNumber}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
