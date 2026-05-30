@@ -38,8 +38,8 @@ export function Generate() {
         if (res.ok) {
           const data = await res.json();
           const result = data.data || data;
-          if (result && Array.isArray(result.weights)) {
-            setWeights(result.weights);
+          if (Array.isArray(result)) {
+            setWeights(result);
             setWeightStatus("saved");
             return;
           }
@@ -151,6 +151,12 @@ export function Generate() {
         ),
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            weights: weights,
+          }),
         },
       );
       if (!res.ok) throw new Error("예측 번호 생성에 실패했습니다.");
