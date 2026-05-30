@@ -26,6 +26,16 @@ export function Welcome() {
     }
   }, [allowed, navigate]);
 
+  // If user is guest, skip welcome screen and go straight to home/dashboard
+  useEffect(() => {
+    if (allowed === true) {
+      const isGuest = localStorage.getItem("visitor_id") === "guest";
+      if (isGuest) {
+        navigate("/home");
+      }
+    }
+  }, [allowed, navigate]);
+
   const onMasterKeySubmitLocal = async (e: React.FormEvent) => {
     e.preventDefault();
     const success = await handleMasterKeySubmit(masterKey);

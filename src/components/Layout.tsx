@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Alert } from "./Alert";
+import { IpRequestModal } from "./IpRequestModal";
 
 export function Layout() {
   const {
@@ -12,6 +13,9 @@ export function Layout() {
     submitting,
     checkIpStatus,
     handleMasterKeySubmit,
+    visitorId,
+    showIpRequestModal,
+    setShowIpRequestModal,
   } = useApp();
 
   const navigate = useNavigate();
@@ -266,6 +270,12 @@ export function Layout() {
           </NavLink>
           <NavLink
             to="/generate"
+            onClick={(e) => {
+              if (visitorId === "guest") {
+                e.preventDefault();
+                setShowIpRequestModal(true);
+              }
+            }}
             className={({ isActive }) =>
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
@@ -274,6 +284,12 @@ export function Layout() {
           </NavLink>
           <NavLink
             to="/history"
+            onClick={(e) => {
+              if (visitorId === "guest") {
+                e.preventDefault();
+                setShowIpRequestModal(true);
+              }
+            }}
             className={({ isActive }) =>
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
@@ -283,6 +299,12 @@ export function Layout() {
           {hasAdminAccess && (
             <NavLink
               to="/system"
+              onClick={(e) => {
+                if (visitorId === "guest") {
+                  e.preventDefault();
+                  setShowIpRequestModal(true);
+                }
+              }}
               className={({ isActive }) =>
                 `tab-btn ${isActive ? "active-tab" : ""}`
               }
@@ -310,6 +332,12 @@ export function Layout() {
         {/* Global Toast Alerts */}
         <Alert alert={alert} />
       </div>
+
+      {/* Guest IP Access Request Modal */}
+      <IpRequestModal
+        isOpen={showIpRequestModal}
+        onClose={() => setShowIpRequestModal(false)}
+      />
     </div>
   );
 }

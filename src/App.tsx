@@ -20,6 +20,21 @@ import { System } from "./pages/Dashboard/System";
 import { AdminDashboard } from "./pages/Admin/AdminDashboard";
 import { AdminLoginModal } from "./components/AdminLoginModal";
 
+function GuestProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { visitorId, setShowIpRequestModal } = useApp();
+
+  useEffect(() => {
+    if (visitorId === "guest") {
+      setShowIpRequestModal(true);
+    }
+  }, [visitorId, setShowIpRequestModal]);
+
+  if (visitorId === "guest") {
+    return <Navigate to="/home" replace />;
+  }
+  return <>{children}</>;
+}
+
 function AppContent() {
   const {
     isAdminMode,
@@ -116,9 +131,30 @@ function AppContent() {
           <Route path="/home" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/stats" element={<Stats />} />
-          <Route path="/generate" element={<Generate />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/system" element={<System />} />
+          <Route
+            path="/generate"
+            element={
+              <GuestProtectedRoute>
+                <Generate />
+              </GuestProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <GuestProtectedRoute>
+                <History />
+              </GuestProtectedRoute>
+            }
+          />
+          <Route
+            path="/system"
+            element={
+              <GuestProtectedRoute>
+                <System />
+              </GuestProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Route>
       </Routes>
