@@ -23,7 +23,9 @@ export function Generate() {
   // Personal Weight States
   const [weights, setWeights] = useState<number[]>(DEFAULT_WEIGHTS);
   const [savingWeights, setSavingWeights] = useState(false);
-  const [weightStatus, setWeightStatus] = useState<"default" | "saved">("default");
+  const [weightStatus, setWeightStatus] = useState<"default" | "saved">(
+    "default",
+  );
 
   // Fetch weights when algorithm or visitorId changes
   useEffect(() => {
@@ -60,7 +62,10 @@ export function Generate() {
   const remainingWeight = 100 - currentWeightsSum;
 
   const handleWeightChange = (index: number, val: number) => {
-    const sumOfOthers = weights.reduce((sum, w, idx) => (idx === index ? sum : sum + w), 0);
+    const sumOfOthers = weights.reduce(
+      (sum, w, idx) => (idx === index ? sum : sum + w),
+      0,
+    );
     const maxAllowed = 100 - sumOfOthers;
     const finalVal = Math.min(val, maxAllowed);
 
@@ -91,7 +96,10 @@ export function Generate() {
         const errData = await res.json();
         throw new Error(errData.message || "가중치 저장에 실패했습니다.");
       }
-      showAlert("success", "개인 가중치가 성공적으로 저장되었습니다. 번호 생성 시 이 가중치가 적용됩니다.");
+      showAlert(
+        "success",
+        "개인 가중치가 성공적으로 저장되었습니다. 번호 생성 시 이 가중치가 적용됩니다.",
+      );
       setWeightStatus("saved");
     } catch (err) {
       const error = err as Error;
@@ -515,7 +523,9 @@ export function Generate() {
                   }}
                 >
                   {weightStatus === "saved" ? (
-                    <span style={{ color: "var(--success)" }}>● 개인화 가중치 적용됨</span>
+                    <span style={{ color: "var(--success)" }}>
+                      ● 개인화 가중치 적용됨
+                    </span>
                   ) : (
                     <span>기본 가중치 적용 중</span>
                   )}
@@ -539,23 +549,28 @@ export function Generate() {
                 <div
                   style={{
                     fontSize: "0.72rem",
-                    color: remainingWeight === 0 ? "var(--success)" : remainingWeight < 0 ? "var(--error)" : "var(--text-muted)",
+                    color:
+                      remainingWeight === 0
+                        ? "var(--success)"
+                        : remainingWeight < 0
+                          ? "var(--error)"
+                          : "var(--text-muted)",
                     marginTop: "2px",
                   }}
                 >
-                  {remainingWeight === 0 ? (
-                    "완료"
-                  ) : remainingWeight < 0 ? (
-                    `${Math.abs(remainingWeight)}% 초과`
-                  ) : (
-                    `잔여: ${remainingWeight}% 가능`
-                  )}
+                  {remainingWeight === 0
+                    ? "완료"
+                    : remainingWeight < 0
+                      ? `${Math.abs(remainingWeight)}% 초과`
+                      : `잔여: ${remainingWeight}% 가능`}
                 </div>
               </div>
             </div>
 
             {/* Weights Sliders */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            >
               {weights.map((weight, index) => (
                 <div
                   key={index}
@@ -576,17 +591,22 @@ export function Generate() {
                       width: "60px",
                     }}
                   >
-                    {index < 6 ? (index + 1) + "번째" : "보너스"} 자리
+                    {index < 6 ? index + 1 + "번째" : "보너스"} 자리
                   </span>
                   <input
                     type="range"
                     min="0"
                     max="100"
                     value={weight}
-                    onChange={(e) => handleWeightChange(index, Number(e.target.value))}
+                    onChange={(e) =>
+                      handleWeightChange(index, Number(e.target.value))
+                    }
                     style={{
                       flex: 1,
-                      accentColor: currentWeightsSum === 100 ? "var(--success)" : "var(--primary-cyan)",
+                      accentColor:
+                        currentWeightsSum === 100
+                          ? "var(--success)"
+                          : "var(--primary-cyan)",
                       cursor: "pointer",
                     }}
                   />
@@ -619,7 +639,12 @@ export function Generate() {
                 type="button"
                 className="btn-neon btn-outline"
                 onClick={handleResetWeights}
-                style={{ flex: 1, height: "36px", padding: "0 12px", fontSize: "0.8rem" }}
+                style={{
+                  flex: 1,
+                  height: "36px",
+                  padding: "0 12px",
+                  fontSize: "0.8rem",
+                }}
               >
                 기본값 재설정
               </button>
@@ -633,10 +658,19 @@ export function Generate() {
                   height: "36px",
                   padding: "0 12px",
                   fontSize: "0.8rem",
-                  background: currentWeightsSum !== 100 ? "var(--bg-input)" : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
-                  color: currentWeightsSum !== 100 ? "var(--text-dim)" : "var(--text-main)",
+                  background:
+                    currentWeightsSum !== 100
+                      ? "var(--bg-input)"
+                      : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
+                  color:
+                    currentWeightsSum !== 100
+                      ? "var(--text-dim)"
+                      : "var(--text-main)",
                   cursor: currentWeightsSum !== 100 ? "not-allowed" : "pointer",
-                  boxShadow: currentWeightsSum !== 100 ? "none" : "0 4px 15px var(--primary-purple-glow)",
+                  boxShadow:
+                    currentWeightsSum !== 100
+                      ? "none"
+                      : "0 4px 15px var(--primary-purple-glow)",
                 }}
               >
                 {savingWeights ? "저장 중..." : "개인 가중치 저장 및 적용"}
@@ -652,9 +686,9 @@ export function Generate() {
               lineHeight: "1.4",
             }}
           >
-            ※ 설정한 가중치는 이번 예측번호 생성 시 적용되며, 이후 언제든 가중치를 다르게 조절하여 새로운 번호를 추출해 볼 수 있습니다.
+            ※ 설정한 가중치는 이번 예측번호 생성 시 적용되며, 이후 언제든
+            가중치를 다르게 조절하여 새로운 번호를 추출해 볼 수 있습니다.
           </p>
-
 
           <button
             className="btn-neon btn-cyan"

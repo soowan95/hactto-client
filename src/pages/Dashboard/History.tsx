@@ -15,7 +15,9 @@ export function History() {
       try {
         setLoading(true);
         const res = await fetch(
-          appendAuth(`${API_BASE_URL}/algorithms/history?visitorId=${visitorId}`),
+          appendAuth(
+            `${API_BASE_URL}/algorithms/history?visitorId=${visitorId}`,
+          ),
         );
         if (!res.ok) throw new Error("당첨 이력을 가져오지 못했습니다.");
         const data = await res.json();

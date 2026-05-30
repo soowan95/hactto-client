@@ -25,7 +25,9 @@ export function System() {
     try {
       setFetchingWinningNumbers(true);
       const res = await fetch(
-        appendAuth(`${API_BASE_URL}/winning-numbers/fetch?latestEpisode=${fetchEpisodeInput}`),
+        appendAuth(
+          `${API_BASE_URL}/winning-numbers/fetch?latestEpisode=${fetchEpisodeInput}`,
+        ),
         {
           method: "POST",
         },

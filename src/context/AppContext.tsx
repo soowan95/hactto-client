@@ -32,15 +32,16 @@ interface AppContextType {
   checkIpStatus: () => Promise<void>;
   handleMasterKeySubmit: (key: string) => Promise<boolean>;
   handleRequestAccess: () => Promise<void>;
-  loadAdminData: (
-    key: string,
-  ) => Promise<{
+  loadAdminData: (key: string) => Promise<{
     pendingIps: string[];
     allowedIps: string[];
     masterKeys: string[];
   }>;
   handleAdminLogout: () => void;
   appendAuth: (url: string) => string;
+  showIpRequestModal: boolean;
+  setShowIpRequestModal: (val: boolean) => void;
+  handleEnterAsGuest: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -51,6 +52,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<boolean>(false);
   const [clientIp, setClientIp] = useState<string>("");
   const [visitorId, setVisitorId] = useState<string>("");
+
+  // Guest IP Request Modal state
+  const [showIpRequestModal, setShowIpRequestModal] = useState<boolean>(false);
 
   // Admin states
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
@@ -84,6 +88,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await Promise.resolve();
       setLoading(true);
       const savedUserMk = localStorage.getItem("user_mk");
+      const isGuestMode = localStorage.getItem("visitor_id") === "guest";
 
       // If a Master Key is saved locally, prioritize verifying it first
       if (savedUserMk) {
@@ -120,24 +125,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       const result = data.data || data;
 
-      setAllowed(!!result.allowed);
-      setPending(!!result.pending);
-      setClientIp(result.ip || "unknown");
-      if (result.visitorId) {
-        setVisitorId(result.visitorId);
-        localStorage.setItem("visitor_id", result.visitorId);
+      if (result.allowed) {
+        setAllowed(true);
+        setPending(false);
+        setClientIp(result.ip || "unknown");
+        if (result.visitorId) {
+          setVisitorId(result.visitorId);
+          localStorage.setItem("visitor_id", result.visitorId);
+        }
+      } else {
+        if (isGuestMode) {
+          setAllowed(true);
+          setPending(!!result.pending);
+          setClientIp(result.ip || "unknown");
+          setVisitorId("guest");
+        } else {
+          setAllowed(false);
+          setPending(!!result.pending);
+          setClientIp(result.ip || "unknown");
+          if (result.visitorId) {
+            setVisitorId(result.visitorId);
+            localStorage.setItem("visitor_id", result.visitorId);
+          }
+        }
       }
     } catch (err: unknown) {
       console.error(err);
-      setAllowed(false);
-      setPending(false);
-      setClientIp("알 수 없음");
-      const error = err as Error;
-      showAlert("error", error.message || "서버 연결에 실패했습니다.");
+      const isGuestMode = localStorage.getItem("visitor_id") === "guest";
+      if (isGuestMode) {
+        setAllowed(true);
+        setPending(false);
+        setClientIp("알 수 없음");
+        setVisitorId("guest");
+      } else {
+        setAllowed(false);
+        setPending(false);
+        setClientIp("알 수 없음");
+        const error = err as Error;
+        showAlert("error", error.message || "서버 연결에 실패했습니다.");
+      }
     } finally {
       setLoading(false);
     }
   }, [showAlert]);
+
+  // Enter as guest
+  const handleEnterAsGuest = useCallback(() => {
+    localStorage.setItem("visitor_id", "guest");
+    setVisitorId("guest");
+    setAllowed(true);
+  }, []);
 
   // Register/Verify Master Key
   const handleMasterKeySubmit = useCallback(
@@ -207,6 +244,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         "success",
         "관리자 승인 대기열에 성공적으로 등록되었습니다. 승인을 기다려주세요.",
       );
+      setPending(true);
       setTimeout(() => {
         checkIpStatus();
       }, 1500);
@@ -310,6 +348,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loadAdminData,
         handleAdminLogout,
         appendAuth,
+        showIpRequestModal,
+        setShowIpRequestModal,
+        handleEnterAsGuest,
       }}
     >
       {children}
