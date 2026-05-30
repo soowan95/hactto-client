@@ -75,6 +75,28 @@ export function Layout() {
     }
   };
 
+  const handleGoBack = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const performGoBack = async () => {
+      if (visitorId === "guest") {
+        localStorage.removeItem("visitor_id");
+        await checkIpStatus();
+        navigate("/gate");
+      } else {
+        navigate("/");
+      }
+    };
+
+    if (hasUnsavedWeights) {
+      e.preventDefault();
+      setUnsavedActionTarget(() => () => {
+        performGoBack();
+      });
+      setShowUnsavedModal(true);
+    } else {
+      performGoBack();
+    }
+  };
+
   const layoutWidth = hasAdminAccess ? "820px" : "720px";
 
   return (
@@ -154,7 +176,7 @@ export function Layout() {
             )}
             <button
               className="btn-neon btn-outline"
-              onClick={() => navigate("/")}
+              onClick={handleGoBack}
               style={{ width: "auto", padding: "6px 12px", fontSize: "0.8rem" }}
             >
               돌아가기
