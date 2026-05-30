@@ -10,7 +10,15 @@ import {
 const DEFAULT_WEIGHTS = [25, 20, 15, 15, 10, 10, 5];
 
 export function Generate() {
-  const { appendAuth, showAlert, visitorId } = useApp();
+  const {
+    appendAuth,
+    showAlert,
+    visitorId,
+    hasUnsavedWeights,
+    setHasUnsavedWeights,
+    setShowUnsavedModal,
+    setUnsavedActionTarget,
+  } = useApp();
   const [algorithmTypes, setAlgorithmTypes] = useState<string[]>([]);
   const [generatingAlgo, setGeneratingAlgo] = useState("MIN_COUNT");
   const [generatedNumbers, setGeneratedNumbers] = useState<number[] | null>(
@@ -22,6 +30,8 @@ export function Generate() {
 
   // Personal Weight States
   const [weights, setWeights] = useState<number[]>(DEFAULT_WEIGHTS);
+  const [initialWeights, setInitialWeights] =
+    useState<number[]>(DEFAULT_WEIGHTS);
   const [savingWeights, setSavingWeights] = useState(false);
   const [weightStatus, setWeightStatus] = useState<"default" | "saved">(
     "default",
@@ -42,12 +52,14 @@ export function Generate() {
           const result = data.data || data;
           if (Array.isArray(result)) {
             setWeights(result);
+            setInitialWeights(result);
             setWeightStatus("saved");
             return;
           }
         }
         // If not found or failed, reset to default
         setWeights(DEFAULT_WEIGHTS);
+        setInitialWeights(DEFAULT_WEIGHTS);
         setWeightStatus("default");
       } catch (err) {
         console.error("가중치 조회 실패", err);
@@ -100,6 +112,7 @@ export function Generate() {
         "success",
         "개인 가중치가 성공적으로 저장되었습니다. 번호 생성 시 이 가중치가 적용됩니다.",
       );
+      setInitialWeights(weights);
       setWeightStatus("saved");
     } catch (err) {
       const error = err as Error;
@@ -113,6 +126,14 @@ export function Generate() {
     setWeights(DEFAULT_WEIGHTS);
     setWeightStatus("default");
   };
+
+  useEffect(() => {
+    const isDirty = JSON.stringify(weights) !== JSON.stringify(initialWeights);
+    setHasUnsavedWeights(isDirty);
+    return () => {
+      setHasUnsavedWeights(false);
+    };
+  }, [weights, initialWeights, setHasUnsavedWeights]);
 
   useEffect(() => {
     const fetchAlgorithmTypes = async () => {
@@ -358,8 +379,16 @@ export function Generate() {
                       key={type}
                       className={`custom-select-option ${isSelected ? "selected" : ""}`}
                       onClick={() => {
-                        setGeneratingAlgo(type);
-                        setIsDropdownOpen(false);
+                        if (hasUnsavedWeights) {
+                          setUnsavedActionTarget(() => () => {
+                            setGeneratingAlgo(type);
+                            setIsDropdownOpen(false);
+                          });
+                          setShowUnsavedModal(true);
+                        } else {
+                          setGeneratingAlgo(type);
+                          setIsDropdownOpen(false);
+                        }
                       }}
                       style={{
                         padding: "10px 14px",
