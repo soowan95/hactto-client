@@ -42,6 +42,12 @@ interface AppContextType {
   showIpRequestModal: boolean;
   setShowIpRequestModal: (val: boolean) => void;
   handleEnterAsGuest: () => void;
+  hasUnsavedWeights: boolean;
+  setHasUnsavedWeights: (val: boolean) => void;
+  showUnsavedModal: boolean;
+  setShowUnsavedModal: (val: boolean) => void;
+  unsavedActionTarget: (() => void) | null;
+  setUnsavedActionTarget: (val: (() => void) | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -55,6 +61,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Guest IP Request Modal state
   const [showIpRequestModal, setShowIpRequestModal] = useState<boolean>(false);
+
+  // Unsaved weights warning states
+  const [hasUnsavedWeights, setHasUnsavedWeights] = useState<boolean>(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState<boolean>(false);
+  const [unsavedActionTarget, setUnsavedActionTarget] = useState<
+    (() => void) | null
+  >(null);
 
   // Admin states
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
@@ -351,6 +364,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         showIpRequestModal,
         setShowIpRequestModal,
         handleEnterAsGuest,
+        hasUnsavedWeights,
+        setHasUnsavedWeights,
+        showUnsavedModal,
+        setShowUnsavedModal,
+        unsavedActionTarget,
+        setUnsavedActionTarget,
       }}
     >
       {children}
