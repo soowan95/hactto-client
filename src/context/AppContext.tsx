@@ -48,12 +48,14 @@ interface AppContextType {
   setShowUnsavedModal: (val: boolean) => void;
   unsavedActionTarget: (() => void) | null;
   setUnsavedActionTarget: (val: (() => void) | null) => void;
+  isSystemAnalyzing: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
+  const [isSystemAnalyzing, setIsSystemAnalyzing] = useState<boolean>(false);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [pending, setPending] = useState<boolean>(false);
   const [clientIp, setClientIp] = useState<string>("");
@@ -334,6 +336,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [checkIpStatus, loadAdminData]);
 
+  // Handle system status check (REST) & real-time updates (SSE)
+  useEffect(() => {
+    let sse: EventSource | null = null;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const checkSystemStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/system/status`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsSystemAnalyzing(!!data.inProgress);
+        }
+      } catch (err) {
+        console.error("시스템 상태 조회 실패:", err);
+      }
+    };
+
+    const connectSSE = () => {
+      if (sse) {
+        sse.close();
+      }
+
+      sse = new EventSource(`${API_BASE_URL}/system/status/sse`);
+
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          setIsSystemAnalyzing(!!data.inProgress);
+        } catch (err) {
+          console.error("시스템 상태 SSE 파싱 실패:", err);
+        }
+      };
+
+      sse.onerror = (err) => {
+        console.error("시스템 상태 SSE 에러, 재연결 중...", err);
+        sse?.close();
+        // Retry connection after 5 seconds
+        retryTimeout = setTimeout(() => {
+          connectSSE();
+        }, 5000);
+      };
+    };
+
+    checkSystemStatus();
+    connectSSE();
+
+    // Re-check on window focus for extra robustness
+    const handleFocus = () => {
+      checkSystemStatus();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      if (sse) sse.close();
+      if (retryTimeout) clearTimeout(retryTimeout);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -370,6 +431,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setShowUnsavedModal,
         unsavedActionTarget,
         setUnsavedActionTarget,
+        isSystemAnalyzing,
       }}
     >
       {children}
