@@ -2,9 +2,10 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:3000/hactto/v1";
 
 export const ALGORITHM_NAMES: Record<string, string> = {
-  MIN_COUNT: "자리별 가장 적게 당첨된 번호",
-  TOTAL_MIN_COUNT: "전체에서 가장 적게 당첨된 번호",
-  MAX_COUNT: "자리별 가장 많이 당첨된 번호",
+  MIN_COUNT: "자리별 냉번호",
+  TOTAL_MIN_COUNT: "전체 냉번호",
+  MAX_COUNT: "자리별 열번호",
+  TOTAL_MAX_COUNT: "전체 열번호"
 };
 
 export const parseAlgorithmName = (type: string | null | undefined): string => {
@@ -18,11 +19,13 @@ export const getAlgorithmDescription = (
   if (!type) return "";
   switch (type) {
     case "MIN_COUNT":
-      return "각 자리별 가장 적게 당첨된 번호를 오름차순으로 정렬한 결과입니다. 같은 번호가 반복될 수 있습니다. (당첨 횟수가 0인 번호는 제외)";
+      return "각 자리별 가장 적게 당첨된 번호를 오름차순으로 정렬한 결과입니다. (당첨 횟수가 0인 번호는 제외)";
     case "TOTAL_MIN_COUNT":
       return "전체 당첨 번호 중 가장 적게 당첨된 번호입니다.";
     case "MAX_COUNT":
-      return "각 자리별 가장 많이 당첨된 번호를 오름차순으로 정렬한 결과입니다. 같은 번호가 반복될 수 있습니다.";
+      return "각 자리별 가장 많이 당첨된 번호를 오름차순으로 정렬한 결과입니다. (당첨 횟수가 0인 번호는 제외)";
+    case "TOTAL_MAX_COUNT":
+      return "전체 당첨 번호 중 가장 많이 당첨된 번호입니다.";
     default:
       return "정의되지 않은 알고리즘입니다.";
   }
