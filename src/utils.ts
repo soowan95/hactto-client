@@ -8,16 +8,20 @@ export const ALGORITHM_NAMES: Record<string, string> = {
   TOTAL_MAX_COUNT: "전체 열번호"
 };
 
-export const parseAlgorithmName = (type: string | null | undefined): string => {
+export const parseAlgorithmName = (type: any): string => {
   if (!type) return "";
-  return ALGORITHM_NAMES[type] || type;
+  const name = typeof type === "object" ? type.type : type;
+  if (!name) return "";
+  return ALGORITHM_NAMES[name] || name;
 };
 
 export const getAlgorithmDescription = (
-  type: string | null | undefined,
+  type: any,
 ): string => {
   if (!type) return "";
-  switch (type) {
+  const name = typeof type === "object" ? type.type : type;
+  if (!name) return "";
+  switch (name) {
     case "MIN_COUNT":
       return "각 자리별 가장 적게 당첨된 번호를 오름차순으로 정렬한 결과입니다. (당첨 횟수가 0인 번호는 제외)";
     case "TOTAL_MIN_COUNT":
