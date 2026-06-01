@@ -585,8 +585,12 @@ export function Stats() {
     }
 
     const { prediction, winningNumber } = championData;
-    const isMatched = (num: number) =>
-      winningNumber?.numbers?.includes(num) ?? false;
+    const mainNumbers = winningNumber?.numbers?.slice(0, 6) ?? [];
+    const bonusNumber = winningNumber?.numbers?.[6];
+
+    const isMatched = (num: number) => mainNumbers.includes(num);
+    const isBonusMatched = (num: number) =>
+      bonusNumber !== undefined && bonusNumber === num;
 
     return (
       <div
@@ -678,9 +682,7 @@ export function Stats() {
           >
             <span>적용 알고리즘</span>
             <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>
-              {parseAlgorithmName(
-                prediction.algorithm?.type ?? prediction.algorithm,
-              )}
+              {parseAlgorithmName(prediction.algorithm)}
             </span>
           </div>
 
@@ -706,6 +708,20 @@ export function Stats() {
             >
               {prediction.numbers.slice(0, 6).map((num, i) => {
                 const matched = isMatched(num);
+                const bonusMatched = isBonusMatched(num);
+
+                const borderColor = matched
+                  ? "#10b981"
+                  : bonusMatched
+                    ? "#c084fc"
+                    : "rgba(255, 255, 255, 0.15)";
+
+                const shadowColor = matched
+                  ? "rgba(16, 185, 129, 0.6)"
+                  : bonusMatched
+                    ? "rgba(192, 132, 252, 0.6)"
+                    : null;
+
                 return (
                   <div
                     key={i}
@@ -713,22 +729,22 @@ export function Stats() {
                     style={{
                       ...getBallStyle(num),
                       position: "relative",
-                      border: matched
-                        ? "2px solid #10b981"
+                      border: matched || bonusMatched
+                        ? `2px solid ${borderColor}`
                         : "1px solid rgba(255, 255, 255, 0.15)",
-                      boxShadow: matched
-                        ? "0 0 15px rgba(16, 185, 129, 0.6)"
+                      boxShadow: shadowColor
+                        ? `0 0 15px ${shadowColor}`
                         : getBallStyle(num).boxShadow,
                     }}
                   >
                     {num}
-                    {matched && (
+                    {(matched || bonusMatched) && (
                       <div
                         style={{
                           position: "absolute",
                           top: "-4px",
                           right: "-4px",
-                          background: "#10b981",
+                          background: matched ? "#10b981" : "#c084fc",
                           color: "#fff",
                           borderRadius: "50%",
                           width: "14px",
@@ -746,52 +762,7 @@ export function Stats() {
                   </div>
                 );
               })}
-              <div
-                style={{
-                  fontSize: "1.1rem",
-                  fontWeight: "bold",
-                  color: "var(--text-muted)",
-                  padding: "0 2px",
-                }}
-              >
-                +
-              </div>
-              <div
-                className="lotto-ball"
-                style={{
-                  ...getBallStyle(prediction.numbers?.[6] ?? 0),
-                  position: "relative",
-                  border: isMatched(prediction.numbers?.[6] ?? 0)
-                    ? "2px solid #10b981"
-                    : "1px solid rgba(255, 255, 255, 0.15)",
-                  boxShadow: isMatched(prediction.numbers?.[6] ?? 0)
-                    ? "0 0 15px rgba(16, 185, 129, 0.6)"
-                    : getBallStyle(prediction.numbers?.[6] ?? 0).boxShadow,
-                }}
-              >
-                {prediction.numbers?.[6] ?? 0}
-                {isMatched(prediction.numbers?.[6] ?? 0) && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "-4px",
-                      right: "-4px",
-                      background: "#10b981",
-                      color: "#fff",
-                      borderRadius: "50%",
-                      width: "14px",
-                      height: "14px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "8px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    ✓
-                  </div>
-                )}
-              </div>
+
             </div>
           </div>
 
@@ -892,10 +863,11 @@ export function Stats() {
               }}
             >
               {(() => {
-                const maxWeight = Math.max(...prediction.weights, 1);
-                const items = prediction.weights.map((w, idx) => ({
+                const weights = (prediction.weights || []).slice(0, 6);
+                const maxWeight = Math.max(...weights, 1);
+                const items = weights.map((w, idx) => ({
                   val: w,
-                  label: idx < 6 ? `${idx + 1}구` : "보너스",
+                  label: `${idx + 1}구`,
                 }));
                 const sorted = [...items].sort((a, b) => b.val - a.val);
 
@@ -1671,8 +1643,12 @@ export function Stats() {
                     winningNumber && Array.isArray(winningNumber.numbers)
                       ? winningNumber.numbers
                       : [];
-                  const isMatched = (num: number) =>
-                    winningNumbers.includes(num);
+                  const mainNumbers = winningNumbers.slice(0, 6);
+                  const bonusNumber = winningNumbers[6];
+
+                  const isMatched = (num: number) => mainNumbers.includes(num);
+                  const isBonusMatched = (num: number) =>
+                    bonusNumber !== undefined && bonusNumber === num;
 
                   return (
                     <div style={{ color: "#ffffff" }}>
@@ -1763,6 +1739,20 @@ export function Stats() {
                             .slice(0, 6)
                             .map((num: number, i: number) => {
                               const matched = isMatched(num);
+                              const bonusMatched = isBonusMatched(num);
+
+                              const borderColor = matched
+                                ? "#10b981"
+                                : bonusMatched
+                                  ? "#c084fc"
+                                  : "rgba(255, 255, 255, 0.15)";
+
+                              const shadowColor = matched
+                                ? "rgba(16, 185, 129, 0.6)"
+                                : bonusMatched
+                                  ? "rgba(192, 132, 252, 0.6)"
+                                  : null;
+
                               return (
                                 <div
                                   key={i}
@@ -1773,22 +1763,22 @@ export function Stats() {
                                     width: "36px",
                                     height: "36px",
                                     fontSize: "0.95rem",
-                                    border: matched
-                                      ? "2px solid #10b981"
+                                    border: matched || bonusMatched
+                                      ? `2px solid ${borderColor}`
                                       : "1px solid rgba(255, 255, 255, 0.15)",
-                                    boxShadow: matched
-                                      ? "0 0 15px rgba(16, 185, 129, 0.6)"
+                                    boxShadow: shadowColor
+                                      ? `0 0 15px ${shadowColor}`
                                       : getBallStyle(num).boxShadow,
                                   }}
                                 >
                                   {num}
-                                  {matched && (
+                                  {(matched || bonusMatched) && (
                                     <div
                                       style={{
                                         position: "absolute",
                                         top: "-4px",
                                         right: "-4px",
-                                        background: "#10b981",
+                                        background: matched ? "#10b981" : "#c084fc",
                                         color: "#fff",
                                         borderRadius: "50%",
                                         width: "14px",
@@ -1806,56 +1796,7 @@ export function Stats() {
                                 </div>
                               );
                             })}
-                          <div
-                            style={{
-                              fontSize: "1.1rem",
-                              fontWeight: "bold",
-                              color: "rgba(255,255,255,0.4)",
-                              padding: "0 2px",
-                            }}
-                          >
-                            +
-                          </div>
-                          <div
-                            className="lotto-ball"
-                            style={{
-                              ...getBallStyle(predictionNumbers[6] ?? 0),
-                              position: "relative",
-                              width: "36px",
-                              height: "36px",
-                              fontSize: "0.95rem",
-                              border: isMatched(predictionNumbers[6] ?? 0)
-                                ? "2px solid #10b981"
-                                : "1px solid rgba(255, 255, 255, 0.15)",
-                              boxShadow: isMatched(predictionNumbers[6] ?? 0)
-                                ? "0 0 15px rgba(16, 185, 129, 0.6)"
-                                : getBallStyle(predictionNumbers[6] ?? 0)
-                                    .boxShadow,
-                            }}
-                          >
-                            {predictionNumbers[6] ?? 0}
-                            {isMatched(predictionNumbers[6] ?? 0) && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: "-4px",
-                                  right: "-4px",
-                                  background: "#10b981",
-                                  color: "#fff",
-                                  borderRadius: "50%",
-                                  width: "14px",
-                                  height: "14px",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: "8px",
-                                  fontWeight: "bold",
-                                }}
-                              >
-                                ✓
-                              </div>
-                            )}
-                          </div>
+
                         </div>
                       </div>
 
@@ -1952,13 +1893,13 @@ export function Stats() {
                         >
                           {(() => {
                             const weights = Array.isArray(prediction.weights)
-                              ? prediction.weights
+                              ? prediction.weights.slice(0, 6)
                               : [];
                             const maxWeight = Math.max(...weights, 1);
                             const items = weights.map(
                               (w: number, idx: number) => ({
                                 val: w,
-                                label: idx < 6 ? `${idx + 1}구` : "보너스",
+                                label: `${idx + 1}구`,
                               }),
                             );
                             const sorted = [...items].sort(

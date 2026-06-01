@@ -1,4 +1,4 @@
-import { useState } from "react";
+import type { MouseEvent } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Alert } from "./Alert";
@@ -7,11 +7,6 @@ import { UnsavedChangesModal } from "./UnsavedChangesModal";
 export function Layout() {
   const {
     alert,
-    setAlert,
-    showAlert,
-    submitting,
-    checkIpStatus,
-    handleMasterKeySubmit,
     hasUnsavedWeights,
     showUnsavedModal,
     setShowUnsavedModal,
@@ -20,34 +15,12 @@ export function Layout() {
   } = useApp();
 
   const navigate = useNavigate();
-  const [showMasterKeyForm, setShowMasterKeyForm] = useState(false);
-  const [masterKey, setMasterKey] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   const hasAdminAccess = !!(
     localStorage.getItem("mk") || sessionStorage.getItem("mk")
   );
 
-  const onMasterKeySubmitLocal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const success = await handleMasterKeySubmit(masterKey);
-    if (success) {
-      setMasterKey("");
-      setShowMasterKeyForm(false);
-    }
-  };
-
-  const handleDisconnectMasterKey = async () => {
-    localStorage.removeItem("mk");
-    sessionStorage.removeItem("mk");
-    showAlert("success", "Master key 등록이 해제되었습니다.");
-    await checkIpStatus();
-  };
-
-  const handleTabClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    path: string,
-  ) => {
+  const handleTabClick = (e: MouseEvent<HTMLAnchorElement>, path: string) => {
     if (path === "/system" && !hasAdminAccess) {
       e.preventDefault();
       setShowAdminModal(true);
@@ -62,8 +35,6 @@ export function Layout() {
       setShowUnsavedModal(true);
     }
   };
-
-
 
   return (
     <div
@@ -108,8 +79,9 @@ export function Layout() {
             </span>
           </div>
 
-          <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-          </div>
+          <div
+            style={{ display: "flex", gap: "15px", alignItems: "center" }}
+          ></div>
         </div>
 
         <div
@@ -121,11 +93,51 @@ export function Layout() {
             flexWrap: "wrap",
           }}
         >
-          <NavLink to="/home" onClick={(e) => handleTabClick(e, "/home")} className={({ isActive }) => `tab-btn ${isActive ? "active-tab" : ""}`}>최근 당첨번호</NavLink>
-          <NavLink to="/search" onClick={(e) => handleTabClick(e, "/search")} className={({ isActive }) => `tab-btn ${isActive ? "active-tab" : ""}`}>당첨번호 조회</NavLink>
-          <NavLink to="/stats" onClick={(e) => handleTabClick(e, "/stats")} className={({ isActive }) => `tab-btn ${isActive ? "active-tab" : ""}`}>알고리즘 통계</NavLink>
-          <NavLink to="/generate" onClick={(e) => handleTabClick(e, "/generate")} className={({ isActive }) => `tab-btn ${isActive ? "active-tab" : ""}`}>예측번호 생성</NavLink>
-          <NavLink to="/history" onClick={(e) => handleTabClick(e, "/history")} className={({ isActive }) => `tab-btn ${isActive ? "active-tab" : ""}`}>내 당첨이력</NavLink>
+          <NavLink
+            to="/home"
+            onClick={(e) => handleTabClick(e, "/home")}
+            className={({ isActive }) =>
+              `tab-btn ${isActive ? "active-tab" : ""}`
+            }
+          >
+            최근 당첨번호
+          </NavLink>
+          <NavLink
+            to="/search"
+            onClick={(e) => handleTabClick(e, "/search")}
+            className={({ isActive }) =>
+              `tab-btn ${isActive ? "active-tab" : ""}`
+            }
+          >
+            당첨번호 조회
+          </NavLink>
+          <NavLink
+            to="/stats"
+            onClick={(e) => handleTabClick(e, "/stats")}
+            className={({ isActive }) =>
+              `tab-btn ${isActive ? "active-tab" : ""}`
+            }
+          >
+            알고리즘 통계
+          </NavLink>
+          <NavLink
+            to="/generate"
+            onClick={(e) => handleTabClick(e, "/generate")}
+            className={({ isActive }) =>
+              `tab-btn ${isActive ? "active-tab" : ""}`
+            }
+          >
+            예측번호 생성
+          </NavLink>
+          <NavLink
+            to="/history"
+            onClick={(e) => handleTabClick(e, "/history")}
+            className={({ isActive }) =>
+              `tab-btn ${isActive ? "active-tab" : ""}`
+            }
+          >
+            내 당첨이력
+          </NavLink>
         </div>
 
         <div
