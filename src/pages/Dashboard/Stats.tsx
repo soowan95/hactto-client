@@ -134,7 +134,7 @@ export function Stats() {
         );
         if (res.ok) {
           const d = await res.json();
-          setChampionData(d.data || d);
+          setChampionData(d.data ?? null);
         }
       } catch (err) {
         console.error("Champion data fetch failed", err);
@@ -498,7 +498,9 @@ export function Stats() {
                         fontSize: "0.8rem",
                       }}
                     >
-                      <span style={{ color: "var(--text-main)", fontWeight: 500 }}>
+                      <span
+                        style={{ color: "var(--text-main)", fontWeight: 500 }}
+                      >
                         {parseAlgorithmName(c.algorithm)}
                       </span>
                       <span
@@ -583,7 +585,8 @@ export function Stats() {
     }
 
     const { prediction, winningNumber } = championData;
-    const isMatched = (num: number) => winningNumber.numbers.includes(num);
+    const isMatched = (num: number) =>
+      winningNumber?.numbers?.includes(num) ?? false;
 
     return (
       <div
@@ -638,7 +641,8 @@ export function Stats() {
                   marginTop: "8px",
                 }}
               >
-                {winningNumber.episode}회차 최고 신뢰도 예측
+                {winningNumber?.episode ?? prediction?.episode}회차 최고 신뢰도
+                예측
               </h3>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -674,7 +678,9 @@ export function Stats() {
           >
             <span>적용 알고리즘</span>
             <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>
-              {parseAlgorithmName(prediction.algorithm)}
+              {parseAlgorithmName(
+                prediction.algorithm?.type ?? prediction.algorithm,
+              )}
             </span>
           </div>
 
@@ -753,18 +759,18 @@ export function Stats() {
               <div
                 className="lotto-ball"
                 style={{
-                  ...getBallStyle(prediction.numbers[6]),
+                  ...getBallStyle(prediction.numbers?.[6] ?? 0),
                   position: "relative",
-                  border: isMatched(prediction.numbers[6])
+                  border: isMatched(prediction.numbers?.[6] ?? 0)
                     ? "2px solid #10b981"
                     : "1px solid rgba(255, 255, 255, 0.15)",
-                  boxShadow: isMatched(prediction.numbers[6])
+                  boxShadow: isMatched(prediction.numbers?.[6] ?? 0)
                     ? "0 0 15px rgba(16, 185, 129, 0.6)"
-                    : getBallStyle(prediction.numbers[6]).boxShadow,
+                    : getBallStyle(prediction.numbers?.[6] ?? 0).boxShadow,
                 }}
               >
-                {prediction.numbers[6]}
-                {isMatched(prediction.numbers[6]) && (
+                {prediction.numbers?.[6] ?? 0}
+                {isMatched(prediction.numbers?.[6] ?? 0) && (
                   <div
                     style={{
                       position: "absolute",
@@ -818,37 +824,51 @@ export function Stats() {
                 alignItems: "center",
               }}
             >
-              {winningNumber.numbers.slice(0, 6).map((num, i) => (
+              {winningNumber?.numbers ? (
+                <>
+                  {winningNumber.numbers.slice(0, 6).map((num, i) => (
+                    <div
+                      key={i}
+                      className="lotto-ball"
+                      style={{
+                        ...getBallStyle(num),
+                        opacity: 0.85,
+                      }}
+                    >
+                      {num}
+                    </div>
+                  ))}
+                  <div
+                    style={{
+                      fontSize: "1.1rem",
+                      fontWeight: "bold",
+                      color: "var(--text-muted)",
+                      padding: "0 2px",
+                    }}
+                  >
+                    +
+                  </div>
+                  <div
+                    className="lotto-ball"
+                    style={{
+                      ...getBallStyle(winningNumber.numbers[6] ?? 0),
+                      opacity: 0.85,
+                    }}
+                  >
+                    {winningNumber.numbers[6] ?? 0}
+                  </div>
+                </>
+              ) : (
                 <div
-                  key={i}
-                  className="lotto-ball"
                   style={{
-                    ...getBallStyle(num),
-                    opacity: 0.85,
+                    color: "var(--text-muted)",
+                    fontSize: "0.85rem",
+                    padding: "4px 0",
                   }}
                 >
-                  {num}
+                  당첨번호가 아직 발표되지 않았습니다.
                 </div>
-              ))}
-              <div
-                style={{
-                  fontSize: "1.1rem",
-                  fontWeight: "bold",
-                  color: "var(--text-muted)",
-                  padding: "0 2px",
-                }}
-              >
-                +
-              </div>
-              <div
-                className="lotto-ball"
-                style={{
-                  ...getBallStyle(winningNumber.numbers[6]),
-                  opacity: 0.85,
-                }}
-              >
-                {winningNumber.numbers[6]}
-              </div>
+              )}
             </div>
           </div>
 
@@ -1408,8 +1428,6 @@ export function Stats() {
           </div>
         </div>
 
-
-
         {/* Description Info */}
         <div
           style={{
@@ -1460,31 +1478,32 @@ export function Stats() {
       {activeSubTab === "detail" && renderDetail()}
 
       {/* Modal Popup */}
-      {(clickedPointLoading || clickedPointData) && createPortal(
-        <div
-          onClick={() => {
-            setClickedPointData(null);
-            setClickedPointLoading(false);
-          }}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(8, 9, 14, 0.75)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: "20px",
-            boxSizing: "border-box",
-            animation: "backdropFadeIn 0.3s ease-out forwards",
-          }}
-        >
-          <style>{`
+      {(clickedPointLoading || clickedPointData) &&
+        createPortal(
+          <div
+            onClick={() => {
+              setClickedPointData(null);
+              setClickedPointLoading(false);
+            }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              background: "rgba(8, 9, 14, 0.75)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 9999,
+              padding: "20px",
+              boxSizing: "border-box",
+              animation: "backdropFadeIn 0.3s ease-out forwards",
+            }}
+          >
+            <style>{`
             @keyframes modalFadeIn {
               from {
                 opacity: 0;
@@ -1507,427 +1526,488 @@ export function Stats() {
               to { transform: rotate(360deg); }
             }
           `}</style>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "linear-gradient(135deg, rgba(20, 21, 33, 0.95) 0%, rgba(10, 11, 18, 0.98) 100%)",
-              border: "1px solid rgba(189, 0, 255, 0.25)",
-              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(189, 0, 255, 0.05), 0 0 30px rgba(189, 0, 255, 0.15)",
-              borderRadius: "24px",
-              padding: "28px 24px",
-              width: "100%",
-              maxWidth: "490px",
-              position: "relative",
-              animation: "modalFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
-              boxSizing: "border-box",
-              textAlign: "left",
-            }}
-          >
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                setClickedPointData(null);
-                setClickedPointLoading(false);
-              }}
+            <div
+              onClick={(e) => e.stopPropagation()}
               style={{
-                position: "absolute",
-                top: "20px",
-                right: "20px",
-                background: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "50%",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-muted)",
-                cursor: "pointer",
-                fontSize: "1rem",
-                lineHeight: "1",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
-                e.currentTarget.style.color = "var(--text-main)";
-                e.currentTarget.style.transform = "rotate(90deg)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-                e.currentTarget.style.color = "var(--text-muted)";
-                e.currentTarget.style.transform = "rotate(0deg)";
+                background:
+                  "linear-gradient(135deg, rgba(20, 21, 33, 0.95) 0%, rgba(10, 11, 18, 0.98) 100%)",
+                border: "1px solid rgba(189, 0, 255, 0.25)",
+                boxShadow:
+                  "0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(189, 0, 255, 0.05), 0 0 30px rgba(189, 0, 255, 0.15)",
+                borderRadius: "24px",
+                padding: "28px 24px",
+                width: "100%",
+                maxWidth: "490px",
+                position: "relative",
+                animation:
+                  "modalFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+                boxSizing: "border-box",
+                textAlign: "left",
               }}
             >
-              ✕
-            </button>
-
-            {clickedPointLoading && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "200px" }}>
-                <div style={{
-                  width: "40px",
-                  height: "40px",
-                  border: "3px solid rgba(189, 0, 255, 0.1)",
-                  borderTopColor: "var(--primary-purple)",
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  setClickedPointData(null);
+                  setClickedPointLoading(false);
+                }}
+                style={{
+                  position: "absolute",
+                  top: "20px",
+                  right: "20px",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
                   borderRadius: "50%",
-                  animation: "spinner 0.8s linear infinite",
-                  marginBottom: "16px",
-                }} />
-                <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>최고 신뢰도 데이터를 불러오는 중...</p>
-              </div>
-            )}
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  lineHeight: "1",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "rgba(255, 255, 255, 0.15)";
+                  e.currentTarget.style.color = "var(--text-main)";
+                  e.currentTarget.style.transform = "rotate(90deg)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    "rgba(255, 255, 255, 0.05)";
+                  e.currentTarget.style.color = "var(--text-muted)";
+                  e.currentTarget.style.transform = "rotate(0deg)";
+                }}
+              >
+                ✕
+              </button>
 
-            {!clickedPointLoading && clickedPointData && (() => {
-              const prediction = clickedPointData.prediction;
-              const winningNumber = clickedPointData.winningNumber;
-
-              if (!prediction) {
-                return (
-                  <div style={{ color: "#ffffff", padding: "20px 10px", textAlign: "center" }}>
-                    <p style={{ fontWeight: "bold", marginBottom: "12px", fontSize: "1.1rem" }}>⚠️ 상세 정보가 없습니다.</p>
-                    <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.6)", marginBottom: "16px" }}>
-                      데이터를 정상적으로 처리하지 못했습니다.
-                    </p>
-                    <pre style={{
-                      fontSize: "0.75rem",
-                      textAlign: "left",
-                      overflow: "auto",
-                      background: "rgba(0,0,0,0.4)",
-                      padding: "12px",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "rgba(255,255,255,0.8)",
-                      maxHeight: "150px"
-                    }}>
-                      {JSON.stringify(clickedPointData, null, 2)}
-                    </pre>
-                  </div>
-                );
-              }
-
-              const predictionNumbers = Array.isArray(prediction.numbers) ? prediction.numbers : [];
-              const winningNumbers = winningNumber && Array.isArray(winningNumber.numbers) ? winningNumber.numbers : [];
-              const isMatched = (num: number) => winningNumbers.includes(num);
-
-              return (
-                <div style={{ color: "#ffffff" }}>
-                  {/* Title / Header */}
+              {clickedPointLoading && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "200px",
+                  }}
+                >
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: "20px",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
-                      paddingBottom: "16px",
-                      paddingRight: "36px", // leave space for the X button
+                      width: "40px",
+                      height: "40px",
+                      border: "3px solid rgba(189, 0, 255, 0.1)",
+                      borderTopColor: "var(--primary-purple)",
+                      borderRadius: "50%",
+                      animation: "spinner 0.8s linear infinite",
+                      marginBottom: "16px",
                     }}
-                  >
-                    <div>
-                      <span
+                  />
+                  <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
+                    최고 신뢰도 데이터를 불러오는 중...
+                  </p>
+                </div>
+              )}
+
+              {!clickedPointLoading &&
+                clickedPointData &&
+                (() => {
+                  const prediction = clickedPointData.prediction;
+                  const winningNumber = clickedPointData.winningNumber;
+
+                  if (!prediction) {
+                    return (
+                      <div
                         style={{
-                          fontSize: "0.75rem",
-                          background: "rgba(189, 0, 255, 0.15)",
-                          color: "#c084fc",
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          border: "1px solid rgba(189, 0, 255, 0.25)",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        EPISODE DETAIL
-                      </span>
-                      <h3
-                        style={{
-                          fontSize: "1.15rem",
-                          fontWeight: "bold",
                           color: "#ffffff",
-                          marginTop: "8px",
+                          padding: "20px 10px",
+                          textAlign: "center",
                         }}
                       >
-                        {prediction.episode}회차 최고 신뢰도 예측
-                      </h3>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div
-                        style={{
-                          fontSize: "1.5rem",
-                          fontWeight: 800,
-                          color: "#a855f7",
-                          fontFamily: "monospace",
-                          textShadow: "0 0 10px rgba(189,0,255,0.3)",
-                        }}
-                      >
-                        {typeof prediction.reliabilityScore === "number" ? prediction.reliabilityScore.toFixed(2) : "0.00"}%
+                        <p
+                          style={{
+                            fontWeight: "bold",
+                            marginBottom: "12px",
+                            fontSize: "1.1rem",
+                          }}
+                        >
+                          ⚠️ 상세 정보가 없습니다.
+                        </p>
+                        <p
+                          style={{
+                            fontSize: "0.82rem",
+                            color: "rgba(255,255,255,0.6)",
+                            marginBottom: "16px",
+                          }}
+                        >
+                          데이터를 정상적으로 처리하지 못했습니다.
+                        </p>
+                        <pre
+                          style={{
+                            fontSize: "0.75rem",
+                            textAlign: "left",
+                            overflow: "auto",
+                            background: "rgba(0,0,0,0.4)",
+                            padding: "12px",
+                            borderRadius: "8px",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            color: "rgba(255,255,255,0.8)",
+                            maxHeight: "150px",
+                          }}
+                        >
+                          {JSON.stringify(clickedPointData, null, 2)}
+                        </pre>
                       </div>
-                      <span
-                        style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.5)" }}
-                      >
-                        신뢰도 스코어
-                      </span>
-                    </div>
-                  </div>
+                    );
+                  }
 
-                  {/* Generated prediction numbers */}
-                  <div style={{ marginBottom: "20px" }}>
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "rgba(255,255,255,0.6)",
-                        marginBottom: "8px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      생성된 예측번호
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "8px",
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                      }}
-                    >
-                      {predictionNumbers
-                        .slice(0, 6)
-                        .map((num: number, i: number) => {
-                          const matched = isMatched(num);
-                          return (
-                            <div
-                              key={i}
-                              className="lotto-ball"
-                              style={{
-                                ...getBallStyle(num),
-                                position: "relative",
-                                width: "36px",
-                                height: "36px",
-                                fontSize: "0.95rem",
-                                border: matched
-                                  ? "2px solid #10b981"
-                                  : "1px solid rgba(255, 255, 255, 0.15)",
-                                boxShadow: matched
-                                  ? "0 0 15px rgba(16, 185, 129, 0.6)"
-                                  : getBallStyle(num).boxShadow,
-                              }}
-                            >
-                              {num}
-                              {matched && (
-                                <div
-                                  style={{
-                                    position: "absolute",
-                                    top: "-4px",
-                                    right: "-4px",
-                                    background: "#10b981",
-                                    color: "#fff",
-                                    borderRadius: "50%",
-                                    width: "14px",
-                                    height: "14px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "8px",
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  ✓
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      <div
-                        style={{
-                          fontSize: "1.1rem",
-                          fontWeight: "bold",
-                          color: "rgba(255,255,255,0.4)",
-                          padding: "0 2px",
-                        }}
-                      >
-                        +
-                      </div>
-                      <div
-                        className="lotto-ball"
-                        style={{
-                          ...getBallStyle(predictionNumbers[6] ?? 0),
-                          position: "relative",
-                          width: "36px",
-                          height: "36px",
-                          fontSize: "0.95rem",
-                          border: isMatched(predictionNumbers[6] ?? 0)
-                            ? "2px solid #10b981"
-                            : "1px solid rgba(255, 255, 255, 0.15)",
-                          boxShadow: isMatched(predictionNumbers[6] ?? 0)
-                            ? "0 0 15px rgba(16, 185, 129, 0.6)"
-                            : getBallStyle(predictionNumbers[6] ?? 0).boxShadow,
-                        }}
-                      >
-                        {predictionNumbers[6] ?? 0}
-                        {isMatched(predictionNumbers[6] ?? 0) && (
-                          <div
-                            style={{
-                              position: "absolute",
-                              top: "-4px",
-                              right: "-4px",
-                              background: "#10b981",
-                              color: "#fff",
-                              borderRadius: "50%",
-                              width: "14px",
-                              height: "14px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "8px",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            ✓
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  const predictionNumbers = Array.isArray(prediction.numbers)
+                    ? prediction.numbers
+                    : [];
+                  const winningNumbers =
+                    winningNumber && Array.isArray(winningNumber.numbers)
+                      ? winningNumber.numbers
+                      : [];
+                  const isMatched = (num: number) =>
+                    winningNumbers.includes(num);
 
-                  {/* Actual Winning Numbers */}
-                  {winningNumber && winningNumbers.length > 0 && (
-                    <div
-                      style={{
-                        marginBottom: "20px",
-                        background: "rgba(255,255,255,0.01)",
-                        border: "1px dashed rgba(255,255,255,0.06)",
-                        padding: "14px 16px",
-                        borderRadius: "12px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: "0.8rem",
-                          color: "rgba(255,255,255,0.6)",
-                          marginBottom: "8px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        실제 발표 당첨번호
-                      </div>
+                  return (
+                    <div style={{ color: "#ffffff" }}>
+                      {/* Title / Header */}
                       <div
                         style={{
                           display: "flex",
-                          gap: "8px",
-                          flexWrap: "wrap",
-                          alignItems: "center",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          marginBottom: "20px",
+                          borderBottom: "1px solid rgba(255,255,255,0.06)",
+                          paddingBottom: "16px",
+                          paddingRight: "36px", // leave space for the X button
                         }}
                       >
-                        {winningNumbers
-                          .slice(0, 6)
-                          .map((num: number, i: number) => (
+                        <div>
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              background: "rgba(189, 0, 255, 0.15)",
+                              color: "#c084fc",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              border: "1px solid rgba(189, 0, 255, 0.25)",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            EPISODE DETAIL
+                          </span>
+                          <h3
+                            style={{
+                              fontSize: "1.15rem",
+                              fontWeight: "bold",
+                              color: "#ffffff",
+                              marginTop: "8px",
+                            }}
+                          >
+                            {prediction.episode}회차 최고 신뢰도 예측
+                          </h3>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div
+                            style={{
+                              fontSize: "1.5rem",
+                              fontWeight: 800,
+                              color: "#a855f7",
+                              fontFamily: "monospace",
+                              textShadow: "0 0 10px rgba(189,0,255,0.3)",
+                            }}
+                          >
+                            {typeof prediction.reliabilityScore === "number"
+                              ? prediction.reliabilityScore.toFixed(2)
+                              : "0.00"}
+                            %
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "rgba(255,255,255,0.5)",
+                            }}
+                          >
+                            신뢰도 스코어
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Generated prediction numbers */}
+                      <div style={{ marginBottom: "20px" }}>
+                        <div
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "rgba(255,255,255,0.6)",
+                            marginBottom: "8px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          생성된 예측번호
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                          }}
+                        >
+                          {predictionNumbers
+                            .slice(0, 6)
+                            .map((num: number, i: number) => {
+                              const matched = isMatched(num);
+                              return (
+                                <div
+                                  key={i}
+                                  className="lotto-ball"
+                                  style={{
+                                    ...getBallStyle(num),
+                                    position: "relative",
+                                    width: "36px",
+                                    height: "36px",
+                                    fontSize: "0.95rem",
+                                    border: matched
+                                      ? "2px solid #10b981"
+                                      : "1px solid rgba(255, 255, 255, 0.15)",
+                                    boxShadow: matched
+                                      ? "0 0 15px rgba(16, 185, 129, 0.6)"
+                                      : getBallStyle(num).boxShadow,
+                                  }}
+                                >
+                                  {num}
+                                  {matched && (
+                                    <div
+                                      style={{
+                                        position: "absolute",
+                                        top: "-4px",
+                                        right: "-4px",
+                                        background: "#10b981",
+                                        color: "#fff",
+                                        borderRadius: "50%",
+                                        width: "14px",
+                                        height: "14px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "8px",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                      ✓
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          <div
+                            style={{
+                              fontSize: "1.1rem",
+                              fontWeight: "bold",
+                              color: "rgba(255,255,255,0.4)",
+                              padding: "0 2px",
+                            }}
+                          >
+                            +
+                          </div>
+                          <div
+                            className="lotto-ball"
+                            style={{
+                              ...getBallStyle(predictionNumbers[6] ?? 0),
+                              position: "relative",
+                              width: "36px",
+                              height: "36px",
+                              fontSize: "0.95rem",
+                              border: isMatched(predictionNumbers[6] ?? 0)
+                                ? "2px solid #10b981"
+                                : "1px solid rgba(255, 255, 255, 0.15)",
+                              boxShadow: isMatched(predictionNumbers[6] ?? 0)
+                                ? "0 0 15px rgba(16, 185, 129, 0.6)"
+                                : getBallStyle(predictionNumbers[6] ?? 0)
+                                    .boxShadow,
+                            }}
+                          >
+                            {predictionNumbers[6] ?? 0}
+                            {isMatched(predictionNumbers[6] ?? 0) && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "-4px",
+                                  right: "-4px",
+                                  background: "#10b981",
+                                  color: "#fff",
+                                  borderRadius: "50%",
+                                  width: "14px",
+                                  height: "14px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "8px",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actual Winning Numbers */}
+                      {winningNumber && winningNumbers.length > 0 && (
+                        <div
+                          style={{
+                            marginBottom: "20px",
+                            background: "rgba(255,255,255,0.01)",
+                            border: "1px dashed rgba(255,255,255,0.06)",
+                            padding: "14px 16px",
+                            borderRadius: "12px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "rgba(255,255,255,0.6)",
+                              marginBottom: "8px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            실제 발표 당첨번호
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                            }}
+                          >
+                            {winningNumbers
+                              .slice(0, 6)
+                              .map((num: number, i: number) => (
+                                <div
+                                  key={i}
+                                  className="lotto-ball"
+                                  style={{
+                                    ...getBallStyle(num),
+                                    width: "36px",
+                                    height: "36px",
+                                    fontSize: "0.95rem",
+                                    opacity: 0.85,
+                                  }}
+                                >
+                                  {num}
+                                </div>
+                              ))}
                             <div
-                              key={i}
+                              style={{
+                                fontSize: "1.1rem",
+                                fontWeight: "bold",
+                                color: "rgba(255,255,255,0.4)",
+                                padding: "0 2px",
+                              }}
+                            >
+                              +
+                            </div>
+                            <div
                               className="lotto-ball"
                               style={{
-                                ...getBallStyle(num),
+                                ...getBallStyle(winningNumbers[6] ?? 0),
                                 width: "36px",
                                 height: "36px",
                                 fontSize: "0.95rem",
                                 opacity: 0.85,
                               }}
                             >
-                              {num}
+                              {winningNumbers[6] ?? 0}
                             </div>
-                          ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Weights breakdown */}
+                      <div>
                         <div
                           style={{
-                            fontSize: "1.1rem",
-                            fontWeight: "bold",
-                            color: "rgba(255,255,255,0.4)",
-                            padding: "0 2px",
+                            fontSize: "0.8rem",
+                            color: "rgba(255,255,255,0.6)",
+                            marginBottom: "8px",
+                            fontWeight: 600,
                           }}
                         >
-                          +
+                          설정된 가중치 조합
                         </div>
                         <div
-                          className="lotto-ball"
                           style={{
-                            ...getBallStyle(winningNumbers[6] ?? 0),
-                            width: "36px",
-                            height: "36px",
-                            fontSize: "0.95rem",
-                            opacity: 0.85,
+                            display: "grid",
+                            gridTemplateColumns: "repeat(3, 1fr)",
+                            gap: "8px",
                           }}
                         >
-                          {winningNumbers[6] ?? 0}
+                          {(() => {
+                            const weights = Array.isArray(prediction.weights)
+                              ? prediction.weights
+                              : [];
+                            const maxWeight = Math.max(...weights, 1);
+                            const items = weights.map(
+                              (w: number, idx: number) => ({
+                                val: w,
+                                label: idx < 6 ? `${idx + 1}구` : "보너스",
+                              }),
+                            );
+                            const sorted = [...items].sort(
+                              (a, b) => b.val - a.val,
+                            );
+
+                            return sorted.map((item, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  background: "rgba(255,255,255,0.02)",
+                                  padding: "8px 10px",
+                                  borderRadius: "6px",
+                                  border: "var(--border-glass)",
+                                  fontSize: "0.72rem",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    color: "rgba(255,255,255,0.85)",
+                                    fontFamily: "monospace",
+                                  }}
+                                >
+                                  {item.label}
+                                </span>
+                                <span
+                                  style={{
+                                    color: "#c084fc",
+                                    fontWeight: "bold",
+                                    opacity:
+                                      0.35 + (item.val / maxWeight) * 0.65,
+                                  }}
+                                >
+                                  {item.val}%
+                                </span>
+                              </div>
+                            ));
+                          })()}
                         </div>
                       </div>
                     </div>
-                  )}
-
-                  {/* Weights breakdown */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "rgba(255,255,255,0.6)",
-                        marginBottom: "8px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      설정된 가중치 조합
-                    </div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(3, 1fr)",
-                        gap: "8px",
-                      }}
-                    >
-                      {(() => {
-                        const weights = Array.isArray(prediction.weights) ? prediction.weights : [];
-                        const maxWeight = Math.max(...weights, 1);
-                        const items = weights.map((w: number, idx: number) => ({
-                          val: w,
-                          label: idx < 6 ? `${idx + 1}구` : "보너스",
-                        }));
-                        const sorted = [...items].sort((a, b) => b.val - a.val);
-
-                        return sorted.map((item, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              background: "rgba(255,255,255,0.02)",
-                              padding: "8px 10px",
-                              borderRadius: "6px",
-                              border: "var(--border-glass)",
-                              fontSize: "0.72rem",
-                              display: "flex",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <span
-                              style={{
-                                color: "rgba(255,255,255,0.85)",
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              {item.label}
-                            </span>
-                            <span
-                              style={{
-                                color: "#c084fc",
-                                fontWeight: "bold",
-                                opacity: 0.35 + (item.val / maxWeight) * 0.65,
-                              }}
-                            >
-                              {item.val}%
-                            </span>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>,
-        document.body
-      )}
+                  );
+                })()}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
