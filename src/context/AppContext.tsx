@@ -31,7 +31,6 @@ interface AppContextType {
   setSubmitting: (val: boolean) => void;
   checkIpStatus: () => Promise<void>;
   handleMasterKeySubmit: (key: string) => Promise<boolean>;
-  handleRequestAccess: () => Promise<void>;
   loadAdminData: (key: string) => Promise<{
     pendingIps: string[];
     allowedIps: string[];
@@ -39,9 +38,6 @@ interface AppContextType {
   }>;
   handleAdminLogout: () => void;
   appendAuth: (url: string) => string;
-  showIpRequestModal: boolean;
-  setShowIpRequestModal: (val: boolean) => void;
-  handleEnterAsGuest: () => void;
   hasUnsavedWeights: boolean;
   setHasUnsavedWeights: (val: boolean) => void;
   showUnsavedModal: boolean;
@@ -49,6 +45,7 @@ interface AppContextType {
   unsavedActionTarget: (() => void) | null;
   setUnsavedActionTarget: (val: (() => void) | null) => void;
   isSystemAnalyzing: boolean;
+  setIsSystemAnalyzing: (val: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -60,9 +57,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<boolean>(false);
   const [clientIp, setClientIp] = useState<string>("");
   const [visitorId, setVisitorId] = useState<string>("");
-
-  // Guest IP Request Modal state
-  const [showIpRequestModal, setShowIpRequestModal] = useState<boolean>(false);
 
   // Unsaved weights warning states
   const [hasUnsavedWeights, setHasUnsavedWeights] = useState<boolean>(false);
@@ -91,7 +85,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Helper to append Master Key if present
   const appendAuth = useCallback((url: string) => {
-    const mk = localStorage.getItem("user_mk");
+    const mk = sessionStorage.getItem("mk") || localStorage.getItem("mk");
     if (!mk) return url;
     const separator = url.includes("?") ? "&" : "?";
     return `${url}${separator}mk=${encodeURIComponent(mk)}`;
@@ -102,13 +96,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await Promise.resolve();
       setLoading(true);
-      const savedUserMk = localStorage.getItem("user_mk");
-      const isGuestMode = localStorage.getItem("visitor_id") === "guest";
+      const savedMk = localStorage.getItem("mk");
 
-      // If a Master Key is saved locally, prioritize verifying it first
-      if (savedUserMk) {
+      // If a Master Key is saved locally, verify it
+      if (savedMk) {
         const adminRes = await fetch(
-          `${API_BASE_URL}/check-ip?mk=${encodeURIComponent(savedUserMk)}`,
+          `${API_BASE_URL}/check-ip?mk=${encodeURIComponent(savedMk)}`,
         );
         const adminData = await adminRes.json();
         const adminResult = adminData.data || adminData;
@@ -124,11 +117,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setLoading(false);
           return;
         } else {
-          localStorage.removeItem("user_mk");
+          localStorage.removeItem("mk");
         }
       }
 
-      // Default IP check
+      // Default IP check (always allowed now)
       const res = await fetch(`${API_BASE_URL}/check-ip`, {
         credentials: "include",
       });
@@ -140,56 +133,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       const result = data.data || data;
 
-      if (result.allowed) {
-        setAllowed(true);
-        setPending(false);
-        setClientIp(result.ip || "unknown");
-        if (result.visitorId) {
-          setVisitorId(result.visitorId);
-          localStorage.setItem("visitor_id", result.visitorId);
-        }
-      } else {
-        if (isGuestMode) {
-          setAllowed(true);
-          setPending(!!result.pending);
-          setClientIp(result.ip || "unknown");
-          setVisitorId("guest");
-        } else {
-          setAllowed(false);
-          setPending(!!result.pending);
-          setClientIp(result.ip || "unknown");
-          if (result.visitorId) {
-            setVisitorId(result.visitorId);
-            localStorage.setItem("visitor_id", result.visitorId);
-          }
-        }
+      setAllowed(true);
+      setPending(false);
+      setClientIp(result.ip || "unknown");
+      if (result.visitorId) {
+        setVisitorId(result.visitorId);
+        localStorage.setItem("visitor_id", result.visitorId);
       }
     } catch (err: unknown) {
       console.error(err);
-      const isGuestMode = localStorage.getItem("visitor_id") === "guest";
-      if (isGuestMode) {
-        setAllowed(true);
-        setPending(false);
-        setClientIp("알 수 없음");
-        setVisitorId("guest");
-      } else {
-        setAllowed(false);
-        setPending(false);
-        setClientIp("알 수 없음");
-        const error = err as Error;
-        showAlert("error", error.message || "서버 연결에 실패했습니다.");
-      }
+      setAllowed(true);
+      setPending(false);
+      setClientIp("알 수 없음");
+      const error = err as Error;
+      showAlert("error", error.message || "서버 연결에 실패했습니다.");
     } finally {
       setLoading(false);
     }
   }, [showAlert]);
-
-  // Enter as guest
-  const handleEnterAsGuest = useCallback(() => {
-    localStorage.setItem("visitor_id", "guest");
-    setVisitorId("guest");
-    setAllowed(true);
-  }, []);
 
   // Register/Verify Master Key
   const handleMasterKeySubmit = useCallback(
@@ -215,7 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           );
         }
 
-        localStorage.setItem("user_mk", key);
+        localStorage.setItem("mk", key);
         showAlert(
           "success",
           "Master key 인증 성공! 플랫폼 접근 권한이 부여되었습니다.",
@@ -239,77 +200,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [checkIpStatus, showAlert],
   );
 
-  // Request Access
-  const handleRequestAccess = useCallback(async () => {
-    try {
-      setSubmitting(true);
-      setAlert(null);
-      const res = await fetch(`${API_BASE_URL}/request-access`, {
-        method: "POST",
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(
-          data.message || "접근 승인 대기열 등록에 실패했습니다.",
-        );
-      }
-
-      showAlert(
-        "success",
-        "관리자 승인 대기열에 성공적으로 등록되었습니다. 승인을 기다려주세요.",
-      );
-      setPending(true);
-      setTimeout(() => {
-        checkIpStatus();
-      }, 1500);
-    } catch (err: unknown) {
-      console.error(err);
-      const error = err as Error;
-      showAlert("error", error.message || "요청 처리 중 오류가 발생했습니다.");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [checkIpStatus, showAlert]);
-
-  // Load administrative data from Redis
+  // Load administrative data from Redis (Simplifying to only verify Master Key)
   const loadAdminData = useCallback(async (key: string) => {
     try {
       setLoading(true);
       setAdminError("");
 
-      const pendingRes = await fetch(
-        `${API_BASE_URL}/admin/whitelist/pending?rmk=${encodeURIComponent(key)}`,
+      const res = await fetch(
+        `${API_BASE_URL}/check-ip?mk=${encodeURIComponent(key)}`,
       );
-      if (!pendingRes.ok) throw new Error("승인 대기열 로드 실패");
-      const pendingData = await pendingRes.json();
+      if (!res.ok) throw new Error("마스터키 인증 실패");
+      const data = await res.json();
+      const result = data.data || data;
 
-      const allowedRes = await fetch(
-        `${API_BASE_URL}/admin/whitelist/read?t=ip&rmk=${encodeURIComponent(key)}`,
-      );
-      if (!allowedRes.ok) throw new Error("화이트리스트 로드 실패");
-      const allowedData = await allowedRes.json();
+      if (!result.allowed) {
+        throw new Error("올바르지 않은 마스터키입니다.");
+      }
 
-      const mksRes = await fetch(
-        `${API_BASE_URL}/admin/whitelist/read?t=mk&rmk=${encodeURIComponent(key)}`,
-      );
-      if (!mksRes.ok) throw new Error("Master key 목록 로드 실패");
-      const mksData = await mksRes.json();
-
-      sessionStorage.setItem("rmk", key);
+      sessionStorage.setItem("mk", key);
       setIsAdminMode(true);
-      setShowAdminModal(false);
 
       return {
-        pendingIps: (pendingData.data || pendingData || []) as string[],
-        allowedIps: (allowedData.data || allowedData || []) as string[],
-        masterKeys: (mksData.data || mksData || []) as string[],
+        pendingIps: [],
+        allowedIps: [],
+        masterKeys: [],
       };
     } catch (err: unknown) {
       console.error(err);
       const errMsg = "관리자 키 인증 실패 또는 데이터를 불러오지 못했습니다.";
       setAdminError(errMsg);
-      sessionStorage.removeItem("rmk");
+      sessionStorage.removeItem("mk");
       setIsAdminMode(false);
       throw err;
     } finally {
@@ -319,7 +239,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Logout from Admin
   const handleAdminLogout = useCallback(() => {
-    sessionStorage.removeItem("rmk");
+    sessionStorage.removeItem("mk");
     setIsAdminMode(false);
     setAdminKey("");
     checkIpStatus();
@@ -329,7 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     checkIpStatus();
 
-    const savedKey = sessionStorage.getItem("rmk");
+    const savedKey = sessionStorage.getItem("mk");
     if (savedKey) {
       setIsAdminMode(true);
       loadAdminData(savedKey).catch(() => {});
@@ -418,13 +338,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSubmitting,
         checkIpStatus,
         handleMasterKeySubmit,
-        handleRequestAccess,
         loadAdminData,
         handleAdminLogout,
         appendAuth,
-        showIpRequestModal,
-        setShowIpRequestModal,
-        handleEnterAsGuest,
         hasUnsavedWeights,
         setHasUnsavedWeights,
         showUnsavedModal,
@@ -432,6 +348,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         unsavedActionTarget,
         setUnsavedActionTarget,
         isSystemAnalyzing,
+        setIsSystemAnalyzing,
       }}
     >
       {children}

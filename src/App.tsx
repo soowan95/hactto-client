@@ -4,107 +4,46 @@ import {
   Routes,
   Route,
   Navigate,
-  useNavigate,
-  useLocation,
 } from "react-router-dom";
 import "./App.css";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Layout } from "./components/Layout";
-import { Gate } from "./pages/Gate";
-import { Welcome } from "./pages/Welcome";
 import { SystemAnalyzing } from "./pages/SystemAnalyzing";
 import { Home } from "./pages/Dashboard/Home";
 import { Search } from "./pages/Dashboard/Search";
 import { Stats } from "./pages/Dashboard/Stats";
 import { Generate } from "./pages/Dashboard/Generate";
 import { History } from "./pages/Dashboard/History";
-import { System } from "./pages/Dashboard/System";
-import { AdminDashboard } from "./pages/Admin/AdminDashboard";
 import { AdminLoginModal } from "./components/AdminLoginModal";
-
-function GuestProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { visitorId, setShowIpRequestModal } = useApp();
-
-  useEffect(() => {
-    if (visitorId === "guest") {
-      setShowIpRequestModal(true);
-    }
-  }, [visitorId, setShowIpRequestModal]);
-
-  if (visitorId === "guest") {
-    return <Navigate to="/home" replace />;
-  }
-  return <>{children}</>;
-}
 
 function AppContent() {
   const {
-    isAdminMode,
     showAdminModal,
     setShowAdminModal,
-    adminKey,
-    setAdminKey,
-    adminError,
     setAdminError,
     setAlert,
-    loadAdminData,
+    isSystemAnalyzing,
   } = useApp();
-
-  const navigate = useNavigate();
 
   // Global hotkey listener for Admin Auth modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isModifier = e.metaKey || e.ctrlKey;
       // Trigger on Cmd+Shift+H (Mac) or Ctrl+Shift+H (Windows)
-      if (isModifier && e.shiftKey && e.key.toLowerCase() === "h") {
+      if (isModifier && e.shiftKey && e.code === "KeyH") {
         e.preventDefault();
-        const savedKey = sessionStorage.getItem("rmk");
-        if (savedKey && !isAdminMode) {
-          loadAdminData(savedKey)
-            .then(() => {
-              navigate("/admin");
-            })
-            .catch(() => {});
-        } else {
-          setShowAdminModal(!showAdminModal);
-          setAdminError("");
-          setAlert(null);
-        }
+        setShowAdminModal(!showAdminModal);
+        setAdminError("");
+        setAlert(null);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
 
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    isAdminMode,
-    showAdminModal,
-    navigate,
-    loadAdminData,
-    setAdminError,
-    setAlert,
-    setShowAdminModal,
-  ]);
+  }, [showAdminModal, setAdminError, setAlert, setShowAdminModal]);
 
-  const handleAdminAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminKey.trim()) {
-      setAdminError("관리자 키를 입력하세요.");
-      return;
-    }
-    try {
-      await loadAdminData(adminKey);
-      navigate("/admin");
-    } catch {
-      // Error is set in context
-    }
-  };
-
-  const location = useLocation();
-  const { isSystemAnalyzing } = useApp();
-
-  if (isSystemAnalyzing && location.pathname !== "/admin") {
+  if (isSystemAnalyzing) {
     return <SystemAnalyzing />;
   }
 
@@ -117,53 +56,16 @@ function AppContent() {
       </div>
 
       <Routes>
-        {/* Gate page for pending/denied IPs */}
-        <Route path="/gate" element={<Gate />} />
-
-        {/* Welcome screen for allowed IPs */}
-        <Route path="/" element={<Welcome />} />
-
-        {/* Admin Dashboard page */}
-        <Route
-          path="/admin"
-          element={
-            sessionStorage.getItem("rmk") ? (
-              <AdminDashboard />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+        {/* Welcome screen is bypassed, redirect to home */}
+        <Route path="/" element={<Navigate to="/home" replace />} />
 
         {/* User Service Dashboard pages wrapped in Layout */}
         <Route element={<Layout />}>
           <Route path="/home" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/stats" element={<Stats />} />
-          <Route
-            path="/generate"
-            element={
-              <GuestProtectedRoute>
-                <Generate />
-              </GuestProtectedRoute>
-            }
-          />
-          <Route
-            path="/history"
-            element={
-              <GuestProtectedRoute>
-                <History />
-              </GuestProtectedRoute>
-            }
-          />
-          <Route
-            path="/system"
-            element={
-              <GuestProtectedRoute>
-                <System />
-              </GuestProtectedRoute>
-            }
-          />
+          <Route path="/generate" element={<Generate />} />
+          <Route path="/history" element={<History />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Route>
       </Routes>
@@ -171,14 +73,10 @@ function AppContent() {
       {/* Secret admin login modal */}
       <AdminLoginModal
         isOpen={showAdminModal}
-        adminKey={adminKey}
-        setAdminKey={setAdminKey}
-        adminError={adminError}
         onClose={() => {
           setShowAdminModal(false);
           setAdminError("");
         }}
-        onSubmit={handleAdminAuthSubmit}
       />
     </>
   );

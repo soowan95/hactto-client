@@ -142,7 +142,12 @@ export function Generate() {
         if (!res.ok) throw new Error("알고리즘 목록을 가져오지 못했습니다.");
         const data = await res.json();
         const result = data.data || data;
-        const types = (result.types || []) as string[];
+        let types: string[] = [];
+        if (Array.isArray(result)) {
+          types = result.map((r: any) => r.type);
+        } else if (result && Array.isArray(result.types)) {
+          types = result.types;
+        }
         setAlgorithmTypes(types);
         if (types.length > 0) {
           setGeneratingAlgo(types[0]);
