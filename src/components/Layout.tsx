@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Alert } from "./Alert";
 import { IpRequestModal } from "./IpRequestModal";
+import { UnsavedChangesModal } from "./UnsavedChangesModal";
 
 export function Layout() {
   const {
@@ -16,6 +17,10 @@ export function Layout() {
     visitorId,
     showIpRequestModal,
     setShowIpRequestModal,
+    hasUnsavedWeights,
+    showUnsavedModal,
+    setShowUnsavedModal,
+    setUnsavedActionTarget,
   } = useApp();
 
   const navigate = useNavigate();
@@ -49,6 +54,48 @@ export function Layout() {
   const hasAdminAccess = !!(
     localStorage.getItem("user_mk") || sessionStorage.getItem("rmk")
   );
+
+  const handleTabClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    path: string,
+    isRestricted: boolean = false,
+  ) => {
+    if (isRestricted && visitorId === "guest") {
+      e.preventDefault();
+      setShowIpRequestModal(true);
+      return;
+    }
+
+    if (hasUnsavedWeights) {
+      e.preventDefault();
+      setUnsavedActionTarget(() => () => {
+        navigate(path);
+      });
+      setShowUnsavedModal(true);
+    }
+  };
+
+  const handleGoBack = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const performGoBack = async () => {
+      if (visitorId === "guest") {
+        localStorage.removeItem("visitor_id");
+        await checkIpStatus();
+        navigate("/gate");
+      } else {
+        navigate("/");
+      }
+    };
+
+    if (hasUnsavedWeights) {
+      e.preventDefault();
+      setUnsavedActionTarget(() => () => {
+        performGoBack();
+      });
+      setShowUnsavedModal(true);
+    } else {
+      performGoBack();
+    }
+  };
 
   const layoutWidth = hasAdminAccess ? "820px" : "720px";
 
@@ -129,7 +176,7 @@ export function Layout() {
             )}
             <button
               className="btn-neon btn-outline"
-              onClick={() => navigate("/")}
+              onClick={handleGoBack}
               style={{ width: "auto", padding: "6px 12px", fontSize: "0.8rem" }}
             >
               돌아가기
@@ -246,6 +293,7 @@ export function Layout() {
         >
           <NavLink
             to="/home"
+            onClick={(e) => handleTabClick(e, "/home", false)}
             className={({ isActive }) =>
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
@@ -254,6 +302,7 @@ export function Layout() {
           </NavLink>
           <NavLink
             to="/search"
+            onClick={(e) => handleTabClick(e, "/search", false)}
             className={({ isActive }) =>
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
@@ -262,6 +311,7 @@ export function Layout() {
           </NavLink>
           <NavLink
             to="/stats"
+            onClick={(e) => handleTabClick(e, "/stats", false)}
             className={({ isActive }) =>
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
@@ -270,12 +320,7 @@ export function Layout() {
           </NavLink>
           <NavLink
             to="/generate"
-            onClick={(e) => {
-              if (visitorId === "guest") {
-                e.preventDefault();
-                setShowIpRequestModal(true);
-              }
-            }}
+            onClick={(e) => handleTabClick(e, "/generate", true)}
             className={({ isActive }) =>
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
@@ -284,12 +329,7 @@ export function Layout() {
           </NavLink>
           <NavLink
             to="/history"
-            onClick={(e) => {
-              if (visitorId === "guest") {
-                e.preventDefault();
-                setShowIpRequestModal(true);
-              }
-            }}
+            onClick={(e) => handleTabClick(e, "/history", true)}
             className={({ isActive }) =>
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
@@ -299,12 +339,7 @@ export function Layout() {
           {hasAdminAccess && (
             <NavLink
               to="/system"
-              onClick={(e) => {
-                if (visitorId === "guest") {
-                  e.preventDefault();
-                  setShowIpRequestModal(true);
-                }
-              }}
+              onClick={(e) => handleTabClick(e, "/system", true)}
               className={({ isActive }) =>
                 `tab-btn ${isActive ? "active-tab" : ""}`
               }
@@ -337,6 +372,12 @@ export function Layout() {
       <IpRequestModal
         isOpen={showIpRequestModal}
         onClose={() => setShowIpRequestModal(false)}
+      />
+
+      {/* Unsaved Changes Confirmation Modal */}
+      <UnsavedChangesModal
+        isOpen={showUnsavedModal}
+        onClose={() => setShowUnsavedModal(false)}
       />
     </div>
   );

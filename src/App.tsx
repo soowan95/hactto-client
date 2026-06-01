@@ -5,12 +5,14 @@ import {
   Route,
   Navigate,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import "./App.css";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Layout } from "./components/Layout";
 import { Gate } from "./pages/Gate";
 import { Welcome } from "./pages/Welcome";
+import { SystemAnalyzing } from "./pages/SystemAnalyzing";
 import { Home } from "./pages/Dashboard/Home";
 import { Search } from "./pages/Dashboard/Search";
 import { Stats } from "./pages/Dashboard/Stats";
@@ -98,6 +100,13 @@ function AppContent() {
       // Error is set in context
     }
   };
+
+  const location = useLocation();
+  const { isSystemAnalyzing } = useApp();
+
+  if (isSystemAnalyzing && location.pathname !== "/admin") {
+    return <SystemAnalyzing />;
+  }
 
   return (
     <>
