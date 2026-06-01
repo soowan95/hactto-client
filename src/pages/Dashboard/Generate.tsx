@@ -7,7 +7,7 @@ import {
   getAlgorithmDescription,
 } from "../../utils";
 
-const DEFAULT_WEIGHTS = [25, 20, 15, 15, 10, 10, 5];
+const DEFAULT_WEIGHTS = [25, 20, 18, 15, 12, 10];
 
 export function Generate() {
   const {
@@ -50,7 +50,7 @@ export function Generate() {
         if (res.ok) {
           const data = await res.json();
           const result = data.data || data;
-          if (Array.isArray(result)) {
+          if (Array.isArray(result) && result.length === 6) {
             setWeights(result);
             setInitialWeights(result);
             setWeightStatus("saved");
@@ -625,7 +625,7 @@ export function Generate() {
                       width: "60px",
                     }}
                   >
-                    {index < 6 ? index + 1 + "번째" : "보너스"} 자리
+                    {index + 1}번째 자리
                   </span>
                   <input
                     type="range"
@@ -778,33 +778,6 @@ export function Generate() {
                 {num}
               </div>
             ))}
-            {generatedNumbers.length === 7 && (
-              <>
-                <div
-                  style={{
-                    fontSize: "1.2rem",
-                    fontWeight: "bold",
-                    color: "var(--text-muted)",
-                    margin: "0 4px",
-                    animation: "fadeIn 0.4s ease-out",
-                    animationDelay: "600ms",
-                    animationFillMode: "both",
-                  }}
-                >
-                  +
-                </div>
-                <div
-                  className="lotto-ball lotto-ball-pop"
-                  style={{
-                    ...getBallStyle(generatedNumbers[6]),
-                    animationDelay: "700ms",
-                    margin: "0 4px",
-                  }}
-                >
-                  {generatedNumbers[6]}
-                </div>
-              </>
-            )}
           </div>
           <p
             style={{

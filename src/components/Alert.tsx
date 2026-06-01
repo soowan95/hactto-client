@@ -8,7 +8,7 @@ export function Alert({ alert }: AlertProps) {
   if (!alert) return null;
 
   return (
-    <div className={`alert alert-${alert.type}`} style={{ marginTop: "20px" }}>
+    <div className={`alert alert-${alert.type}`}>
       <span>{alert.type === "success" ? "✓" : "⚠"}</span>
       <div>{alert.text}</div>
     </div>

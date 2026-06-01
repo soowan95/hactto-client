@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -76,6 +76,7 @@ function AppContent() {
         onClose={() => {
           setShowAdminModal(false);
           setAdminError("");
+          setAlert(null);
         }}
       />
     </>

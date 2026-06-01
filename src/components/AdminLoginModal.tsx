@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { API_BASE_URL, parseAlgorithmName } from "../utils";
+import { Alert } from "./Alert";
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     loadAdminData,
     showAlert,
     appendAuth,
+    alert,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<"algo" | "system">("algo");
@@ -327,6 +329,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
               </div>
             </div>
           )}
+          <Alert alert={alert} />
         </div>
 
         {/* Modal Footer */}
