@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { API_BASE_URL } from "../../utils";
 import { LottoBalls } from "../../components/LottoBall";
+import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
 import type { WinningNumber } from "../../types";
 
 export function Home() {
@@ -63,10 +64,17 @@ export function Home() {
             제 {latestWinningNumber.episode}회 로또 당첨번호
           </div>
           <LottoBalls numbers={latestWinningNumber.numbers} />
+
+          <LottoAnalysisCard
+            numbers={latestWinningNumber.numbers}
+            analysis={latestWinningNumber.analysis}
+            title="당첨 번호 심층 분석 정보"
+          />
+
           <p
             style={{
-              marginTop: "16px",
-              fontSize: "0.85rem",
+              marginTop: "20px",
+              fontSize: "0.82rem",
               color: "var(--text-muted)",
             }}
           >

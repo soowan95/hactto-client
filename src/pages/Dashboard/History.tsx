@@ -2,12 +2,21 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { API_BASE_URL, parseAlgorithmName } from "../../utils";
 import { LottoBalls } from "../../components/LottoBall";
+import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
 import type { HistoryItem } from "../../types";
 
 export function History() {
   const { visitorId, appendAuth, showAlert } = useApp();
   const [historyList, setHistoryList] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedItems, setExpandedItems] = useState<Record<string | number, boolean>>({});
+
+  const toggleExpand = (id: string | number) => {
+    setExpandedItems((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   useEffect(() => {
     const fetchHistoryList = async () => {
@@ -73,6 +82,7 @@ export function History() {
         ) : (
           historyList.map((hist) => {
             const hasResult = hist.matchResult !== null;
+            const isExpanded = !!expandedItems[hist.id];
             return (
               <div key={hist.id} className="history-card">
                 <div
@@ -134,7 +144,30 @@ export function History() {
                     numbers={hist.numbers}
                     matchResult={hist.matchResult}
                   />
+                  <div style={{ marginTop: "8px", textAlign: "right" }}>
+                    <button
+                      onClick={() => toggleExpand(hist.id)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--primary-cyan)",
+                        fontSize: "0.75rem",
+                        cursor: "pointer",
+                        padding: "4px 0",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {isExpanded ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
+                    </button>
+                  </div>
                 </div>
+
+                {isExpanded && (
+                  <LottoAnalysisCard
+                    numbers={hist.numbers}
+                    analysis={hist.analysis}
+                  />
+                )}
 
                 {hasResult && hist.matchResult && (
                   <div

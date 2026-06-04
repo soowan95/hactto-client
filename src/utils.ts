@@ -8,6 +8,7 @@ export const ALGORITHM_NAMES: Record<string, string> = {
   TOTAL_MAX_COUNT: "전체 열번호"
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const parseAlgorithmName = (type: any): string => {
   if (!type) return "";
   const name = typeof type === "object" ? type.type : type;
@@ -15,9 +16,8 @@ export const parseAlgorithmName = (type: any): string => {
   return ALGORITHM_NAMES[name] || name;
 };
 
-export const getAlgorithmDescription = (
-  type: any,
-): string => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getAlgorithmDescription = (type: any): string => {
   if (!type) return "";
   const name = typeof type === "object" ? type.type : type;
   if (!name) return "";

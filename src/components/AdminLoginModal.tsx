@@ -36,6 +36,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   // Reset local auth state and key whenever the modal opens
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsAuthSuccessLocal(false);
       setAdminKey("");
       setAdminError("");
@@ -66,8 +67,10 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
   useEffect(() => {
     if (isOpen && isAuthSuccessLocal && activeTab === "algo") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchAlgorithms();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isAuthSuccessLocal, activeTab]);
 
   if (!isOpen) return null;
@@ -138,7 +141,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const handleAdminAnalyze = async () => {
     setAnalyzingReliability(true);
     try {
-      const res = await fetch(appendAuth(`${API_BASE_URL}/reliability/analyze`), {
+      const res = await fetch(appendAuth(`${API_BASE_URL}/Analysis/analyze`), {
         method: "POST",
       });
       if (!res.ok) throw new Error("알고리즘 신뢰도 배치 분석에 실패했습니다.");

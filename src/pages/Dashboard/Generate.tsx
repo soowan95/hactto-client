@@ -8,6 +8,9 @@ import {
   getAlgorithmDescription,
 } from "../../utils";
 
+import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
+import type { LottoAnalysis } from "../../types";
+
 const DEFAULT_WEIGHTS = [25, 20, 18, 15, 12, 10];
 
 export function Generate() {
@@ -23,6 +26,9 @@ export function Generate() {
   const [algorithmTypes, setAlgorithmTypes] = useState<string[]>([]);
   const [generatingAlgo, setGeneratingAlgo] = useState("MIN_COUNT");
   const [generatedNumbers, setGeneratedNumbers] = useState<number[] | null>(
+    null,
+  );
+  const [generatedAnalysis, setGeneratedAnalysis] = useState<LottoAnalysis | null>(
     null,
   );
   const [generating, setGenerating] = useState(false);
@@ -208,6 +214,7 @@ export function Generate() {
   const handleGeneratePrediction = async () => {
     setGenerating(true);
     setGeneratedNumbers(null);
+    setGeneratedAnalysis(null);
     try {
       const isWeightsAlgo = generatingAlgo.endsWith("WEIGHTS");
       const res = await fetch(
@@ -232,6 +239,7 @@ export function Generate() {
       const data = await res.json();
       const result = data.data || data;
       setGeneratedNumbers(result.numbers as number[]);
+      setGeneratedAnalysis(result.analysis as LottoAnalysis || null);
       showAlert("success", "새로운 당첨 예측 번호가 생성되었습니다.");
     } catch (err) {
       const error = err as Error;
@@ -870,7 +878,7 @@ export function Generate() {
             <div
               className="glass-card admin-modal-content"
               style={{
-                maxWidth: "520px",
+                maxWidth: "600px",
                 padding: "32px",
                 textAlign: "center",
                 position: "relative",
@@ -1005,10 +1013,17 @@ export function Generate() {
                 ))}
               </div>
 
+              <LottoAnalysisCard
+                numbers={generatedNumbers}
+                analysis={generatedAnalysis}
+                title="예측 번호 심층 분석"
+              />
+
               <p
                 style={{
                   fontSize: "0.78rem",
                   color: "var(--text-muted)",
+                  marginTop: "20px",
                   marginBottom: "24px",
                   lineHeight: "1.5",
                 }}
