@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext";
 import { API_BASE_URL } from "../../utils";
 import { LottoBalls } from "../../components/LottoBall";
+import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
 import type { WinningNumber } from "../../types";
 
 export function Search() {
@@ -14,6 +16,9 @@ export function Search() {
   const [loading, setLoading] = useState(true);
   const [allWinningNumbers, setAllWinningNumbers] = useState<WinningNumber[]>(
     [],
+  );
+  const [selectedEpisode, setSelectedEpisode] = useState<WinningNumber | null>(
+    null,
   );
 
   useEffect(() => {
@@ -123,13 +128,22 @@ export function Search() {
 
       {searchResult && (
         <div
+          onClick={() => setSelectedEpisode(searchResult)}
           style={{
             background: "rgba(0, 240, 255, 0.03)",
             border: "1px solid rgba(0, 240, 255, 0.15)",
             padding: "20px",
             borderRadius: "16px",
             marginBottom: "24px",
+            cursor: "pointer",
+            transition: "background 0.2s",
           }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = "rgba(0, 240, 255, 0.06)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "rgba(0, 240, 255, 0.03)")
+          }
         >
           <div
             style={{
@@ -137,9 +151,15 @@ export function Search() {
               fontWeight: "bold",
               color: "var(--primary-cyan)",
               marginBottom: "14px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            제 {searchResult.episode}회 당첨번호 결과
+            <span>제 {searchResult.episode}회 당첨번호 결과</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              상세 분석 보기 🔍
+            </span>
           </div>
           <LottoBalls numbers={searchResult.numbers} />
         </div>
@@ -154,7 +174,7 @@ export function Search() {
           color: "var(--text-muted)",
         }}
       >
-        최근 당첨 번호 내역
+        최근 당첨 번호 내역 (회차 클릭 시 상세 분석)
       </h3>
       <div className="scroll-y-container">
         <table className="admin-table">
@@ -185,11 +205,15 @@ export function Search() {
               </tr>
             ) : (
               allWinningNumbers.slice(0, 20).map((wn) => (
-                <tr key={wn.episode}>
+                <tr
+                  key={wn.episode}
+                  onClick={() => setSelectedEpisode(wn)}
+                  style={{ cursor: "pointer" }}
+                >
                   <td
                     style={{ fontWeight: "bold", color: "var(--primary-cyan)" }}
                   >
-                    {wn.episode}회
+                    {wn.episode}회 🔍
                   </td>
                   <td>
                     <LottoBalls numbers={wn.numbers} />
@@ -200,6 +224,111 @@ export function Search() {
           </tbody>
         </table>
       </div>
+
+      {selectedEpisode &&
+        createPortal(
+          <div className="admin-modal-overlay">
+            <div
+              className="glass-card admin-modal-content"
+              style={{
+                maxWidth: "600px",
+                padding: "30px",
+                textAlign: "left",
+                position: "relative",
+                border: "1px solid rgba(0, 240, 255, 0.25)",
+                boxShadow:
+                  "0 20px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.1)",
+              }}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedEpisode(null)}
+                style={{
+                  position: "absolute",
+                  top: "20px",
+                  right: "20px",
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-dim)",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "var(--text-main)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "var(--text-dim)")
+                }
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+
+              <h2
+                className="access-title"
+                style={{
+                  fontSize: "1.25rem",
+                  color: "var(--text-main)",
+                  marginBottom: "4px",
+                }}
+              >
+                제 {selectedEpisode.episode}회 당첨 결과 상세 분석
+              </h2>
+              <p
+                style={{
+                  fontSize: "0.82rem",
+                  color: "var(--text-dim)",
+                  marginBottom: "20px",
+                }}
+              >
+                당첨 번호 조합 및 통계 데이터를 바탕으로 분석 정보를 제공합니다.
+              </p>
+
+              <LottoAnalysisCard
+                numbers={selectedEpisode.numbers}
+                analysis={selectedEpisode.analysis}
+              />
+
+              <button
+                type="button"
+                className="btn-submit"
+                style={{
+                  width: "100%",
+                  height: "42px",
+                  marginTop: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background:
+                    "linear-gradient(135deg, var(--primary-cyan) 0%, #00b0ff 100%)",
+                  boxShadow: "0 4px 15px rgba(0, 240, 255, 0.25)",
+                  color: "#030712",
+                  fontWeight: 600,
+                  fontSize: "0.9rem",
+                }}
+                onClick={() => setSelectedEpisode(null)}
+              >
+                확인
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

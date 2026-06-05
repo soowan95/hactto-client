@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext";
 import { API_BASE_URL, parseAlgorithmName, getBallStyle } from "../../utils";
+import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
 
 export function Stats() {
   const { appendAuth, showAlert } = useApp();
@@ -50,6 +51,7 @@ export function Stats() {
     index: number;
   } | null>(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [clickedPointData, setClickedPointData] = useState<any | null>(null);
   const [clickedPointLoading, setClickedPointLoading] = useState(false);
 
@@ -59,7 +61,7 @@ export function Stats() {
     try {
       const res = await fetch(
         appendAuth(
-          `${API_BASE_URL}/reliability/best?episode=${episode}&algorithm=${algorithm}`,
+          `${API_BASE_URL}/Analysis/best?episode=${episode}&algorithm=${algorithm}`,
         ),
       );
       if (res.ok) {
@@ -80,6 +82,7 @@ export function Stats() {
 
   // Reset clicked details when algorithm or sub-tab changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setClickedPointData(null);
   }, [activeSubTab, selectedAlgorithm]);
 
@@ -89,7 +92,7 @@ export function Stats() {
       setOverviewLoading(true);
       try {
         const avgRes = await fetch(
-          appendAuth(`${API_BASE_URL}/reliability/averages`),
+          appendAuth(`${API_BASE_URL}/Analysis/averages`),
         );
         let leaderboardData = [];
         if (avgRes.ok) {
@@ -98,7 +101,7 @@ export function Stats() {
         }
 
         const countRes = await fetch(
-          appendAuth(`${API_BASE_URL}/reliability/upcoming-counts`),
+          appendAuth(`${API_BASE_URL}/Analysis/upcoming-counts`),
         );
         let upcomingData = [];
         if (countRes.ok) {
@@ -130,7 +133,7 @@ export function Stats() {
       setChampionLoading(true);
       try {
         const res = await fetch(
-          appendAuth(`${API_BASE_URL}/reliability/latest-best`),
+          appendAuth(`${API_BASE_URL}/Analysis/latest-best`),
         );
         if (res.ok) {
           const d = await res.json();
@@ -148,7 +151,7 @@ export function Stats() {
       setDetailLoading(true);
       try {
         const res = await fetch(
-          appendAuth(`${API_BASE_URL}/reliability/history?algorithm=${algo}`),
+          appendAuth(`${API_BASE_URL}/Analysis/history?algorithm=${algo}`),
         );
         if (res.ok) {
           const d = await res.json();
@@ -1509,7 +1512,7 @@ export function Stats() {
                 borderRadius: "24px",
                 padding: "28px 24px",
                 width: "100%",
-                maxWidth: "490px",
+                maxWidth: "600px",
                 position: "relative",
                 animation:
                   "modalFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
@@ -1869,6 +1872,16 @@ export function Stats() {
                               {winningNumbers[6] ?? 0}
                             </div>
                           </div>
+                        </div>
+                      )}
+
+                      {prediction.analysis && (
+                        <div style={{ marginBottom: "20px" }}>
+                          <LottoAnalysisCard
+                            numbers={predictionNumbers}
+                            analysis={prediction.analysis}
+                            title="예측 번호 심층 분석"
+                          />
                         </div>
                       )}
 

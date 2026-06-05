@@ -12,6 +12,7 @@ import { SystemAnalyzing } from "./pages/SystemAnalyzing";
 import { Home } from "./pages/Dashboard/Home";
 import { Search } from "./pages/Dashboard/Search";
 import { Stats } from "./pages/Dashboard/Stats";
+import { AnalysisCharts } from "./pages/Dashboard/AnalysisCharts";
 import { Generate } from "./pages/Dashboard/Generate";
 import { History } from "./pages/Dashboard/History";
 import { AdminLoginModal } from "./components/AdminLoginModal";
@@ -64,6 +65,7 @@ function AppContent() {
           <Route path="/home" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/analysis-charts" element={<AnalysisCharts />} />
           <Route path="/generate" element={<Generate />} />
           <Route path="/history" element={<History />} />
           <Route path="*" element={<Navigate to="/home" replace />} />

@@ -39,7 +39,7 @@ export function Layout() {
   return (
     <div
       className="access-container"
-      style={{ maxWidth: "820px", width: "100%" }}
+      style={{ maxWidth: "1080px", width: "100%" }}
     >
       <div
         className="glass-card dashboard-container"
@@ -121,6 +121,15 @@ export function Layout() {
             알고리즘 통계
           </NavLink>
           <NavLink
+            to="/analysis-charts"
+            onClick={(e) => handleTabClick(e, "/analysis-charts")}
+            className={({ isActive }) =>
+              `tab-btn ${isActive ? "active-tab" : ""}`
+            }
+          >
+            당첨통계 차트
+          </NavLink>
+          <NavLink
             to="/generate"
             onClick={(e) => handleTabClick(e, "/generate")}
             className={({ isActive }) =>
@@ -145,6 +154,7 @@ export function Layout() {
           style={{
             flex: 1,
             overflowY: "auto",
+            overflowX: "hidden",
             paddingRight: "8px",
             marginRight: "-8px",
             minHeight: 0,
