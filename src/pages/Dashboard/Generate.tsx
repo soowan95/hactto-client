@@ -1,17 +1,15 @@
 import {useEffect, useState} from "react";
 import {createPortal} from "react-dom";
-import {useNavigate} from "react-router-dom";
 import {useApp} from "../../context/AppContext";
 import {API_BASE_URL, getAlgorithmDescription, parseAlgorithmName} from "../../utils";
 
 import {LottoAnalysisCard} from "../../components/LottoAnalysisCard";
 import {PersonalAnalysisCard} from "../../components/PersonalAnalysisCard";
-import type {LottoAnalysis, PersonalAnalysis} from "../../types";
+import type {LottoAnalysis} from "../../types";
 
 const DEFAULT_WEIGHTS = [25, 20, 18, 15, 12, 10];
 
 export function Generate() {
-  const navigate = useNavigate();
   const {
     appendAuth,
     showAlert,
@@ -35,18 +33,21 @@ export function Generate() {
 
   // New states for personal prediction analysis
   const [activeSubTab, setActiveSubTab] = useState<"generate" | "analyze">("generate");
-  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+  const [selectedGames, setSelectedGames] = useState<number[][]>([[], [], [], [], []]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [analyzedResults, setAnalyzedResults] = useState<any[]>([]);
+  const [currentAnalysisIndex, setCurrentAnalysisIndex] = useState<number>(0);
+  const [savedPredictionIds, setSavedPredictionIds] = useState<Record<number, number>>({});
   const [analyzing, setAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<PersonalAnalysis | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [savedId, setSavedId] = useState<number | null>(null);
   const [latestEpisode, setLatestEpisode] = useState<number>(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
     const scrollContainer = document.querySelector(".scroll-y-container") as HTMLElement;
-    if (generatedNumbers || analysisResult || showWarningModal) {
+    if (generatedNumbers || analyzedResults.length > 0 || showWarningModal || showConfirmModal) {
       document.body.style.overflow = "hidden";
       if (scrollContainer) scrollContainer.style.overflowY = "hidden";
     } else {
@@ -57,7 +58,7 @@ export function Generate() {
       document.body.style.overflow = "";
       if (scrollContainer) scrollContainer.style.overflowY = "auto";
     };
-  }, [generatedNumbers, analysisResult, showWarningModal]);
+  }, [generatedNumbers, analyzedResults.length, showWarningModal, showConfirmModal]);
 
   // Fetch the latest episode on mount
   useEffect(() => {
@@ -115,8 +116,13 @@ export function Generate() {
       try {
         const res = await fetch(
           appendAuth(
-            `${API_BASE_URL}/personal-weights?visitorId=${visitorId}&algorithm=${generatingAlgo}`,
+            `${API_BASE_URL}/personal-weights?algorithm=${generatingAlgo}`,
           ),
+          {
+            headers: {
+              "x-visitor-id": visitorId,
+            },
+          },
         );
         if (res.ok) {
           const data = await res.json();
@@ -168,9 +174,9 @@ export function Generate() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-visitor-id": visitorId,
         },
         body: JSON.stringify({
-          visitorId: visitorId,
           algorithm: generatingAlgo,
           weights: weights,
         }),
@@ -261,12 +267,13 @@ export function Generate() {
       const isWeightsAlgo = generatingAlgo.endsWith("WEIGHTS");
       const res = await fetch(
         appendAuth(
-          `${API_BASE_URL}/algorithms/${generatingAlgo}/generate?visitorId=${visitorId}`,
+          `${API_BASE_URL}/algorithms/${generatingAlgo}/generate`,
         ),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-visitor-id": visitorId,
           },
           body: JSON.stringify(
             isWeightsAlgo
@@ -291,59 +298,89 @@ export function Generate() {
     }
   };
 
-  const handleNumberToggle = (num: number) => {
-    if (isSaving || analyzing || savedId) return;
-    setSelectedNumbers((prev) => {
-      setAnalysisResult(null);
-      setSavedId(null);
-      if (prev.includes(num)) {
-        return prev.filter((n) => n !== num);
+  const handleNumberToggleForGame = (gameIndex: number, num: number) => {
+    if (isSaving || analyzing) return;
+    setSelectedGames((prev) => {
+      const next = [...prev];
+      const current = next[gameIndex] || [];
+      if (current.includes(num)) {
+        next[gameIndex] = current.filter((n) => n !== num);
+      } else if (current.length < 6) {
+        next[gameIndex] = [...current, num].sort((a, b) => a - b);
       }
-      if (prev.length >= 6) return prev;
-      return [...prev, num].sort((a, b) => a - b);
+      return next;
     });
   };
 
-  const handleSemiAuto = () => {
-    const remaining = 6 - selectedNumbers.length;
+  const handleSemiAutoForGame = (gameIndex: number) => {
+    const currentSel = selectedGames[gameIndex] || [];
+    const remaining = 6 - currentSel.length;
     if (remaining <= 0) return;
 
     const pool = Array.from({ length: 45 }, (_, i) => i + 1)
-      .filter((n) => !selectedNumbers.includes(n));
+      .filter((n) => !currentSel.includes(n));
 
     for (let i = pool.length - 1; i > 0; i--) {
+      // eslint-disable-next-line react-hooks/purity
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
 
-    setSelectedNumbers((prev) =>
-      [...prev, ...pool.slice(0, remaining)].sort((a, b) => a - b)
-    );
-    setAnalysisResult(null);
-    setSavedId(null);
+    const completed = [...currentSel, ...pool.slice(0, remaining)].sort((a, b) => a - b);
+    setSelectedGames((prev) => {
+      const next = [...prev];
+      next[gameIndex] = completed;
+      return next;
+    });
   };
 
-  const handleAnalyze = async () => {
-    if (selectedNumbers.length !== 6) {
-      showAlert("error", "번호를 6개 선택해야 분석할 수 있습니다.");
+  const handleResetForGame = (gameIndex: number) => {
+    setSelectedGames((prev) => {
+      const next = [...prev];
+      next[gameIndex] = [];
+      return next;
+    });
+  };
+
+  const handleAnalyzeClick = () => {
+    const validGamesCount = selectedGames.filter((game) => game.length === 6).length;
+    if (validGamesCount === 0) {
+      showAlert("error", "최소 1개 이상의 게임에 6개 번호를 채워야 분석할 수 있습니다.");
       return;
     }
+    setShowConfirmModal(true);
+  };
+
+  const handlePerformAnalysis = async () => {
+    setShowConfirmModal(false);
     setAnalyzing(true);
-    setAnalysisResult(null);
-    setSavedId(null);
+    setAnalyzedResults([]);
+    setSavedPredictionIds({});
+    setCurrentAnalysisIndex(0);
+
     try {
-      const res = await fetch(appendAuth(`${API_BASE_URL}/personal-analysis`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prediction: selectedNumbers }),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "번호 분석에 실패했습니다.");
-      }
-      const data = await res.json();
-      setAnalysisResult(data.data || data);
-      showAlert("success", "번호 분석이 완료되었습니다.");
+      const validGames = selectedGames.filter((game) => game.length === 6);
+      const results = await Promise.all(
+        validGames.map(async (prediction) => {
+          const res = await fetch(appendAuth(`${API_BASE_URL}/personal-analysis`), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prediction }),
+          });
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || "번호 분석에 실패했습니다.");
+          }
+          const data = await res.json();
+          return {
+            numbers: prediction,
+            analysis: data.data || data,
+          };
+        }),
+      );
+
+      setAnalyzedResults(results);
+      showAlert("success", `${results.length}개의 예측 번호 분석이 완료되었습니다.`);
     } catch (err) {
       const error = err as Error;
       showAlert("error", error.message);
@@ -352,8 +389,9 @@ export function Generate() {
     }
   };
 
-  const handleSave = async () => {
-    if (selectedNumbers.length !== 6) return;
+  const handleSaveCurrent = async () => {
+    const current = analyzedResults[currentAnalysisIndex];
+    if (!current) return;
     setIsSaving(true);
     try {
       const res = await fetch(appendAuth(`${API_BASE_URL}/personal-predictions`), {
@@ -364,7 +402,7 @@ export function Generate() {
         },
         body: JSON.stringify({
           episode: latestEpisode + 1,
-          prediction: selectedNumbers,
+          prediction: current.numbers,
         }),
       });
       if (!res.ok) {
@@ -372,12 +410,12 @@ export function Generate() {
         throw new Error(errData.message || "예측 번호 저장에 실패했습니다.");
       }
       const data = await res.json();
-      setSavedId((data.data || data).id || 9999);
-      showAlert("success", "예측번호가 저장되었습니다!");
-      setTimeout(() => {
-        setAnalysisResult(null);
-        navigate("/history", { state: { defaultTab: "personal" } });
-      }, 1000);
+      const savedId = (data.data || data).id || 9999;
+      setSavedPredictionIds((prev) => ({
+        ...prev,
+        [currentAnalysisIndex]: savedId,
+      }));
+      showAlert("success", `${currentAnalysisIndex + 1}번째 예측번호가 저장되었습니다!`);
     } catch (err) {
       const error = err as Error;
       showAlert("error", error.message);
@@ -392,349 +430,658 @@ export function Generate() {
       { id: "analyze", label: "예측번호 분석" },
     ] as const;
 
+    const validGamesCount = selectedGames.filter((game) => game.length === 6).length;
+
     return (
       <div
         style={{
-          display: "inline-flex",
-          background: "rgba(255, 255, 255, 0.03)",
-          border: "1px solid rgba(255, 255, 255, 0.06)",
-          padding: "4px",
-          borderRadius: "10px",
-          marginBottom: "24px",
-          gap: "2px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "12px",
+          width: "100%",
           flexWrap: "wrap",
+          gap: "12px",
         }}
       >
-        {tabs.map((tab) => {
-          const isActive = activeSubTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id)}
-              style={{
-                background: isActive
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "transparent",
-                border: "none",
-                color: isActive ? "var(--text-main)" : "var(--text-muted)",
-                fontFamily: "var(--font-family)",
-                fontWeight: isActive ? "600" : "500",
-                fontSize: "0.85rem",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                transition: "var(--transition-fast)",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.color = "var(--text-main)";
-                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.color = "var(--text-muted)";
-                  e.currentTarget.style.background = "transparent";
-                }
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+        <div
+          style={{
+            display: "inline-flex",
+            background: "rgba(255, 255, 255, 0.03)",
+            border: "1px solid rgba(255, 255, 255, 0.06)",
+            padding: "4px",
+            borderRadius: "10px",
+            gap: "2px",
+          }}
+        >
+          {tabs.map((tab) => {
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                style={{
+                  background: isActive
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "transparent",
+                  border: "none",
+                  color: isActive ? "var(--text-main)" : "var(--text-muted)",
+                  fontFamily: "var(--font-family)",
+                  fontWeight: isActive ? "600" : "500",
+                  fontSize: "0.85rem",
+                  padding: "8px 14px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  transition: "var(--transition-fast)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = "var(--text-main)";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = "var(--text-muted)";
+                    e.currentTarget.style.background = "transparent";
+                  }
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {activeSubTab === "analyze" && (
+          <button
+            onClick={handleAnalyzeClick}
+            disabled={validGamesCount === 0 || analyzing || isSaving}
+            className="btn-submit"
+            style={{
+              width: "180px",
+              height: "38px",
+              fontSize: "0.85rem",
+              background:
+                validGamesCount === 0
+                  ? "var(--bg-input)"
+                  : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
+              color: validGamesCount === 0 ? "var(--text-dim)" : "#ffffff",
+              boxShadow: validGamesCount === 0 ? "none" : "0 4px 12px var(--primary-purple-glow)",
+              cursor: validGamesCount === 0 ? "not-allowed" : "pointer",
+              borderRadius: "8px",
+              border: "none",
+              fontWeight: "bold",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {analyzing ? "분석 중..." : "선택 번호 분석하기"}
+          </button>
+        )}
       </div>
     );
   };
 
   const renderAnalyze = () => {
     return (
-      <div>
-        <p
-          className="access-desc"
-          style={{ fontSize: "0.88rem", marginBottom: "24px" }}
-        >
-          직접 원하는 예측 번호 조합을 수동으로 입력하여 분석하고 저장할 수 있습니다. 
-          반자동 기능을 사용하여 일부만 정하고 나머지를 무작위로 채울 수도 있습니다.
-        </p>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            padding: "20px 0",
-            marginBottom: "16px",
-          }}
-        >
-          {/* Lotto Ticket Paper Slip */}
-          <div
-            style={{
-              width: "280px",
-              background: "#faf8f2",
-              border: "1px solid #e0d9c3",
-              borderTop: "8px solid #c62828",
-              borderRadius: "4px",
-              padding: "24px 16px 16px 16px",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255,255,255,0.5)",
-              color: "#3e2723",
-              fontFamily: "var(--font-family), monospace",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Pink sidebar line pattern like a real ticket */}
-            <div style={{ position: "absolute", left: "6px", top: 0, bottom: 0, borderLeft: "1px dashed rgba(198, 40, 40, 0.2)" }} />
-            <div style={{ position: "absolute", right: "6px", top: 0, bottom: 0, borderLeft: "1px dashed rgba(198, 40, 40, 0.2)" }} />
-
-            {/* Header Text */}
-            <div style={{ textAlign: "center", marginBottom: "16px", fontSize: "0.95rem", fontWeight: "bold", color: "#c62828", letterSpacing: "1px" }}>
-              HACTTO 6/45
-            </div>
-
-            {/* Numbers Grid */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "stretch",
+          gap: "10px",
+          padding: "10px 0",
+          width: "100%",
+          flexWrap: "wrap",
+        }}
+      >
+        {selectedGames.map((selectedNumbers, gameIndex) => {
+          return (
             <div
+              key={gameIndex}
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(7, 1fr)",
-                gap: "12px 6px",
-                marginBottom: "24px",
-                padding: "4px",
-              }}
-            >
-              {Array.from({ length: 45 }, (_, i) => i + 1).map((num) => {
-                const isSelected = selectedNumbers.includes(num);
-                const isDisabled = !isSelected && selectedNumbers.length >= 6;
-                return (
-                  <div
-                    key={num}
-                    onClick={() => !isDisabled && handleNumberToggle(num)}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      height: "40px",
-                      position: "relative",
-                      cursor: isDisabled ? "not-allowed" : "pointer",
-                      opacity: isDisabled ? 0.4 : 1,
-                      userSelect: "none",
-                    }}
-                  >
-                     {/* Number Box with Vertical Brackets style */}
-                    <div
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        borderTop: "1.5px solid rgba(198, 40, 40, 0.5)",
-                        borderBottom: "1.5px solid rgba(198, 40, 40, 0.5)",
-                        borderLeft: "none",
-                        borderRight: "none",
-                        position: "relative",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.85rem",
-                        fontWeight: "bold",
-                        color: "#c62828",
-                        background: "rgba(198, 40, 40, 0.02)",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      {/* Corner ticks for vertical bracket effect */}
-                      <div style={{ position: "absolute", top: 0, left: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
-                      <div style={{ position: "absolute", top: 0, right: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
-                      <div style={{ position: "absolute", bottom: 0, left: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
-                      <div style={{ position: "absolute", bottom: 0, right: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
-                      {num}
-                    </div>
-
-                    {/* Black Computer Sign Pen Stroke */}
-                    {isSelected && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          width: "6px",
-                          height: "30px",
-                          background: "#1c1c1c",
-                          borderRadius: "1px",
-                          transform: "rotate(12deg)",
-                          opacity: 0.9,
-                          boxShadow: "0 0 1px #000",
-                          pointerEvents: "none",
-                        }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Bottom Section similar to the image */}
-            <div
-              style={{
-                borderTop: "1px dashed rgba(0, 0, 0, 0.15)",
-                paddingTop: "12px",
+                width: "180px",
+                height: "400px",
+                background: "#faf8f2",
+                border: "1px solid #e0d9c3",
+                borderTop: "6px solid #c62828",
+                borderRadius: "4px",
+                padding: "16px 12px 12px 12px",
+                boxShadow: "0 6px 15px rgba(0, 0, 0, 0.35)",
+                color: "#3e2723",
+                fontFamily: "monospace",
+                position: "relative",
+                overflow: "hidden",
+                flexShrink: 0,
                 display: "flex",
                 flexDirection: "column",
-                gap: "10px",
+                justifyContent: "space-between",
               }}
             >
-              {/* Auto / Semi-Auto Section */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#c62828" }}>
-                  자동 및 반자동 선택
-                </span>
-                <button
-                  onClick={handleSemiAuto}
-                  disabled={selectedNumbers.length === 6 || isSaving || analyzing || !!savedId}
+              {/* Pink sidebar line pattern */}
+              <div style={{ position: "absolute", left: "4px", top: 0, bottom: 0, borderLeft: "1px dashed rgba(198, 40, 40, 0.15)" }} />
+              <div style={{ position: "absolute", right: "4px", top: 0, bottom: 0, borderLeft: "1px dashed rgba(198, 40, 40, 0.15)" }} />
+
+              <div>
+                {/* Header Text */}
+                <div style={{ textAlign: "center", marginBottom: "10px", fontSize: "0.78rem", fontWeight: "bold", color: "#c62828", letterSpacing: "0.5px" }}>
+                  HACTTO - GAME {String.fromCharCode(65 + gameIndex)}
+                </div>
+
+                {/* Numbers Grid */}
+                <div
                   style={{
-                    background: selectedNumbers.length === 6 ? "#ccc" : "#c62828",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "2px",
-                    padding: "4px 10px",
-                    fontSize: "0.7rem",
-                    fontWeight: "bold",
-                    cursor: selectedNumbers.length === 6 ? "not-allowed" : "pointer",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(7, 1fr)",
+                    gap: "4px 8px",
+                    marginBottom: "0px",
+                    padding: "2px",
                   }}
                 >
-                  선택
-                </button>
+                  {Array.from({ length: 45 }, (_, i) => i + 1).map((num) => {
+                    const isSelected = selectedNumbers.includes(num);
+                    const isDisabled = !isSelected && selectedNumbers.length >= 6;
+                    return (
+                      <div
+                        key={num}
+                        onClick={() => !isDisabled && handleNumberToggleForGame(gameIndex, num)}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "32px",
+                          position: "relative",
+                          cursor: isDisabled ? "not-allowed" : "pointer",
+                          opacity: isDisabled ? 0.35 : 1,
+                          userSelect: "none",
+                        }}
+                      >
+                        {/* Number Box */}
+                        <div
+                          style={{
+                            width: "14px",
+                            height: "26px",
+                            borderTop: "1px solid rgba(198, 40, 40, 0.4)",
+                            borderBottom: "1px solid rgba(198, 40, 40, 0.4)",
+                            position: "relative",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.62rem",
+                            fontWeight: "bold",
+                            color: "#c62828",
+                            background: "rgba(198, 40, 40, 0.02)",
+                          }}
+                        >
+                          <div style={{ position: "absolute", top: 0, left: 0, width: "1px", height: "2px", background: "rgba(198, 40, 40, 0.4)" }} />
+                          <div style={{ position: "absolute", top: 0, right: 0, width: "1px", height: "2px", background: "rgba(198, 40, 40, 0.4)" }} />
+                          <div style={{ position: "absolute", bottom: 0, left: 0, width: "1px", height: "2px", background: "rgba(198, 40, 40, 0.4)" }} />
+                          <div style={{ position: "absolute", bottom: 0, right: 0, width: "1px", height: "2px", background: "rgba(198, 40, 40, 0.4)" }} />
+                          {num}
+                        </div>
+
+                        {/* Computer Sign Pen Stroke */}
+                        {isSelected && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              width: "3px",
+                              height: "27px",
+                              background: "#1c1c1c",
+                              borderRadius: "1px",
+                              transform: "rotate(12deg)",
+                              opacity: 0.9,
+                              pointerEvents: "none",
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Reset Section */}
+              {/* Bottom Section inside the Ticket */}
               <div
                 style={{
+                  borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
+                  paddingTop: "8px",
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  flexDirection: "column",
+                  gap: "6px",
                 }}
               >
-                <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#555" }}>
-                  선택 초기화
-                </span>
-                <button
-                  onClick={() => {
-                    setSelectedNumbers([]);
-                    setAnalysisResult(null);
-                    setSavedId(null);
-                  }}
-                  disabled={selectedNumbers.length === 0}
+                {/* Auto / Semi-Auto Section */}
+                <div
                   style={{
-                    background: selectedNumbers.length === 0 ? "#ccc" : "#3e2723",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "2px",
-                    padding: "4px 10px",
-                    fontSize: "0.7rem",
-                    fontWeight: "bold",
-                    cursor: selectedNumbers.length === 0 ? "not-allowed" : "pointer",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
-                  취소
-                </button>
+                  <span style={{ fontSize: "0.68rem", fontWeight: "bold", color: "#c62828" }}>
+                    반자동 채우기
+                  </span>
+                  <button
+                    onClick={() => handleSemiAutoForGame(gameIndex)}
+                    disabled={selectedNumbers.length === 6 || isSaving || analyzing}
+                    style={{
+                      background: selectedNumbers.length === 6 ? "#ccc" : "#c62828",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "2px",
+                      padding: "2px 6px",
+                      fontSize: "0.62rem",
+                      fontWeight: "bold",
+                      cursor: selectedNumbers.length === 6 ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    자동
+                  </button>
+                </div>
+
+                {/* Reset Section */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "0.68rem", fontWeight: "bold", color: "#555" }}>
+                    초기화
+                  </span>
+                  <button
+                    onClick={() => handleResetForGame(gameIndex)}
+                    disabled={selectedNumbers.length === 0}
+                    style={{
+                      background: selectedNumbers.length === 0 ? "#ccc" : "#3e2723",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "2px",
+                      padding: "2px 6px",
+                      fontSize: "0.62rem",
+                      fontWeight: "bold",
+                      cursor: selectedNumbers.length === 0 ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    리셋
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })}
 
-        {/* Analyze button positioned under the paper slip */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: "12px", marginBottom: "24px" }}>
-          <button
-            onClick={handleAnalyze}
-            disabled={selectedNumbers.length !== 6 || analyzing || isSaving}
-            className="btn-submit"
-            style={{
-              width: "280px",
-              height: "44px",
-              fontSize: "0.9rem",
-              background:
-                selectedNumbers.length !== 6
-                  ? "var(--bg-input)"
-                  : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
-              color: selectedNumbers.length !== 6 ? "var(--text-dim)" : "#ffffff",
-              boxShadow: selectedNumbers.length !== 6 ? "none" : "0 4px 15px var(--primary-purple-glow)",
-              cursor: selectedNumbers.length !== 6 ? "not-allowed" : "pointer",
-              borderRadius: "8px",
-            }}
-          >
-            {analyzing ? "분석 중..." : "선택 번호 분석하기"}
-          </button>
-        </div>
-
-        {analysisResult &&
+        {/* Portals for modals */}
+        {showConfirmModal &&
           createPortal(
-            <div className="admin-modal-overlay" style={{ overflow: "hidden" }}>
+            <div className="admin-modal-overlay" style={{ zIndex: 1100 }}>
+              <div
+                className="glass-card admin-modal-content"
+                style={{ maxWidth: "440px", textAlign: "center" }}
+              >
+                <div
+                  className="status-icon"
+                  style={{
+                    background: "rgba(189, 0, 255, 0.1)",
+                    border: "1px solid rgba(189, 0, 255, 0.4)",
+                    color: "var(--primary-purple)",
+                    marginBottom: "20px",
+                    display: "inline-flex",
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                </div>
+
+                <h2
+                  className="access-title"
+                  style={{ fontSize: "1.35rem", marginBottom: "8px", color: "var(--text-main)", fontWeight: "bold" }}
+                >
+                  예측 번호 분석
+                </h2>
+
+                <p
+                  className="access-desc"
+                  style={{
+                    fontSize: "0.88rem",
+                    marginBottom: "24px",
+                    lineHeight: "1.6",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  {selectedGames.filter((game) => game.length === 6).length}개 선택하여 총 {selectedGames.filter((game) => game.length === 6).length * 5} 개의 토큰이 사용됩니다. 분석하시겠습니까?
+                </p>
+
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  <button
+                    type="button"
+                    className="btn-submit"
+                    style={{
+                      flex: 1,
+                      height: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
+                      color: "#ffffff",
+                      boxShadow: "0 4px 15px var(--primary-purple-glow)",
+                      fontWeight: 600,
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                    onClick={handlePerformAnalysis}
+                  >
+                    분석하기
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-neon btn-outline"
+                    style={{
+                      flex: 1,
+                      padding: 0,
+                      height: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: 0,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setShowConfirmModal(false)}
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+
+        {analyzedResults.length > 0 &&
+          createPortal(
+            <div
+              className="admin-modal-overlay"
+              style={{
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 1000,
+              }}
+            >
+              {/* Pagination Left Button */}
+              <button
+                onClick={() => setCurrentAnalysisIndex((prev) => Math.max(0, prev - 1))}
+                disabled={currentAnalysisIndex === 0}
+                style={{
+                  position: "absolute",
+                  left: "calc(50% - 410px)",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "50%",
+                  background: currentAnalysisIndex === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.08)",
+                  color: currentAnalysisIndex === 0 ? "rgba(255,255,255,0.2)" : "var(--text-main)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  cursor: currentAnalysisIndex === 0 ? "not-allowed" : "pointer",
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1010,
+                  transition: "all 0.2s ease",
+                  boxShadow: currentAnalysisIndex === 0 ? "none" : "0 4px 12px rgba(0,0,0,0.5)",
+                }}
+              >
+                &lt;
+              </button>
+
+              {/* Main Content Box */}
               <div
                 style={{
                   maxWidth: "680px",
                   width: "90%",
-                  maxHeight: "85vh",
-                  overflowY: "auto",
+                  maxHeight: "90vh",
+                  overflowY: "hidden",
                   position: "relative",
                   margin: "0 auto",
-                  zIndex: 1000,
-                  paddingTop: "40px",
+                  zIndex: 1005,
+                  paddingTop: "24px",
                 }}
               >
-                <button
-                  onClick={() => {
-                    if (!savedId) {
-                      setShowWarningModal(true);
-                    } else {
-                      setAnalysisResult(null);
-                    }
-                  }}
+                {/* Header Row: Contains Result Indicator (Center) and Close Button (Right) */}
+                <div
                   style={{
-                    position: "absolute",
-                    top: "8px",
-                    right: "0px",
-                    background: "transparent",
-                    border: "none",
-                    color: "rgba(255, 255, 255, 0.6)",
-                    cursor: "pointer",
-                    padding: "4px",
                     display: "flex",
+                    justifyContent: "center",
                     alignItems: "center",
-                    gap: "6px",
-                    transition: "color 0.2s ease",
-                    zIndex: 100,
-                    fontSize: "0.9rem",
-                    fontWeight: "bold",
+                    position: "relative",
+                    marginBottom: "16px",
+                    width: "100%",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-main)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)")}
+                >
+                  <div style={{ color: "var(--text-muted)", fontSize: "0.95rem", fontWeight: "600" }}>
+                    결과 {currentAnalysisIndex + 1} / {analyzedResults.length}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const totalCount = analyzedResults.length;
+                      const savedCount = Object.keys(savedPredictionIds).length;
+                      if (savedCount < totalCount) {
+                        setShowWarningModal(true);
+                      } else {
+                        setAnalyzedResults([]);
+                      }
+                    }}
+                    style={{
+                      position: "absolute",
+                      right: "0px",
+                      background: "transparent",
+                      border: "none",
+                      color: "rgba(255, 255, 255, 0.6)",
+                      cursor: "pointer",
+                      padding: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "color 0.2s ease",
+                      zIndex: 110,
+                      fontSize: "0.9rem",
+                      fontWeight: "bold",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-main)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)")}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>닫기</span>
+                  </button>
+                </div>
+
+                <PersonalAnalysisCard
+                  numbers={analyzedResults[currentAnalysisIndex].numbers}
+                  analysis={analyzedResults[currentAnalysisIndex].analysis}
+                  onSave={handleSaveCurrent}
+                  isSaving={isSaving}
+                  isSaved={savedPredictionIds[currentAnalysisIndex] !== undefined}
+                />
+              </div>
+
+              {/* Pagination Right Button */}
+              <button
+                onClick={() => setCurrentAnalysisIndex((prev) => Math.min(analyzedResults.length - 1, prev + 1))}
+                disabled={currentAnalysisIndex === analyzedResults.length - 1}
+                style={{
+                  position: "absolute",
+                  right: "calc(50% - 410px)",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "50%",
+                  background: currentAnalysisIndex === analyzedResults.length - 1 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.08)",
+                  color: currentAnalysisIndex === analyzedResults.length - 1 ? "rgba(255,255,255,0.2)" : "var(--text-main)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  cursor: currentAnalysisIndex === analyzedResults.length - 1 ? "not-allowed" : "pointer",
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1010,
+                  transition: "all 0.2s ease",
+                  boxShadow: currentAnalysisIndex === analyzedResults.length - 1 ? "none" : "0 4px 12px rgba(0,0,0,0.5)",
+                }}
+              >
+                &gt;
+              </button>
+            </div>,
+            document.body,
+          )}
+
+        {showWarningModal &&
+          createPortal(
+            <div className="admin-modal-overlay" style={{ zIndex: 1100 }}>
+              <div
+                className="glass-card admin-modal-content"
+                style={{ maxWidth: "440px", textAlign: "center" }}
+              >
+                <div
+                  className="status-icon"
+                  style={{
+                    background: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid #ef4444",
+                    color: "#ef4444",
+                    marginBottom: "20px",
+                    display: "inline-flex",
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
                   <svg
-                    width="18"
-                    height="18"
+                    width="32"
+                    height="32"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2.5"
+                    strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
-                  <span>닫기</span>
-                </button>
+                </div>
 
-                <PersonalAnalysisCard
-                  numbers={selectedNumbers}
-                  analysis={analysisResult}
-                  onSave={handleSave}
-                  isSaving={isSaving}
-                  isSaved={!!savedId}
-                />
+                <h2
+                  className="access-title"
+                  style={{ fontSize: "1.35rem", marginBottom: "8px", color: "var(--text-main)", fontWeight: "bold" }}
+                >
+                  저장하지 않은 결과가 있습니다
+                </h2>
+
+                <p
+                  className="access-desc"
+                  style={{
+                    fontSize: "0.88rem",
+                    marginBottom: "24px",
+                    lineHeight: "1.6",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  저장하지 않은 분석결과 {analyzedResults.length - Object.keys(savedPredictionIds).length}개가 있습니다. 저장하지 않고 정말 종료하시겠습니까?
+                </p>
+
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  <button
+                    type="button"
+                    className="btn-submit"
+                    style={{
+                      flex: 1,
+                      height: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+                      color: "#ffffff",
+                      boxShadow: "0 4px 15px rgba(239, 68, 68, 0.3)",
+                      fontWeight: 600,
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setShowWarningModal(false);
+                      setAnalyzedResults([]);
+                    }}
+                  >
+                    종료하기 (저장 안 함)
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-neon btn-outline"
+                    style={{
+                      flex: 1,
+                      padding: 0,
+                      height: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: 0,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setShowWarningModal(false)}
+                  >
+                    머무르기
+                  </button>
+                </div>
               </div>
             </div>,
             document.body,
@@ -819,7 +1166,7 @@ export function Generate() {
                     }}
                     onClick={() => {
                       setShowWarningModal(false);
-                      setAnalysisResult(null);
+                      setAnalyzedResults([]);
                     }}
                   >
                     종료하기 (저장 안 함)
@@ -866,7 +1213,7 @@ export function Generate() {
         <>
           <p
             className="access-desc"
-            style={{ fontSize: "0.88rem", marginBottom: "24px" }}
+            style={{ fontSize: "0.88rem", marginBottom: "16px" }}
           >
             사용하고자 하는 하이퍼-파라미터 알고리즘을 선택한 후 번호를
             생성해주십시오. 결과는 고유 식별자(IP 및 브라우저 세션)를 통해 내
@@ -1493,7 +1840,18 @@ export function Generate() {
         </>
       )}
 
-      {activeSubTab === "analyze" && renderAnalyze()}
+      {activeSubTab === "analyze" && (
+        <>
+          <p
+            className="access-desc"
+            style={{ fontSize: "0.88rem", marginBottom: "16px" }}
+          >
+            직접 원하는 예측 번호 조합을 수동으로 입력하여 분석하고 저장할 수 있습니다. 
+            반자동 기능을 사용하여 일부만 정하고 나머지를 무작위로 채울 수도 있습니다.
+          </p>
+          {renderAnalyze()}
+        </>
+      )}
 
       {generatedNumbers &&
         createPortal(
