@@ -15,6 +15,7 @@ export function Stats() {
     "leaderboard" | "weekly" | "champion" | "detail"
   >("leaderboard");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [algorithmTypes, setAlgorithmTypes] = useState<any[]>([]);
 
   // Tab 1: Overview States

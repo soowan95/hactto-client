@@ -838,7 +838,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                           margin: "0 0 12px 0",
                         }}
                       >
-                        예측번호를 알고리즘별로 분석하는 배피를
+                        예측번호를 알고리즘별로 분석하는 배치를
                         실행합니다.
                       </p>
                       <button
@@ -848,7 +848,6 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         style={{
                           height: "36px",
                           width: "auto",
-                          padding: "0 20px",
                           fontSize: "0.82rem",
                         }}
                       >
