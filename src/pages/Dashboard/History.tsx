@@ -34,10 +34,14 @@ export function History() {
         
         const endpoint =
           activeSubTab === "algorithm"
-            ? `${API_BASE_URL}/algorithms/history?visitorId=${visitorId}`
-            : `${API_BASE_URL}/personal-predictions/history?visitorId=${visitorId}`;
+            ? `${API_BASE_URL}/algorithms/history`
+            : `${API_BASE_URL}/personal-predictions/history`;
 
-        const res = await fetch(appendAuth(endpoint));
+        const res = await fetch(appendAuth(endpoint), {
+          headers: {
+            "x-visitor-id": visitorId,
+          },
+        });
         if (!res.ok) throw new Error("당첨 이력을 가져오지 못했습니다.");
         const data = await res.json();
         setHistoryList(data.data || data || []);
