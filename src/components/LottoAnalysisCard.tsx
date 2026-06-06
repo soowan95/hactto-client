@@ -304,17 +304,15 @@ export function LottoAnalysisCard({
                     border: "1px solid rgba(255, 255, 255, 0.05)",
                     cursor: "pointer",
                     transition: "all 0.2s",
-                    color: "var(--text-muted)",
+                    color: "var(--text-main)",
                   }}
                   onPointerEnter={(e) => {
                     e.currentTarget.style.borderColor = "var(--primary-cyan)";
                     e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
-                    e.currentTarget.style.color = "var(--text-main)";
                   }}
                   onPointerLeave={(e) => {
                     e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
                     e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
-                    e.currentTarget.style.color = "var(--text-muted)";
                   }}
                 >
                   {d.label}: {d.val}개
@@ -343,17 +341,15 @@ export function LottoAnalysisCard({
                     border: "1px solid rgba(255, 255, 255, 0.05)",
                     cursor: "pointer",
                     transition: "all 0.2s",
-                    color: "var(--text-muted)",
+                    color: "var(--text-main)",
                   }}
                   onPointerEnter={(e) => {
                     e.currentTarget.style.borderColor = "var(--primary-cyan)";
                     e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
-                    e.currentTarget.style.color = "var(--text-main)";
                   }}
                   onPointerLeave={(e) => {
                     e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
                     e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
-                    e.currentTarget.style.color = "var(--text-muted)";
                   }}
                 >
                   끝자리 {item.digit}: {item.nums.join(",")} ({item.nums.length}개)
@@ -371,9 +367,9 @@ export function LottoAnalysisCard({
             </span>
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {[
-                { label: "HOT", color: "#f57f17", val: analysis.hot, type: "HOT" as const },
-                { label: "WARM", color: "#0288d1", val: analysis.warm, type: "WARM" as const },
-                { label: "COLD", color: "#616161", val: analysis.cold, type: "COLD" as const },
+                { label: "열번호 🔥", color: "#ef4444", val: analysis.hot, type: "HOT" as const },
+                { label: "온번호 🟠", color: "#f97316", val: analysis.warm, type: "WARM" as const },
+                { label: "냉번호 ❄️", color: "#3b82f6", val: analysis.cold, type: "COLD" as const },
               ]
                 .filter((t) => t.val > 0)
                 .map((t) => (
@@ -391,22 +387,17 @@ export function LottoAnalysisCard({
                       border: "1px solid rgba(255, 255, 255, 0.05)",
                       cursor: "pointer",
                       transition: "all 0.2s",
-                      color: "var(--text-muted)",
+                      color: "var(--text-main)",
                     }}
                     onPointerEnter={(e) => {
                       e.currentTarget.style.borderColor = t.color;
                       e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
-                      e.currentTarget.style.color = "var(--text-main)";
                     }}
                     onPointerLeave={(e) => {
                       e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
                       e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
-                      e.currentTarget.style.color = "var(--text-muted)";
                     }}
                   >
-                    <span style={{ color: t.color, fontWeight: "bold", marginRight: "4px" }}>
-                      ●
-                    </span>
                     {t.label}: {t.val}개
                   </span>
                 ))}

@@ -119,7 +119,7 @@ export function SystemAnalyzing() {
               style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}
             >
               분석이 완료되는 즉시 페이지가 자동으로 새로고침 없이 대시보드로
-              전환됩니다. 브라우저 창을 닫지 마시고 잠시만 기다려주세요.
+              전환됩니다.<br/>브라우저 창을 닫지 마시고 잠시만 기다려주세요.
             </div>
           </div>
         </div>
