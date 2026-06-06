@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext";
-import { API_BASE_URL, parseAlgorithmName, getBallStyle } from "../../utils";
+import {
+  API_BASE_URL,
+  parseAlgorithmName,
+  getAlgorithmDescription,
+  getBallStyle,
+} from "../../utils";
 import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
 
 export function Stats() {
@@ -9,6 +14,8 @@ export function Stats() {
   const [activeSubTab, setActiveSubTab] = useState<
     "leaderboard" | "weekly" | "champion" | "detail"
   >("leaderboard");
+
+  const [algorithmTypes, setAlgorithmTypes] = useState<any[]>([]);
 
   // Tab 1: Overview States
   const [leaderboard, setLeaderboard] = useState<
@@ -55,6 +62,22 @@ export function Stats() {
   const [clickedPointData, setClickedPointData] = useState<any | null>(null);
   const [clickedPointLoading, setClickedPointLoading] = useState(false);
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    const scrollContainer = document.querySelector(".scroll-y-container") as HTMLElement;
+    if (clickedPointLoading || clickedPointData) {
+      document.body.style.overflow = "hidden";
+      if (scrollContainer) scrollContainer.style.overflowY = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+    };
+  }, [clickedPointLoading, clickedPointData]);
+
   const handlePointClick = async (episode: number, algorithm: string) => {
     setClickedPointLoading(true);
     setClickedPointData(null);
@@ -91,6 +114,12 @@ export function Stats() {
     const fetchOverviewData = async () => {
       setOverviewLoading(true);
       try {
+        const algoRes = await fetch(appendAuth(`${API_BASE_URL}/algorithms`));
+        if (algoRes.ok) {
+          const d = await algoRes.json();
+          setAlgorithmTypes(d.data || d);
+        }
+
         const avgRes = await fetch(
           appendAuth(`${API_BASE_URL}/Analysis/averages`),
         );
@@ -361,7 +390,11 @@ export function Stats() {
                             fontSize: "0.95rem",
                           }}
                         >
-                          {parseAlgorithmName(item.algorithm)}
+                          {parseAlgorithmName(
+                            algorithmTypes.find(
+                              (a) => a.type === item.algorithm,
+                            ) || item.algorithm,
+                          )}
                         </span>
                       </div>
                       <span
@@ -504,7 +537,11 @@ export function Stats() {
                       <span
                         style={{ color: "var(--text-main)", fontWeight: 500 }}
                       >
-                        {parseAlgorithmName(c.algorithm)}
+                        {parseAlgorithmName(
+                          algorithmTypes.find(
+                            (a) => a.type === c.algorithm,
+                          ) || c.algorithm,
+                        )}
                       </span>
                       <span
                         style={{
@@ -685,9 +722,41 @@ export function Stats() {
           >
             <span>적용 알고리즘</span>
             <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>
-              {parseAlgorithmName(prediction.algorithm)}
+              {parseAlgorithmName(
+                algorithmTypes.find(
+                  (a) => a.type === prediction.algorithm,
+                ) || prediction.algorithm,
+              )}
             </span>
           </div>
+
+          {/* 적용 알고리즘 설명 박스 */}
+          {(() => {
+            const algoObj = algorithmTypes.find(
+              (a) => a.type === prediction.algorithm,
+            );
+            const desc = getAlgorithmDescription(
+              algoObj || prediction.algorithm,
+            );
+            if (!desc) return null;
+            return (
+              <div
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--text-muted)",
+                  background: "rgba(255, 255, 255, 0.01)",
+                  border: "1px dashed rgba(255, 255, 255, 0.06)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  marginBottom: "24px",
+                  textAlign: "left",
+                  lineHeight: "1.4",
+                }}
+              >
+                💡 <strong>알고리즘 설명:</strong> {desc}
+              </div>
+            );
+          })()}
 
           {/* Prediction Numbers (Lotto Balls) */}
           <div style={{ marginBottom: "24px", textAlign: "left" }}>
@@ -924,6 +993,20 @@ export function Stats() {
       );
     }
 
+    const getGroupKey = (type: string) => {
+      const parts = type.split("_");
+      return parts[parts.length - 1]; // 마지막 단어 (WEIGHTS, FREQUENCY 등)
+    };
+
+    const groupedLeaderboard: Record<string, typeof leaderboard> = {};
+    leaderboard.forEach((item) => {
+      const groupKey = getGroupKey(item.algorithm);
+      if (!groupedLeaderboard[groupKey]) {
+        groupedLeaderboard[groupKey] = [];
+      }
+      groupedLeaderboard[groupKey].push(item);
+    });
+
     const hasHistory = historyData.length > 0;
     const scores = historyData.map((h) => h.averageScore);
     const minScore = hasHistory ? Math.max(0, Math.min(...scores) - 5) : 0;
@@ -1043,10 +1126,26 @@ export function Stats() {
               cursor: "pointer",
             }}
           >
-            {leaderboard.map((item) => (
-              <option key={item.algorithm} value={item.algorithm}>
-                {parseAlgorithmName(item.algorithm)}
-              </option>
+            {Object.entries(groupedLeaderboard).map(([groupName, items]) => (
+              <optgroup
+                key={groupName}
+                label={
+                  groupName === "WEIGHTS"
+                    ? "가중치 분석형 (WEIGHTS)"
+                    : groupName === "FREQUENCY"
+                      ? "빈도 분석형 (FREQUENCY)"
+                      : groupName
+                }
+              >
+                {items.map((item) => (
+                  <option key={item.algorithm} value={item.algorithm}>
+                    {parseAlgorithmName(
+                      algorithmTypes.find((a) => a.type === item.algorithm) ||
+                        item.algorithm,
+                    )}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
@@ -1476,6 +1575,7 @@ export function Stats() {
               padding: "20px",
               boxSizing: "border-box",
               animation: "backdropFadeIn 0.3s ease-out forwards",
+              overflow: "hidden",
             }}
           >
             <style>{`

@@ -1,15 +1,10 @@
-import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { useApp } from "../../context/AppContext";
-import {
-  API_BASE_URL,
-  parseAlgorithmName,
-  getBallStyle,
-  getAlgorithmDescription,
-} from "../../utils";
+import {useEffect, useState} from "react";
+import {createPortal} from "react-dom";
+import {useApp} from "../../context/AppContext";
+import {API_BASE_URL, getAlgorithmDescription, parseAlgorithmName,} from "../../utils";
 
-import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
-import type { LottoAnalysis } from "../../types";
+import {LottoAnalysisCard} from "../../components/LottoAnalysisCard";
+import type {LottoAnalysis} from "../../types";
 
 const DEFAULT_WEIGHTS = [25, 20, 18, 15, 12, 10];
 
@@ -23,17 +18,32 @@ export function Generate() {
     setShowUnsavedModal,
     setUnsavedActionTarget,
   } = useApp();
-  const [algorithmTypes, setAlgorithmTypes] = useState<string[]>([]);
+  const [algorithmTypes, setAlgorithmTypes] = useState<any[]>([]);
   const [generatingAlgo, setGeneratingAlgo] = useState("MIN_COUNT");
   const [generatedNumbers, setGeneratedNumbers] = useState<number[] | null>(
     null,
   );
-  const [generatedAnalysis, setGeneratedAnalysis] = useState<LottoAnalysis | null>(
-    null,
-  );
+  const [generatedAnalysis, setGeneratedAnalysis] =
+    useState<LottoAnalysis | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    const scrollContainer = document.querySelector(".scroll-y-container") as HTMLElement;
+    if (generatedNumbers) {
+      document.body.style.overflow = "hidden";
+      if (scrollContainer) scrollContainer.style.overflowY = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+    };
+  }, [generatedNumbers]);
 
   // 알고리즘 유형 그룹화를 위한 헬퍼 함수 및 가공
   const getGroupKey = (type: string) => {
@@ -41,13 +51,14 @@ export function Generate() {
     return parts[parts.length - 1]; // 마지막 인덱스 (WEIGHTS, FREQUENCY 등)
   };
 
-  const groupedAlgorithms: Record<string, string[]> = {};
-  algorithmTypes.forEach((type) => {
+  const groupedAlgorithms: Record<string, any[]> = {};
+  algorithmTypes.forEach((algo) => {
+    const type = typeof algo === "object" ? algo.type : algo;
     const groupKey = getGroupKey(type);
     if (!groupedAlgorithms[groupKey]) {
       groupedAlgorithms[groupKey] = [];
     }
-    groupedAlgorithms[groupKey].push(type);
+    groupedAlgorithms[groupKey].push(algo);
   });
 
   // Personal Weight States
@@ -178,15 +189,17 @@ export function Generate() {
         if (!res.ok) throw new Error("알고리즘 목록을 가져오지 못했습니다.");
         const data = await res.json();
         const result = data.data || data;
-        let types: string[] = [];
+        let types: any[] = [];
         if (Array.isArray(result)) {
-          types = result.map((r: { type: string }) => r.type);
+          types = result;
         } else if (result && Array.isArray(result.types)) {
-          types = result.types;
+          types = result.types.map((t: string) => ({ type: t, complexity: 0 }));
         }
         setAlgorithmTypes(types);
         if (types.length > 0) {
-          setGeneratingAlgo(types[0]);
+          const firstType =
+            typeof types[0] === "object" ? types[0].type : types[0];
+          setGeneratingAlgo(firstType);
         }
       } catch (err) {
         const error = err as Error;
@@ -239,7 +252,7 @@ export function Generate() {
       const data = await res.json();
       const result = data.data || data;
       setGeneratedNumbers(result.numbers as number[]);
-      setGeneratedAnalysis(result.analysis as LottoAnalysis || null);
+      setGeneratedAnalysis((result.analysis as LottoAnalysis) || null);
       showAlert("success", "새로운 당첨 예측 번호가 생성되었습니다.");
     } catch (err) {
       const error = err as Error;
@@ -359,7 +372,12 @@ export function Generate() {
                     flexWrap: "wrap",
                   }}
                 >
-                  {parseAlgorithmName(generatingAlgo)}
+                  {parseAlgorithmName(
+                    algorithmTypes.find(
+                      (a) =>
+                        (typeof a === "object" ? a.type : a) === generatingAlgo,
+                    ) || generatingAlgo,
+                  )}
                   {generatingAlgo && (
                     <span
                       style={{
@@ -449,7 +467,9 @@ export function Generate() {
                             : groupName}
                       </div>
                       {/* 그룹 내 아이템 */}
-                      {types.map((type) => {
+                      {types.map((algo) => {
+                        const type =
+                          typeof algo === "object" ? algo.type : algo;
                         const badge = getBadgeDetails(type);
                         const isSelected = generatingAlgo === type;
                         return (
@@ -510,7 +530,7 @@ export function Generate() {
                                   : "var(--text-main)",
                               }}
                             >
-                              {parseAlgorithmName(type)}
+                              {parseAlgorithmName(algo)}
                             </span>
                             <span
                               style={{
@@ -595,7 +615,12 @@ export function Generate() {
                     lineHeight: "1.5",
                   }}
                 >
-                  {getAlgorithmDescription(generatingAlgo)}
+                  {getAlgorithmDescription(
+                    algorithmTypes.find(
+                      (a) =>
+                        (typeof a === "object" ? a.type : a) === generatingAlgo,
+                    ) || generatingAlgo,
+                  )}
                 </div>
               </div>
             </div>
@@ -874,7 +899,7 @@ export function Generate() {
 
       {generatedNumbers &&
         createPortal(
-          <div className="admin-modal-overlay">
+          <div className="admin-modal-overlay" style={{ overflow: "hidden" }}>
             <div
               className="glass-card admin-modal-content"
               style={{
@@ -885,6 +910,7 @@ export function Generate() {
                 border: "1px solid rgba(189, 0, 255, 0.25)",
                 boxShadow:
                   "0 20px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(189, 0, 255, 0.1)",
+                overflowY: "hidden",
               }}
             >
               {/* Close Button */}
@@ -973,45 +999,12 @@ export function Generate() {
                 style={{
                   fontSize: "0.85rem",
                   color: "var(--text-muted)",
-                  marginBottom: "24px",
+                  marginBottom: "8px",
                 }}
               >
                 [{parseAlgorithmName(generatingAlgo)}] 알고리즘을 통해 최적의
                 번호 조합을 추출했습니다.
               </p>
-
-              {/* Numbers Display Box */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: "10px",
-                  flexWrap: "wrap",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  padding: "20px",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
-                  marginBottom: "24px",
-                }}
-              >
-                {generatedNumbers.slice(0, 6).map((num, i) => (
-                  <div
-                    key={i}
-                    className="lotto-ball lotto-ball-pop"
-                    style={{
-                      ...getBallStyle(num),
-                      animationDelay: `${i * 100}ms`,
-                      width: "44px",
-                      height: "44px",
-                      fontSize: "1.1rem",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {num}
-                  </div>
-                ))}
-              </div>
 
               <LottoAnalysisCard
                 numbers={generatedNumbers}

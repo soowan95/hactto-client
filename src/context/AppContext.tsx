@@ -83,13 +83,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 6000);
   }, []);
 
-  // Helper to append Master Key if present
+  // Helper to append Master Key if present (No-op now since headers handle auth)
   const appendAuth = useCallback((url: string) => {
-    const mk = sessionStorage.getItem("mk") || localStorage.getItem("mk");
-    if (!mk) return url;
-    const separator = url.includes("?") ? "&" : "?";
-    return `${url}${separator}mk=${encodeURIComponent(mk)}`;
+    return url;
   }, []);
+
+  // Global Fetch Interceptor to inject x-visitor-id and x-master-key headers
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const vid = localStorage.getItem("visitor_id") || visitorId;
+      const mk = sessionStorage.getItem("mk") || localStorage.getItem("mk");
+
+      const newInit = { ...init };
+      const headers = { ...(init?.headers || {}) } as Record<string, string>;
+
+      if (vid) {
+        headers["x-visitor-id"] = vid;
+      }
+      if (mk) {
+        headers["x-master-key"] = mk;
+      }
+
+      newInit.headers = headers;
+      return originalFetch(input, newInit);
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [visitorId]);
 
   // Fetch initial IP status / verify saved master key
   const checkIpStatus = useCallback(async () => {
@@ -266,7 +289,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const res = await fetch(`${API_BASE_URL}/system/status`);
         if (res.ok) {
           const data = await res.json();
-          setIsSystemAnalyzing(!!data.inProgress);
+          const result = data.data || data;
+          setIsSystemAnalyzing(!!result.inProgress);
         }
       } catch (err) {
         console.error("시스템 상태 조회 실패:", err);

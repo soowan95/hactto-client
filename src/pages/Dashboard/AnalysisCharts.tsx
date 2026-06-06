@@ -43,11 +43,13 @@ export function AnalysisCharts() {
     // Filter out items without analysis data just in case
     const withAnalysis = rawData.filter(item => !!item.analysis);
     
-    // Limit to the chosen period (most recent N items)
-    const limited = period === "all" ? withAnalysis : withAnalysis.slice(0, period);
+    // Sort chronologically (oldest -> newest)
+    const sorted = [...withAnalysis].sort((a, b) => a.episode - b.episode);
     
-    // Reverse to sort chronologically (oldest -> newest)
-    return [...limited].reverse();
+    // Limit to the chosen period (most recent N items from the end)
+    const limited = period === "all" ? sorted : sorted.slice(-period);
+    
+    return limited;
   }, [rawData, period]);
 
   // Calculations for charts
@@ -139,10 +141,10 @@ export function AnalysisCharts() {
     );
   }
 
-  // Dimension helpers for line charts
-  const width = 500;
-  const height = 200;
-  const padding = { top: 20, right: 15, bottom: 25, left: 40 };
+  // Dimension helpers for line charts (Optimized for full-width 1000px display)
+  const width = 1000;
+  const height = 240;
+  const padding = { top: 25, right: 20, bottom: 30, left: 45 };
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
@@ -256,13 +258,13 @@ export function AnalysisCharts() {
         </div>
       </div>
 
-      {/* Grid of charts */}
+      {/* 100% Width Line Charts (Each occupies a full row) */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-          gap: "12px",
-          marginBottom: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          marginBottom: "16px",
         }}
       >
         {/* Chart 1: Sum Trendline */}
@@ -312,13 +314,34 @@ export function AnalysisCharts() {
             <text x={padding.left - 8} y={padding.top + 3} fill="var(--text-dim)" fontSize="9" textAnchor="end">{maxSum - 5}</text>
             <text x={padding.left - 8} y={padding.top + chartH + 3} fill="var(--text-dim)" fontSize="9" textAnchor="end">{minSum + 5}</text>
 
-            {/* X Labels (First & Last Episode) */}
-            <text x={padding.left} y={height - 5} fill="var(--text-dim)" fontSize="9" textAnchor="start">
-              {chartData[0]?.episode}회
-            </text>
-            <text x={width - padding.right} y={height - 5} fill="var(--text-dim)" fontSize="9" textAnchor="end">
-              {chartData[chartData.length - 1]?.episode}회
-            </text>
+            {/* X Axis Labels */}
+            {chartData.map((d, i) => {
+              const total = chartData.length;
+              const step = Math.max(1, Math.ceil(total / 12));
+              if (i % step === 0 || i === total - 1) {
+                if (i === total - 1 && (total - 1) % step < step / 2 && (total - 1) % step !== 0) {
+                  return null;
+                }
+                const p = getSumCoords(d.analysis!.sum, i, total);
+                let anchor: "start" | "end" | "middle" = "middle";
+                if (i === 0) anchor = "start";
+                else if (i === total - 1) anchor = "end";
+
+                return (
+                  <text
+                    key={i}
+                    x={p.x}
+                    y={height - 5}
+                    fill="var(--text-dim)"
+                    fontSize="9.5"
+                    textAnchor={anchor}
+                  >
+                    {d.episode}회
+                  </text>
+                );
+              }
+              return null;
+            })}
 
             {/* Area Path */}
             <path d={sumAreaD} fill="url(#sumGrad)" />
@@ -432,13 +455,34 @@ export function AnalysisCharts() {
             <text x={padding.left - 8} y={padding.top + 3} fill="var(--text-dim)" fontSize="9" textAnchor="end">{maxAc}</text>
             <text x={padding.left - 8} y={padding.top + chartH + 3} fill="var(--text-dim)" fontSize="9" textAnchor="end">{minAc}</text>
 
-            {/* X Labels */}
-            <text x={padding.left} y={height - 5} fill="var(--text-dim)" fontSize="9" textAnchor="start">
-              {chartData[0]?.episode}회
-            </text>
-            <text x={width - padding.right} y={height - 5} fill="var(--text-dim)" fontSize="9" textAnchor="end">
-              {chartData[chartData.length - 1]?.episode}회
-            </text>
+            {/* X Axis Labels */}
+            {chartData.map((d, i) => {
+              const total = chartData.length;
+              const step = Math.max(1, Math.ceil(total / 12));
+              if (i % step === 0 || i === total - 1) {
+                if (i === total - 1 && (total - 1) % step < step / 2 && (total - 1) % step !== 0) {
+                  return null;
+                }
+                const p = getAcCoords(d.analysis!.ac, i, total);
+                let anchor: "start" | "end" | "middle" = "middle";
+                if (i === 0) anchor = "start";
+                else if (i === total - 1) anchor = "end";
+
+                return (
+                  <text
+                    key={i}
+                    x={p.x}
+                    y={height - 5}
+                    fill="var(--text-dim)"
+                    fontSize="9.5"
+                    textAnchor={anchor}
+                  >
+                    {d.episode}회
+                  </text>
+                );
+              }
+              return null;
+            })}
 
             {/* Area Path */}
             <path d={acAreaD} fill="url(#acGrad)" />
@@ -499,6 +543,17 @@ export function AnalysisCharts() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Grid for smaller distribution charts */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          gap: "12px",
+          marginBottom: "12px",
+        }}
+      >
 
         {/* Chart 3: Decades Distribution */}
         <div
@@ -524,7 +579,7 @@ export function AnalysisCharts() {
                 "linear-gradient(90deg, #f093fb 0%, #f5576c 100%)", // 10s (Pink to Red)
                 "linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)", // 20s (Blue to Cyan)
                 "linear-gradient(90deg, #b1f2ff 0%, #bd00ff 100%)", // 30s (Purple to Neon)
-                "linear-gradient(90deg, #434343 0%, #000000 100%)", // 40s (Dark)
+                "linear-gradient(90deg, #11998e 0%, #38ef7d 100%)", // 40s (Green / Mint)
               ];
 
               const totalDecadeCounts = statsSummary.decades.reduce((sum, d) => sum + d.val, 0) || 1;
@@ -592,9 +647,9 @@ export function AnalysisCharts() {
             }}
           >
             {[
-              { type: "HOT", avg: statsSummary?.avgHot, color: "#f57f17", gradient: "linear-gradient(180deg, #ffab00 0%, #e65100 100%)" },
-              { type: "WARM", avg: statsSummary?.avgWarm, color: "#0288d1", gradient: "linear-gradient(180deg, #00b0ff 0%, #01579b 100%)" },
-              { type: "COLD", avg: statsSummary?.avgCold, color: "#9e9e9e", gradient: "linear-gradient(180deg, #e0e0e0 0%, #424242 100%)" },
+              { type: "HOT", label: "열번호 🔥", avg: statsSummary?.avgHot, color: "#ef4444", gradient: "linear-gradient(180deg, #ef4444 0%, #991b1b 100%)" },
+              { type: "WARM", label: "온번호 🟠", avg: statsSummary?.avgWarm, color: "#f97316", gradient: "linear-gradient(180deg, #f97316 0%, #c2410c 100%)" },
+              { type: "COLD", label: "냉번호 ❄️", avg: statsSummary?.avgCold, color: "#3b82f6", gradient: "linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)" },
             ].map(t => {
               const val = parseFloat(t.avg || "0");
               const heightPct = Math.min(100, Math.max(10, (val / 6) * 100)); // Max is 6 balls
@@ -606,7 +661,7 @@ export function AnalysisCharts() {
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    width: "60px",
+                    width: "70px",
                     gap: "8px",
                   }}
                 >
@@ -617,22 +672,22 @@ export function AnalysisCharts() {
                       width: "32px",
                       background: t.gradient,
                       borderRadius: "6px 6px 0 0",
-                      boxShadow: `0 0 10px rgba(${t.type === "HOT" ? "255,171,0" : t.type === "WARM" ? "0,176,255" : "158,158,158"}, 0.25)`,
+                      boxShadow: `0 0 10px rgba(${t.type === "HOT" ? "239,68,68" : t.type === "WARM" ? "249,115,22" : "59,130,246"}, 0.25)`,
                       transition: "height 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)",
                     }}
                   />
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "bold" }}>{t.type}</span>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "bold", whiteSpace: "nowrap" }}>{t.label}</span>
                 </div>
               );
             })}
           </div>
 
           <p style={{ fontSize: "0.74rem", color: "var(--text-dim)", lineHeight: "1.4", margin: 0 }}>
-            * <b>HOT:</b> 최근 5회차 이내 다득점 번호들
+            * <b>열번호 🔥:</b> 최근 5회차 이내 다득점 번호들
             <br />
-            * <b>WARM:</b> 최근 6~10회차 출현 이력이 있는 번호들
+            * <b>온번호 🟠:</b> 최근 6~10회차 출현 이력이 있는 번호들
             <br />
-            * <b>COLD:</b> 최근 10회차 이상 출현하지 않은 미출현 번호들
+            * <b>냉번호 ❄️:</b> 최근 10회차 이상 출현하지 않은 미출현 번호들
           </p>
         </div>
       </div>
@@ -660,6 +715,23 @@ export function AnalysisCharts() {
           <div style={{ position: "relative", width: "80px", height: "80px", flexShrink: 0 }}>
             <svg width="80" height="80" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="12" />
+              {/* Even (Cyan) Arc */}
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="transparent"
+                stroke="var(--primary-cyan)"
+                strokeWidth="12"
+                strokeDasharray="251.2"
+                strokeDashoffset={251.2 - (251.2 * (statsSummary?.evenPct || 50)) / 100}
+                transform={`rotate(${-90 + 360 * (statsSummary?.oddPct || 50) / 100} 50 50)`}
+                style={{
+                  transition: "transform 0.6s cubic-bezier(0.1, 0.8, 0.3, 1), stroke-dashoffset 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)",
+                  filter: "drop-shadow(0 0 4px rgba(0, 240, 255, 0.3))",
+                }}
+              />
+              {/* Odd (Purple) Arc */}
               <circle
                 cx="50"
                 cy="50"
@@ -669,7 +741,6 @@ export function AnalysisCharts() {
                 strokeWidth="12"
                 strokeDasharray="251.2"
                 strokeDashoffset={251.2 - (251.2 * (statsSummary?.oddPct || 50)) / 100}
-                strokeLinecap="round"
                 transform="rotate(-90 50 50)"
                 style={{
                   transition: "stroke-dashoffset 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)",

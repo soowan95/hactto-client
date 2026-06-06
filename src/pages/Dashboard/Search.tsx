@@ -21,6 +21,37 @@ export function Search() {
     null,
   );
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    const scrollContainer = document.querySelector(".scroll-y-container") as HTMLElement;
+    if (selectedEpisode) {
+      document.body.style.overflow = "hidden";
+      if (scrollContainer) scrollContainer.style.overflowY = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+    };
+  }, [selectedEpisode]);
+
+  const handleSelectEpisode = async (episode: number) => {
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/winning-numbers/${episode}`),
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const result = data.data || data;
+        setSelectedEpisode(result as WinningNumber);
+      }
+    } catch (err) {
+      console.error("Failed to fetch episode details:", err);
+    }
+  };
+
   useEffect(() => {
     const fetchAllWinningNumbers = async () => {
       try {
@@ -128,7 +159,7 @@ export function Search() {
 
       {searchResult && (
         <div
-          onClick={() => setSelectedEpisode(searchResult)}
+          onClick={() => handleSelectEpisode(searchResult.episode)}
           style={{
             background: "rgba(0, 240, 255, 0.03)",
             border: "1px solid rgba(0, 240, 255, 0.15)",
@@ -139,10 +170,10 @@ export function Search() {
             transition: "background 0.2s",
           }}
           onMouseEnter={(e) =>
-            (e.currentTarget.style.background = "rgba(0, 240, 255, 0.06)")
+              (e.currentTarget.style.background = "rgba(0, 240, 255, 0.06)")
           }
           onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "rgba(0, 240, 255, 0.03)")
+              (e.currentTarget.style.background = "rgba(0, 240, 255, 0.03)")
           }
         >
           <div
@@ -207,7 +238,7 @@ export function Search() {
               allWinningNumbers.slice(0, 20).map((wn) => (
                 <tr
                   key={wn.episode}
-                  onClick={() => setSelectedEpisode(wn)}
+                  onClick={() => handleSelectEpisode(wn.episode)}
                   style={{ cursor: "pointer" }}
                 >
                   <td
@@ -227,7 +258,7 @@ export function Search() {
 
       {selectedEpisode &&
         createPortal(
-          <div className="admin-modal-overlay">
+          <div className="admin-modal-overlay" style={{ overflow: "hidden" }}>
             <div
               className="glass-card admin-modal-content"
               style={{
@@ -238,6 +269,7 @@ export function Search() {
                 border: "1px solid rgba(0, 240, 255, 0.25)",
                 boxShadow:
                   "0 20px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.1)",
+                overflowY: "hidden",
               }}
             >
               {/* Close Button */}
