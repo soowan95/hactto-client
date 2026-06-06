@@ -136,7 +136,7 @@ export function Layout() {
               `tab-btn ${isActive ? "active-tab" : ""}`
             }
           >
-            예측번호 생성
+            예측번호 분석기
           </NavLink>
           <NavLink
             to="/history"

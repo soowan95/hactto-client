@@ -59,3 +59,48 @@ export interface HistoryItem {
   createdAt?: string;
   analysis?: LottoAnalysis | null;
 }
+
+export interface PairCount {
+  pair: [number, number];
+  count: number;
+}
+
+export interface PersonalAnalysis {
+  sum: number;
+  cnt0s: number;
+  cnt10s: number;
+  cnt20s: number;
+  cnt30s: number;
+  cnt40s: number;
+  sumLastDigits: number;
+  lastDigit0: number[];
+  lastDigit1: number[];
+  lastDigit2: number[];
+  lastDigit3: number[];
+  lastDigit4: number[];
+  lastDigit5: number[];
+  lastDigit6: number[];
+  lastDigit7: number[];
+  lastDigit8: number[];
+  lastDigit9: number[];
+  even: number;
+  odd: number;
+  hot: number;
+  warm: number;
+  cold: number;
+  low: number;
+  high: number;
+  ac: number;
+  consecutive: number[][];
+  pair: PairCount[];
+  prime: number;
+  composite: number;
+  mul3: number;
+  win1: number;
+  win2: number;
+  win3: number;
+  win4: number;
+  win5: number;
+  temperatures?: Record<number, "HOT" | "WARM" | "COLD">;
+}
+

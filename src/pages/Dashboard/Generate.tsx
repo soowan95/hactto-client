@@ -1,14 +1,17 @@
 import {useEffect, useState} from "react";
 import {createPortal} from "react-dom";
+import {useNavigate} from "react-router-dom";
 import {useApp} from "../../context/AppContext";
-import {API_BASE_URL, getAlgorithmDescription, parseAlgorithmName,} from "../../utils";
+import {API_BASE_URL, getAlgorithmDescription, parseAlgorithmName} from "../../utils";
 
 import {LottoAnalysisCard} from "../../components/LottoAnalysisCard";
-import type {LottoAnalysis} from "../../types";
+import {PersonalAnalysisCard} from "../../components/PersonalAnalysisCard";
+import type {LottoAnalysis, PersonalAnalysis} from "../../types";
 
 const DEFAULT_WEIGHTS = [25, 20, 18, 15, 12, 10];
 
 export function Generate() {
+  const navigate = useNavigate();
   const {
     appendAuth,
     showAlert,
@@ -18,6 +21,7 @@ export function Generate() {
     setShowUnsavedModal,
     setUnsavedActionTarget,
   } = useApp();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [algorithmTypes, setAlgorithmTypes] = useState<any[]>([]);
   const [generatingAlgo, setGeneratingAlgo] = useState("MIN_COUNT");
   const [generatedNumbers, setGeneratedNumbers] = useState<number[] | null>(
@@ -29,10 +33,20 @@ export function Generate() {
   const [loading, setLoading] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // New states for personal prediction analysis
+  const [activeSubTab, setActiveSubTab] = useState<"generate" | "analyze">("generate");
+  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<PersonalAnalysis | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedId, setSavedId] = useState<number | null>(null);
+  const [latestEpisode, setLatestEpisode] = useState<number>(0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+
   // Prevent body scroll when modal is open
   useEffect(() => {
     const scrollContainer = document.querySelector(".scroll-y-container") as HTMLElement;
-    if (generatedNumbers) {
+    if (generatedNumbers || analysisResult || showWarningModal) {
       document.body.style.overflow = "hidden";
       if (scrollContainer) scrollContainer.style.overflowY = "hidden";
     } else {
@@ -43,7 +57,20 @@ export function Generate() {
       document.body.style.overflow = "";
       if (scrollContainer) scrollContainer.style.overflowY = "auto";
     };
-  }, [generatedNumbers]);
+  }, [generatedNumbers, analysisResult, showWarningModal]);
+
+  // Fetch the latest episode on mount
+  useEffect(() => {
+    fetch(appendAuth(`${API_BASE_URL}/winning-numbers/latest`))
+      .then((r) => r.json())
+      .then((d) => {
+        const episode = (d.data || d).episode;
+        if (episode) {
+          setLatestEpisode(episode);
+        }
+      })
+      .catch((err) => console.error("최신 회차 조회 실패", err));
+  }, [appendAuth]);
 
   // 알고리즘 유형 그룹화를 위한 헬퍼 함수 및 가공
   const getGroupKey = (type: string) => {
@@ -51,6 +78,7 @@ export function Generate() {
     return parts[parts.length - 1]; // 마지막 인덱스 (WEIGHTS, FREQUENCY 등)
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const groupedAlgorithms: Record<string, any[]> = {};
   algorithmTypes.forEach((algo) => {
     const type = typeof algo === "object" ? algo.type : algo;
@@ -189,6 +217,7 @@ export function Generate() {
         if (!res.ok) throw new Error("알고리즘 목록을 가져오지 못했습니다.");
         const data = await res.json();
         const result = data.data || data;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let types: any[] = [];
         if (Array.isArray(result)) {
           types = result;
@@ -262,640 +291,1209 @@ export function Generate() {
     }
   };
 
+  const handleNumberToggle = (num: number) => {
+    if (isSaving || analyzing || savedId) return;
+    setSelectedNumbers((prev) => {
+      setAnalysisResult(null);
+      setSavedId(null);
+      if (prev.includes(num)) {
+        return prev.filter((n) => n !== num);
+      }
+      if (prev.length >= 6) return prev;
+      return [...prev, num].sort((a, b) => a - b);
+    });
+  };
+
+  const handleSemiAuto = () => {
+    const remaining = 6 - selectedNumbers.length;
+    if (remaining <= 0) return;
+
+    const pool = Array.from({ length: 45 }, (_, i) => i + 1)
+      .filter((n) => !selectedNumbers.includes(n));
+
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    setSelectedNumbers((prev) =>
+      [...prev, ...pool.slice(0, remaining)].sort((a, b) => a - b)
+    );
+    setAnalysisResult(null);
+    setSavedId(null);
+  };
+
+  const handleAnalyze = async () => {
+    if (selectedNumbers.length !== 6) {
+      showAlert("error", "번호를 6개 선택해야 분석할 수 있습니다.");
+      return;
+    }
+    setAnalyzing(true);
+    setAnalysisResult(null);
+    setSavedId(null);
+    try {
+      const res = await fetch(appendAuth(`${API_BASE_URL}/personal-analysis`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prediction: selectedNumbers }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "번호 분석에 실패했습니다.");
+      }
+      const data = await res.json();
+      setAnalysisResult(data.data || data);
+      showAlert("success", "번호 분석이 완료되었습니다.");
+    } catch (err) {
+      const error = err as Error;
+      showAlert("error", error.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (selectedNumbers.length !== 6) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(appendAuth(`${API_BASE_URL}/personal-predictions`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-visitor-id": visitorId,
+        },
+        body: JSON.stringify({
+          episode: latestEpisode + 1,
+          prediction: selectedNumbers,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "예측 번호 저장에 실패했습니다.");
+      }
+      const data = await res.json();
+      setSavedId((data.data || data).id || 9999);
+      showAlert("success", "예측번호가 저장되었습니다!");
+      setTimeout(() => {
+        setAnalysisResult(null);
+        navigate("/history", { state: { defaultTab: "personal" } });
+      }, 1000);
+    } catch (err) {
+      const error = err as Error;
+      showAlert("error", error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const renderSubTabs = () => {
+    const tabs = [
+      { id: "generate", label: "예측번호 생성" },
+      { id: "analyze", label: "예측번호 분석" },
+    ] as const;
+
+    return (
+      <div
+        style={{
+          display: "inline-flex",
+          background: "rgba(255, 255, 255, 0.03)",
+          border: "1px solid rgba(255, 255, 255, 0.06)",
+          padding: "4px",
+          borderRadius: "10px",
+          marginBottom: "24px",
+          gap: "2px",
+          flexWrap: "wrap",
+        }}
+      >
+        {tabs.map((tab) => {
+          const isActive = activeSubTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id)}
+              style={{
+                background: isActive
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "transparent",
+                border: "none",
+                color: isActive ? "var(--text-main)" : "var(--text-muted)",
+                fontFamily: "var(--font-family)",
+                fontWeight: isActive ? "600" : "500",
+                fontSize: "0.85rem",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                transition: "var(--transition-fast)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = "var(--text-main)";
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = "var(--text-muted)";
+                  e.currentTarget.style.background = "transparent";
+                }
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderAnalyze = () => {
+    return (
+      <div>
+        <p
+          className="access-desc"
+          style={{ fontSize: "0.88rem", marginBottom: "24px" }}
+        >
+          직접 원하는 예측 번호 조합을 수동으로 입력하여 분석하고 저장할 수 있습니다. 
+          반자동 기능을 사용하여 일부만 정하고 나머지를 무작위로 채울 수도 있습니다.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            padding: "20px 0",
+            marginBottom: "16px",
+          }}
+        >
+          {/* Lotto Ticket Paper Slip */}
+          <div
+            style={{
+              width: "280px",
+              background: "#faf8f2",
+              border: "1px solid #e0d9c3",
+              borderTop: "8px solid #c62828",
+              borderRadius: "4px",
+              padding: "24px 16px 16px 16px",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255,255,255,0.5)",
+              color: "#3e2723",
+              fontFamily: "var(--font-family), monospace",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* Pink sidebar line pattern like a real ticket */}
+            <div style={{ position: "absolute", left: "6px", top: 0, bottom: 0, borderLeft: "1px dashed rgba(198, 40, 40, 0.2)" }} />
+            <div style={{ position: "absolute", right: "6px", top: 0, bottom: 0, borderLeft: "1px dashed rgba(198, 40, 40, 0.2)" }} />
+
+            {/* Header Text */}
+            <div style={{ textAlign: "center", marginBottom: "16px", fontSize: "0.95rem", fontWeight: "bold", color: "#c62828", letterSpacing: "1px" }}>
+              HACTTO 6/45
+            </div>
+
+            {/* Numbers Grid */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(7, 1fr)",
+                gap: "12px 6px",
+                marginBottom: "24px",
+                padding: "4px",
+              }}
+            >
+              {Array.from({ length: 45 }, (_, i) => i + 1).map((num) => {
+                const isSelected = selectedNumbers.includes(num);
+                const isDisabled = !isSelected && selectedNumbers.length >= 6;
+                return (
+                  <div
+                    key={num}
+                    onClick={() => !isDisabled && handleNumberToggle(num)}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "40px",
+                      position: "relative",
+                      cursor: isDisabled ? "not-allowed" : "pointer",
+                      opacity: isDisabled ? 0.4 : 1,
+                      userSelect: "none",
+                    }}
+                  >
+                     {/* Number Box with Vertical Brackets style */}
+                    <div
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderTop: "1.5px solid rgba(198, 40, 40, 0.5)",
+                        borderBottom: "1.5px solid rgba(198, 40, 40, 0.5)",
+                        borderLeft: "none",
+                        borderRight: "none",
+                        position: "relative",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.85rem",
+                        fontWeight: "bold",
+                        color: "#c62828",
+                        background: "rgba(198, 40, 40, 0.02)",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {/* Corner ticks for vertical bracket effect */}
+                      <div style={{ position: "absolute", top: 0, left: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
+                      <div style={{ position: "absolute", top: 0, right: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
+                      <div style={{ position: "absolute", bottom: 0, left: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
+                      <div style={{ position: "absolute", bottom: 0, right: 0, width: "1.5px", height: "4px", background: "rgba(198, 40, 40, 0.5)" }} />
+                      {num}
+                    </div>
+
+                    {/* Black Computer Sign Pen Stroke */}
+                    {isSelected && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          width: "6px",
+                          height: "30px",
+                          background: "#1c1c1c",
+                          borderRadius: "1px",
+                          transform: "rotate(12deg)",
+                          opacity: 0.9,
+                          boxShadow: "0 0 1px #000",
+                          pointerEvents: "none",
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Section similar to the image */}
+            <div
+              style={{
+                borderTop: "1px dashed rgba(0, 0, 0, 0.15)",
+                paddingTop: "12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
+              {/* Auto / Semi-Auto Section */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#c62828" }}>
+                  자동 및 반자동 선택
+                </span>
+                <button
+                  onClick={handleSemiAuto}
+                  disabled={selectedNumbers.length === 6 || isSaving || analyzing || !!savedId}
+                  style={{
+                    background: selectedNumbers.length === 6 ? "#ccc" : "#c62828",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "2px",
+                    padding: "4px 10px",
+                    fontSize: "0.7rem",
+                    fontWeight: "bold",
+                    cursor: selectedNumbers.length === 6 ? "not-allowed" : "pointer",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  선택
+                </button>
+              </div>
+
+              {/* Reset Section */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#555" }}>
+                  선택 초기화
+                </span>
+                <button
+                  onClick={() => {
+                    setSelectedNumbers([]);
+                    setAnalysisResult(null);
+                    setSavedId(null);
+                  }}
+                  disabled={selectedNumbers.length === 0}
+                  style={{
+                    background: selectedNumbers.length === 0 ? "#ccc" : "#3e2723",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "2px",
+                    padding: "4px 10px",
+                    fontSize: "0.7rem",
+                    fontWeight: "bold",
+                    cursor: selectedNumbers.length === 0 ? "not-allowed" : "pointer",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Analyze button positioned under the paper slip */}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: "12px", marginBottom: "24px" }}>
+          <button
+            onClick={handleAnalyze}
+            disabled={selectedNumbers.length !== 6 || analyzing || isSaving}
+            className="btn-submit"
+            style={{
+              width: "280px",
+              height: "44px",
+              fontSize: "0.9rem",
+              background:
+                selectedNumbers.length !== 6
+                  ? "var(--bg-input)"
+                  : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
+              color: selectedNumbers.length !== 6 ? "var(--text-dim)" : "#ffffff",
+              boxShadow: selectedNumbers.length !== 6 ? "none" : "0 4px 15px var(--primary-purple-glow)",
+              cursor: selectedNumbers.length !== 6 ? "not-allowed" : "pointer",
+              borderRadius: "8px",
+            }}
+          >
+            {analyzing ? "분석 중..." : "선택 번호 분석하기"}
+          </button>
+        </div>
+
+        {analysisResult &&
+          createPortal(
+            <div className="admin-modal-overlay" style={{ overflow: "hidden" }}>
+              <div
+                style={{
+                  maxWidth: "680px",
+                  width: "90%",
+                  maxHeight: "85vh",
+                  overflowY: "auto",
+                  position: "relative",
+                  margin: "0 auto",
+                  zIndex: 1000,
+                  paddingTop: "40px",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    if (!savedId) {
+                      setShowWarningModal(true);
+                    } else {
+                      setAnalysisResult(null);
+                    }
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: "8px",
+                    right: "0px",
+                    background: "transparent",
+                    border: "none",
+                    color: "rgba(255, 255, 255, 0.6)",
+                    cursor: "pointer",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "color 0.2s ease",
+                    zIndex: 100,
+                    fontSize: "0.9rem",
+                    fontWeight: "bold",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-main)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)")}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                  <span>닫기</span>
+                </button>
+
+                <PersonalAnalysisCard
+                  numbers={selectedNumbers}
+                  analysis={analysisResult}
+                  onSave={handleSave}
+                  isSaving={isSaving}
+                  isSaved={!!savedId}
+                />
+              </div>
+            </div>,
+            document.body,
+          )}
+
+        {showWarningModal &&
+          createPortal(
+            <div className="admin-modal-overlay" style={{ zIndex: 1100 }}>
+              <div
+                className="glass-card admin-modal-content"
+                style={{ maxWidth: "440px", textAlign: "center" }}
+              >
+                {/* Warning Icon */}
+                <div
+                  className="status-icon"
+                  style={{
+                    background: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid #ef4444",
+                    color: "#ef4444",
+                    marginBottom: "20px",
+                    display: "inline-flex",
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+
+                <h2
+                  className="access-title"
+                  style={{ fontSize: "1.35rem", marginBottom: "8px", color: "var(--text-main)", fontWeight: "bold" }}
+                >
+                  저장하지 않고 종료하시겠습니까?
+                </h2>
+
+                <p
+                  className="access-desc"
+                  style={{
+                    fontSize: "0.88rem",
+                    marginBottom: "24px",
+                    lineHeight: "1.6",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  저장하지 않고 종료하시면 분석 토큰만 사용되고 예측번호가 보관되지 않습니다. 정말 종료하시겠습니까?
+                </p>
+
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  <button
+                    type="button"
+                    className="btn-submit"
+                    style={{
+                      flex: 1,
+                      height: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+                      color: "#ffffff",
+                      boxShadow: "0 4px 15px rgba(239, 68, 68, 0.3)",
+                      fontWeight: 600,
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setShowWarningModal(false);
+                      setAnalysisResult(null);
+                    }}
+                  >
+                    종료하기 (저장 안 함)
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-neon btn-outline"
+                    style={{
+                      flex: 1,
+                      padding: 0,
+                      height: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: 0,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setShowWarningModal(false)}
+                  >
+                    머무르기
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+      </div>
+    );
+  };
+
   return (
     <div>
       <h2
         className="access-title"
         style={{ fontSize: "1.3rem", marginBottom: "16px" }}
       >
-        당첨 예측번호 생성기
+        예측번호 분석기
       </h2>
-      <p
-        className="access-desc"
-        style={{ fontSize: "0.88rem", marginBottom: "24px" }}
-      >
-        사용하고자 하는 하이퍼-파라미터 알고리즘을 선택한 후 번호를
-        생성해주십시오. 결과는 고유 식별자(IP 및 브라우저 세션)를 통해 내
-        당첨이력에 즉시 아카이빙됩니다.
-      </p>
 
-      {loading ? (
-        <p style={{ color: "var(--text-dim)" }}>
-          알고리즘 목록을 불러오는 중...
-        </p>
-      ) : (
-        <div
-          style={{
-            background: "rgba(255,255,255,0.02)",
-            border: "var(--border-glass)",
-            padding: "24px",
-            borderRadius: "16px",
-            marginBottom: "24px",
-          }}
-        >
-          <label
-            className="form-label"
-            style={{ marginBottom: "8px", display: "block" }}
+      {renderSubTabs()}
+
+      {activeSubTab === "generate" && (
+        <>
+          <p
+            className="access-desc"
+            style={{ fontSize: "0.88rem", marginBottom: "24px" }}
           >
-            분석 예측 알고리즘 선택
-          </label>
+            사용하고자 하는 하이퍼-파라미터 알고리즘을 선택한 후 번호를
+            생성해주십시오. 결과는 고유 식별자(IP 및 브라우저 세션)를 통해 내
+            당첨이력에 즉시 아카이빙됩니다.
+          </p>
 
-          {/* Premium Custom Dropdown */}
-          <div
-            className="custom-select-container"
-            style={{ position: "relative", marginBottom: "20px" }}
-          >
-            <div
-              className={`custom-select-trigger ${isDropdownOpen ? "active" : ""}`}
-              onClick={() => !generating && setIsDropdownOpen(!isDropdownOpen)}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                background: "rgba(255, 255, 255, 0.02)",
-                border: isDropdownOpen
-                  ? "1px solid rgba(250, 204, 21, 0.5)"
-                  : "1px solid rgba(255, 255, 255, 0.08)",
-                padding: "12px 18px",
-                borderRadius: "12px",
-                color: "var(--text-main)",
-                cursor: generating ? "not-allowed" : "pointer",
-                boxShadow: isDropdownOpen
-                  ? "0 0 20px rgba(250, 204, 21, 0.15)"
-                  : "none",
-                transition: "var(--transition-smooth)",
-                opacity: generating ? 0.6 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!generating && !isDropdownOpen) {
-                  e.currentTarget.style.borderColor =
-                    "rgba(250, 204, 21, 0.25)";
-                  e.currentTarget.style.background =
-                    "rgba(255, 255, 255, 0.04)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!generating && !isDropdownOpen) {
-                  e.currentTarget.style.borderColor =
-                    "rgba(255, 255, 255, 0.08)";
-                  e.currentTarget.style.background =
-                    "rgba(255, 255, 255, 0.02)";
-                }
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "2px",
-                  textAlign: "left",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "var(--text-dim)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  선택된 알고리즘
-                </span>
-                <span
-                  style={{
-                    fontWeight: 600,
-                    fontSize: "0.95rem",
-                    color: "var(--text-main)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {parseAlgorithmName(
-                    algorithmTypes.find(
-                      (a) =>
-                        (typeof a === "object" ? a.type : a) === generatingAlgo,
-                    ) || generatingAlgo,
-                  )}
-                  {generatingAlgo && (
-                    <span
-                      style={{
-                        fontSize: "0.68rem",
-                        fontWeight: 700,
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                        color: getBadgeDetails(generatingAlgo).color,
-                        background: getBadgeDetails(generatingAlgo).bg,
-                        border: getBadgeDetails(generatingAlgo).border,
-                      }}
-                    >
-                      {getBadgeDetails(generatingAlgo).text}
-                    </span>
-                  )}
-                </span>
-              </div>
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{
-                  transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
-                  transition: "transform 0.25s ease",
-                  color: isDropdownOpen ? "#facc15" : "var(--text-dim)",
-                }}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
-
-            {isDropdownOpen && (
-              <div
-                className="custom-select-options"
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 6px)",
-                  left: 0,
-                  right: 0,
-                  background: "#0f111a",
-                  border: "1px solid rgba(250, 204, 21, 0.25)",
-                  borderRadius: "12px",
-                  boxShadow:
-                    "0 20px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(250, 204, 21, 0.05)",
-                  zIndex: 10,
-                  padding: "6px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  maxHeight: "320px",
-                  overflowY: "auto",
-                  animation: "slideDown 0.2s ease-out",
-                }}
-              >
-                {Object.entries(groupedAlgorithms).map(
-                  ([groupName, types], groupIdx) => (
-                    <div
-                      key={groupName}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        marginTop: groupIdx > 0 ? "8px" : "0px",
-                      }}
-                    >
-                      {/* 그룹 헤더 */}
-                      <div
-                        style={{
-                          padding: "6px 14px 4px 14px",
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          color: "var(--primary-cyan)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        {groupName === "WEIGHTS"
-                          ? "가중치 분석형 (WEIGHTS)"
-                          : groupName === "FREQUENCY"
-                            ? "빈도 분석형 (FREQUENCY)"
-                            : groupName}
-                      </div>
-                      {/* 그룹 내 아이템 */}
-                      {types.map((algo) => {
-                        const type =
-                          typeof algo === "object" ? algo.type : algo;
-                        const badge = getBadgeDetails(type);
-                        const isSelected = generatingAlgo === type;
-                        return (
-                          <div
-                            key={type}
-                            className={`custom-select-option ${isSelected ? "selected" : ""}`}
-                            onClick={() => {
-                              if (hasUnsavedWeights) {
-                                setUnsavedActionTarget(() => () => {
-                                  setGeneratingAlgo(type);
-                                  setIsDropdownOpen(false);
-                                });
-                                setShowUnsavedModal(true);
-                              } else {
-                                setGeneratingAlgo(type);
-                                setIsDropdownOpen(false);
-                              }
-                            }}
-                            style={{
-                              padding: "10px 14px",
-                              borderRadius: "8px",
-                              cursor: "pointer",
-                              transition: "var(--transition-fast)",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              textAlign: "left",
-                              borderLeft: isSelected
-                                ? "3px solid #facc15"
-                                : "3px solid transparent",
-                              background: isSelected
-                                ? "rgba(250, 204, 21, 0.08)"
-                                : "transparent",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.background =
-                                  "rgba(255, 255, 255, 0.03)";
-                                e.currentTarget.style.borderLeftColor =
-                                  "rgba(255, 255, 255, 0.15)";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.background =
-                                  "transparent";
-                                e.currentTarget.style.borderLeftColor =
-                                  "transparent";
-                              }
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                fontSize: "0.9rem",
-                                color: isSelected
-                                  ? "#facc15"
-                                  : "var(--text-main)",
-                              }}
-                            >
-                              {parseAlgorithmName(algo)}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "0.65rem",
-                                fontWeight: 700,
-                                padding: "2px 6px",
-                                borderRadius: "4px",
-                                whiteSpace: "nowrap",
-                                color: badge.color,
-                                background: badge.bg,
-                                border: badge.border,
-                              }}
-                            >
-                              {badge.text}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ),
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Algorithm Mechanism Info Box */}
-          {generatingAlgo && (
+          {loading ? (
+            <p style={{ color: "var(--text-dim)" }}>
+              알고리즘 목록을 불러오는 중...
+            </p>
+          ) : (
             <div
               style={{
-                background: "rgba(0, 240, 255, 0.02)",
-                border: "1px solid rgba(0, 240, 255, 0.15)",
-                padding: "16px 20px",
-                borderRadius: "12px",
-                marginBottom: "20px",
-                display: "flex",
-                gap: "12px",
-                alignItems: "flex-start",
-                animation: "fadeIn 0.3s ease-out",
-                boxShadow: "inset 0 0 15px rgba(0, 240, 255, 0.03)",
+                background: "rgba(255,255,255,0.02)",
+                border: "var(--border-glass)",
+                padding: "24px",
+                borderRadius: "16px",
+                marginBottom: "24px",
               }}
             >
-              <div
-                style={{
-                  marginTop: "2px",
-                  color: "var(--primary-cyan)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
+              <label
+                className="form-label"
+                style={{ marginBottom: "8px", display: "block" }}
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="16" x2="12" y2="12" />
-                  <line x1="12" y1="8" x2="12.01" y2="8" />
-                </svg>
-              </div>
-              <div style={{ textAlign: "left" }}>
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "var(--primary-cyan)",
-                    marginBottom: "4px",
-                  }}
-                >
-                  알고리즘 상세 메커니즘
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.82rem",
-                    color: "var(--text-muted)",
-                    lineHeight: "1.5",
-                  }}
-                >
-                  {getAlgorithmDescription(
-                    algorithmTypes.find(
-                      (a) =>
-                        (typeof a === "object" ? a.type : a) === generatingAlgo,
-                    ) || generatingAlgo,
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+                분석 예측 알고리즘 선택
+              </label>
 
-          {/* Personal Weights Adjustment Section */}
-          {generatingAlgo.endsWith("WEIGHTS") && (
-            <>
+              {/* Premium Custom Dropdown */}
               <div
-                style={{
-                  background: "rgba(255, 255, 255, 0.01)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
-                  borderRadius: "12px",
-                  padding: "20px",
-                  marginBottom: "20px",
-                  transition: "var(--transition-smooth)",
-                }}
+                className="custom-select-container"
+                style={{ position: "relative", marginBottom: "20px" }}
               >
-                {/* Accordion Header (Click to toggle) */}
                 <div
-                  onClick={() => setIsWeightsExpanded(!isWeightsExpanded)}
+                  className={`custom-select-trigger ${isDropdownOpen ? "active" : ""}`}
+                  onClick={() => !generating && setIsDropdownOpen(!isDropdownOpen)}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
+                    background: "rgba(255, 255, 255, 0.02)",
+                    border: isDropdownOpen
+                      ? "1px solid rgba(250, 204, 21, 0.5)"
+                      : "1px solid rgba(255, 255, 255, 0.08)",
+                    padding: "12px 18px",
+                    borderRadius: "12px",
+                    color: "var(--text-main)",
+                    cursor: generating ? "not-allowed" : "pointer",
+                    boxShadow: isDropdownOpen
+                      ? "0 0 20px rgba(250, 204, 21, 0.15)"
+                      : "none",
+                    transition: "var(--transition-smooth)",
+                    opacity: generating ? 0.6 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!generating && !isDropdownOpen) {
+                      e.currentTarget.style.borderColor =
+                        "rgba(250, 204, 21, 0.25)";
+                      e.currentTarget.style.background =
+                        "rgba(255, 255, 255, 0.04)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!generating && !isDropdownOpen) {
+                      e.currentTarget.style.borderColor =
+                        "rgba(255, 255, 255, 0.08)";
+                      e.currentTarget.style.background =
+                        "rgba(255, 255, 255, 0.02)";
+                    }
                   }}
                 >
-                  <div style={{ textAlign: "left" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "2px",
+                      textAlign: "left",
+                    }}
+                  >
                     <span
                       style={{
-                        fontSize: "0.9rem",
-                        fontWeight: "bold",
+                        fontSize: "0.72rem",
+                        color: "var(--text-dim)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      선택된 알고리즘
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.95rem",
                         color: "var(--text-main)",
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
+                        flexWrap: "wrap",
                       }}
                     >
-                      {/* Chevron Arrow Icon */}
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{
-                          transform: isWeightsExpanded
-                            ? "rotate(90deg)"
-                            : "rotate(0deg)",
-                          transition: "transform 0.2s ease-out",
-                          color: isWeightsExpanded
-                            ? "#facc15"
-                            : "var(--text-dim)",
-                        }}
-                      >
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                      개인 신뢰도 가중치 설정 (합계 100%)
-                    </span>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-muted)",
-                        marginTop: "2px",
-                        paddingLeft: "24px",
-                      }}
-                    >
-                      {weightStatus === "saved" ? (
-                        <span style={{ color: "var(--success)" }}>
-                          ● 개인화 가중치 적용됨
-                        </span>
-                      ) : (
-                        <span>기본 가중치 적용 중</span>
+                      {parseAlgorithmName(
+                        algorithmTypes.find(
+                          (a) =>
+                            (typeof a === "object" ? a.type : a) === generatingAlgo,
+                        ) || generatingAlgo,
                       )}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <span
-                      style={{
-                        fontSize: "0.85rem",
-                        fontWeight: "bold",
-                        color:
-                          currentWeightsSum === 100
-                            ? "var(--success)"
-                            : remainingWeight < 0
-                              ? "var(--error)"
-                              : "var(--primary-cyan)",
-                      }}
-                    >
-                      합계: {currentWeightsSum}%
-                    </span>
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color:
-                          remainingWeight === 0
-                            ? "var(--success)"
-                            : remainingWeight < 0
-                              ? "var(--error)"
-                              : "var(--text-muted)",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {remainingWeight === 0
-                        ? "완료"
-                        : remainingWeight < 0
-                          ? `${Math.abs(remainingWeight)}% 초과`
-                          : `클릭하여 가중치 조절 (${remainingWeight}% 가능)`}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Collapsible content (Sliders & Actions) */}
-                {isWeightsExpanded && (
-                  <div
-                    style={{
-                      marginTop: "20px",
-                      borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-                      paddingTop: "20px",
-                      animation: "slideDown 0.25s ease-out",
-                    }}
-                  >
-                    {/* Weights Sliders */}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "10px",
-                      }}
-                    >
-                      {weights.map((weight, index) => (
-                        <div
-                          key={index}
+                      {generatingAlgo && (
+                        <span
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                            background: "rgba(255, 255, 255, 0.02)",
-                            padding: "8px 12px",
-                            borderRadius: "8px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            color: getBadgeDetails(generatingAlgo).color,
+                            background: getBadgeDetails(generatingAlgo).bg,
+                            border: getBadgeDetails(generatingAlgo).border,
                           }}
                         >
-                          <span
-                            style={{
-                              fontSize: "0.78rem",
-                              fontWeight: 600,
-                              color: "var(--text-muted)",
-                              width: "60px",
-                            }}
-                          >
-                            {index + 1}번째 자리
-                          </span>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={weight}
-                            onChange={(e) =>
-                              handleWeightChange(index, Number(e.target.value))
-                            }
-                            style={{
-                              flex: 1,
-                              accentColor:
-                                currentWeightsSum === 100
-                                  ? "var(--success)"
-                                  : "var(--primary-cyan)",
-                              cursor: "pointer",
-                            }}
-                          />
-                          <span
-                            style={{
-                              fontSize: "0.8rem",
-                              fontWeight: "bold",
-                              color: "var(--text-main)",
-                              width: "35px",
-                              textAlign: "right",
-                            }}
-                          >
-                            {weight}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                          {getBadgeDetails(generatingAlgo).text}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.25s ease",
+                      color: isDropdownOpen ? "#facc15" : "var(--text-dim)",
+                    }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
 
-                    {/* Save / Reset Actions */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        marginTop: "16px",
-                        borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-                        paddingTop: "14px",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn-neon btn-outline"
-                        onClick={handleResetWeights}
-                        style={{
-                          flex: 1,
-                          height: "36px",
-                          padding: "0 12px",
-                          fontSize: "0.8rem",
-                        }}
-                      >
-                        기본값 재설정
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-submit"
-                        onClick={handleSaveWeights}
-                        disabled={savingWeights || currentWeightsSum !== 100}
-                        style={{
-                          flex: 2,
-                          height: "36px",
-                          padding: "0 12px",
-                          fontSize: "0.8rem",
-                          background:
-                            currentWeightsSum !== 100
-                              ? "var(--bg-input)"
-                              : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
-                          color:
-                            currentWeightsSum !== 100
-                              ? "var(--text-dim)"
-                              : "var(--text-main)",
-                          cursor:
-                            currentWeightsSum !== 100
-                              ? "not-allowed"
-                              : "pointer",
-                          boxShadow:
-                            currentWeightsSum !== 100
-                              ? "none"
-                              : "0 4px 15px var(--primary-purple-glow)",
-                        }}
-                      >
-                        {savingWeights
-                          ? "저장 중..."
-                          : "개인 가중치 저장 및 적용"}
-                      </button>
-                    </div>
+                {isDropdownOpen && (
+                  <div
+                    className="custom-select-options"
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 6px)",
+                      left: 0,
+                      right: 0,
+                      background: "#0f111a",
+                      border: "1px solid rgba(250, 204, 21, 0.25)",
+                      borderRadius: "12px",
+                      boxShadow:
+                        "0 20px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(250, 204, 21, 0.05)",
+                      zIndex: 10,
+                      padding: "6px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      maxHeight: "320px",
+                      overflowY: "auto",
+                      animation: "slideDown 0.2s ease-out",
+                    }}
+                  >
+                    {Object.entries(groupedAlgorithms).map(
+                      ([groupName, types], groupIdx) => (
+                        <div
+                          key={groupName}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            marginTop: groupIdx > 0 ? "8px" : "0px",
+                          }}
+                        >
+                          {/* 그룹 헤더 */}
+                          <div
+                            style={{
+                              padding: "6px 14px 4px 14px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              color: "var(--primary-cyan)",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            {groupName === "WEIGHTS"
+                              ? "가중치 분석형 (WEIGHTS)"
+                              : groupName === "FREQUENCY"
+                                ? "빈도 분석형 (FREQUENCY)"
+                                : groupName}
+                          </div>
+                          {/* 그룹 내 아이템 */}
+                          {types.map((algo) => {
+                            const type =
+                              typeof algo === "object" ? algo.type : algo;
+                            const badge = getBadgeDetails(type);
+                            const isSelected = generatingAlgo === type;
+                            return (
+                              <div
+                                key={type}
+                                className={`custom-select-option ${isSelected ? "selected" : ""}`}
+                                onClick={() => {
+                                  if (hasUnsavedWeights) {
+                                    setUnsavedActionTarget(() => () => {
+                                      setGeneratingAlgo(type);
+                                      setIsDropdownOpen(false);
+                                    });
+                                    setShowUnsavedModal(true);
+                                  } else {
+                                    setGeneratingAlgo(type);
+                                    setIsDropdownOpen(false);
+                                  }
+                                }}
+                                style={{
+                                  padding: "10px 14px",
+                                  borderRadius: "8px",
+                                  cursor: "pointer",
+                                  transition: "var(--transition-fast)",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  textAlign: "left",
+                                  borderLeft: isSelected
+                                    ? "3px solid #facc15"
+                                    : "3px solid transparent",
+                                  background: isSelected
+                                    ? "rgba(250, 204, 21, 0.08)"
+                                    : "transparent",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.background =
+                                      "rgba(255, 255, 255, 0.03)";
+                                    e.currentTarget.style.borderLeftColor =
+                                      "rgba(255, 255, 255, 0.15)";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.background =
+                                      "transparent";
+                                    e.currentTarget.style.borderLeftColor =
+                                      "transparent";
+                                  }
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontWeight: 600,
+                                    fontSize: "0.9rem",
+                                    color: isSelected
+                                      ? "#facc15"
+                                      : "var(--text-main)",
+                                  }}
+                                >
+                                  {parseAlgorithmName(algo)}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.65rem",
+                                    fontWeight: 700,
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    whiteSpace: "nowrap",
+                                    color: badge.color,
+                                    background: badge.bg,
+                                    border: badge.border,
+                                  }}
+                                >
+                                  {badge.text}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ),
+                    )}
                   </div>
                 )}
               </div>
-              {isWeightsExpanded && (
-                <p
+
+              {/* Algorithm Mechanism Info Box */}
+              {generatingAlgo && (
+                <div
                   style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text-muted)",
-                    textAlign: "left",
+                    background: "rgba(0, 240, 255, 0.02)",
+                    border: "1px solid rgba(0, 240, 255, 0.15)",
+                    padding: "16px 20px",
+                    borderRadius: "12px",
                     marginBottom: "20px",
-                    lineHeight: "1.4",
+                    display: "flex",
+                    gap: "12px",
+                    alignItems: "flex-start",
+                    animation: "fadeIn 0.3s ease-out",
+                    boxShadow: "inset 0 0 15px rgba(0, 240, 255, 0.03)",
                   }}
                 >
-                  ※ 설정한 가중치는 이번 예측번호 생성 시 적용되며, 이후 언제든
-                  가중치를 다르게 조절하여 새로운 번호를 추출해 볼 수 있습니다.
-                </p>
+                  <div
+                    style={{
+                      marginTop: "2px",
+                      color: "var(--primary-cyan)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                  </div>
+                  <div style={{ textAlign: "left" }}>
+                    <div
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: "bold",
+                        color: "var(--primary-cyan)",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      알고리즘 상세 메커니즘
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.82rem",
+                        color: "var(--text-muted)",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      {getAlgorithmDescription(
+                        algorithmTypes.find(
+                          (a) =>
+                            (typeof a === "object" ? a.type : a) === generatingAlgo,
+                        ) || generatingAlgo,
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
-            </>
-          )}
 
-          <button
-            className="btn-neon btn-cyan"
-            onClick={handleGeneratePrediction}
-            disabled={generating || algorithmTypes.length === 0}
-            style={{ height: "48px" }}
-          >
-            {generating ? "최적 조합 연산 중..." : "예측번호 생성하기"}
-          </button>
-        </div>
+              {/* Personal Weights Adjustment Section */}
+              {generatingAlgo.endsWith("WEIGHTS") && (
+                <>
+                  <div
+                    style={{
+                      background: "rgba(255, 255, 255, 0.01)",
+                      border: "1px solid rgba(255, 255, 255, 0.05)",
+                      borderRadius: "12px",
+                      padding: "20px",
+                      marginBottom: "20px",
+                      transition: "var(--transition-smooth)",
+                    }}
+                  >
+                    {/* Accordion Header (Click to toggle) */}
+                    <div
+                      onClick={() => setIsWeightsExpanded(!isWeightsExpanded)}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        userSelect: "none",
+                      }}
+                    >
+                      <div style={{ textAlign: "left" }}>
+                        <span
+                          style={{
+                            fontSize: "0.9rem",
+                            fontWeight: "bold",
+                            color: "var(--text-main)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          {/* Chevron Arrow Icon */}
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{
+                              transform: isWeightsExpanded
+                                ? "rotate(90deg)"
+                                : "rotate(0deg)",
+                              transition: "transform 0.2s ease-out",
+                              color: isWeightsExpanded
+                                ? "#facc15"
+                                : "var(--text-dim)",
+                            }}
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                          개인 신뢰도 가중치 설정 (합계 100%)
+                        </span>
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--text-muted)",
+                            marginTop: "2px",
+                            paddingLeft: "24px",
+                          }}
+                        >
+                          {weightStatus === "saved" ? (
+                            <span style={{ color: "var(--success)" }}>
+                              ● 개인화 가중치 적용됨
+                            </span>
+                          ) : (
+                            <span>기본 가중치 적용 중</span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span
+                          style={{
+                            fontSize: "0.85rem",
+                            fontWeight: "bold",
+                            color:
+                              currentWeightsSum === 100
+                                ? "var(--success)"
+                                : remainingWeight < 0
+                                  ? "var(--error)"
+                                  : "var(--primary-cyan)",
+                          }}
+                        >
+                          합계: {currentWeightsSum}%
+                        </span>
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            color:
+                              remainingWeight === 0
+                                ? "var(--success)"
+                                : remainingWeight < 0
+                                  ? "var(--error)"
+                                  : "var(--text-muted)",
+                            marginTop: "2px",
+                          }}
+                        >
+                          {remainingWeight === 0
+                            ? "완료"
+                            : remainingWeight < 0
+                              ? `${Math.abs(remainingWeight)}% 초과`
+                              : `클릭하여 가중치 조절 (${remainingWeight}% 가능)`}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Collapsible content (Sliders & Actions) */}
+                    {isWeightsExpanded && (
+                      <div
+                        style={{
+                          marginTop: "20px",
+                          borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                          paddingTop: "20px",
+                          animation: "slideDown 0.25s ease-out",
+                        }}
+                      >
+                        {/* Weights Sliders */}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
+                          }}
+                        >
+                          {weights.map((weight, index) => (
+                            <div
+                              key={index}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                                background: "rgba(255, 255, 255, 0.02)",
+                                padding: "8px 12px",
+                                borderRadius: "8px",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "0.78rem",
+                                  fontWeight: 600,
+                                  color: "var(--text-muted)",
+                                  width: "60px",
+                                }}
+                              >
+                                {index + 1}번째 자리
+                              </span>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={weight}
+                                onChange={(e) =>
+                                  handleWeightChange(index, Number(e.target.value))
+                                }
+                                style={{
+                                  flex: 1,
+                                  accentColor:
+                                    currentWeightsSum === 100
+                                      ? "var(--success)"
+                                      : "var(--primary-cyan)",
+                                  cursor: "pointer",
+                                }}
+                              />
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  fontWeight: "bold",
+                                  color: "var(--text-main)",
+                                  width: "35px",
+                                  textAlign: "right",
+                                }}
+                              >
+                                {weight}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Save / Reset Actions */}
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            marginTop: "16px",
+                            borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                            paddingTop: "14px",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="btn-neon btn-outline"
+                            onClick={handleResetWeights}
+                            style={{
+                              flex: 1,
+                              height: "36px",
+                              padding: "0 12px",
+                              fontSize: "0.8rem",
+                            }}
+                          >
+                            기본값 재설정
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-submit"
+                            onClick={handleSaveWeights}
+                            disabled={savingWeights || currentWeightsSum !== 100}
+                            style={{
+                              flex: 2,
+                              height: "36px",
+                              padding: "0 12px",
+                              fontSize: "0.8rem",
+                              background:
+                                currentWeightsSum !== 100
+                                  ? "var(--bg-input)"
+                                  : "linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)",
+                              color:
+                                currentWeightsSum !== 100
+                                  ? "var(--text-dim)"
+                                  : "var(--text-main)",
+                              cursor:
+                                currentWeightsSum !== 100
+                                  ? "not-allowed"
+                                  : "pointer",
+                              boxShadow:
+                                currentWeightsSum !== 100
+                                  ? "none"
+                                  : "0 4px 15px var(--primary-purple-glow)",
+                            }}
+                          >
+                            {savingWeights
+                              ? "저장 중..."
+                              : "개인 가중치 저장 및 적용"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {isWeightsExpanded && (
+                    <p
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                        textAlign: "left",
+                        marginBottom: "20px",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      ※ 설정한 가중치는 이번 예측번호 생성 시 적용되며, 이후 언제든
+                      가중치를 다르게 조절하여 새로운 번호를 추출해 볼 수 있습니다.
+                    </p>
+                  )}
+                </>
+              )}
+
+              <button
+                className="btn-neon btn-cyan"
+                onClick={handleGeneratePrediction}
+                disabled={generating || algorithmTypes.length === 0}
+                style={{ height: "48px" }}
+              >
+                {generating ? "최적 조합 연산 중..." : "예측번호 생성하기"}
+              </button>
+            </div>
+          )}
+        </>
       )}
+
+      {activeSubTab === "analyze" && renderAnalyze()}
 
       {generatedNumbers &&
         createPortal(
