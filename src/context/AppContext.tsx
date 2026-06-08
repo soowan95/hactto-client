@@ -46,6 +46,8 @@ interface AppContextType {
   setUnsavedActionTarget: (val: (() => void) | null) => void;
   isSystemAnalyzing: boolean;
   setIsSystemAnalyzing: (val: boolean) => void;
+  showWelcomeModal: boolean;
+  setShowWelcomeModal: (val: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,6 +59,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<boolean>(false);
   const [clientIp, setClientIp] = useState<string>("");
   const [visitorId, setVisitorId] = useState<string>("");
+  const [showWelcomeModal, setShowWelcomeModal] = useState<boolean>(false);
 
   // Unsaved weights warning states
   const [hasUnsavedWeights, setHasUnsavedWeights] = useState<boolean>(false);
@@ -106,7 +109,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       newInit.headers = headers;
-      return originalFetch(input, newInit);
+      
+      const response = await originalFetch(input, newInit);
+      
+      const isFirstVisit = response.headers.get("x-first-visit") === "true";
+      const hasConsented = localStorage.getItem("hactto_welcome_consented") === "true";
+      if (isFirstVisit && !hasConsented) {
+        setShowWelcomeModal(true);
+      }
+
+      return response;
     };
 
     return () => {
@@ -137,6 +149,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setVisitorId(adminResult.visitorId);
             localStorage.setItem("visitor_id", adminResult.visitorId);
           }
+          const isFirstVisit = adminRes.headers.get("x-first-visit") === "true";
+          const hasConsented = localStorage.getItem("hactto_welcome_consented") === "true";
+          if (!hasConsented) {
+            if (isFirstVisit) {
+              setShowWelcomeModal(true);
+            } else {
+              localStorage.setItem("hactto_welcome_consented", "true");
+            }
+          }
           setLoading(false);
           return;
         } else {
@@ -162,6 +183,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (result.visitorId) {
         setVisitorId(result.visitorId);
         localStorage.setItem("visitor_id", result.visitorId);
+      }
+      
+      const isFirstVisit = res.headers.get("x-first-visit") === "true";
+      const hasConsented = localStorage.getItem("hactto_welcome_consented") === "true";
+      if (!hasConsented) {
+        if (isFirstVisit) {
+          setShowWelcomeModal(true);
+        } else {
+          localStorage.setItem("hactto_welcome_consented", "true");
+        }
       }
     } catch (err: unknown) {
       console.error(err);
@@ -373,6 +404,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setUnsavedActionTarget,
         isSystemAnalyzing,
         setIsSystemAnalyzing,
+        showWelcomeModal,
+        setShowWelcomeModal,
       }}
     >
       {children}

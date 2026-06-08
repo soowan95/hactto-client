@@ -1,8 +1,11 @@
+import { useState } from "react";
 import type { MouseEvent } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Alert } from "./Alert";
 import { UnsavedChangesModal } from "./UnsavedChangesModal";
+import { HelpModal } from "./HelpModal";
+import { WelcomeModal } from "./WelcomeModal";
 
 export function Layout() {
   const {
@@ -12,9 +15,12 @@ export function Layout() {
     setShowUnsavedModal,
     setUnsavedActionTarget,
     setShowAdminModal,
+    showWelcomeModal,
+    setShowWelcomeModal,
   } = useApp();
 
   const navigate = useNavigate();
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const hasAdminAccess = !!(
     localStorage.getItem("mk") || sessionStorage.getItem("mk")
@@ -81,7 +87,42 @@ export function Layout() {
 
           <div
             style={{ display: "flex", gap: "15px", alignItems: "center" }}
-          ></div>
+          >
+            <button
+              onClick={() => setShowHelpModal(true)}
+              style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                color: "var(--text-dim)",
+                fontSize: "0.85rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                outline: "none",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.08)";
+                e.currentTarget.style.color = "#ffffff";
+                e.currentTarget.style.borderColor = "var(--primary-cyan)";
+                e.currentTarget.style.boxShadow = "0 0 10px rgba(0, 240, 255, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.color = "var(--text-dim)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+              title="로또 분석 용어 사전"
+            >
+              ?
+            </button>
+          </div>
         </div>
 
         <div
@@ -170,6 +211,14 @@ export function Layout() {
       <UnsavedChangesModal
         isOpen={showUnsavedModal}
         onClose={() => setShowUnsavedModal(false)}
+      />
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
+      <WelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
       />
     </div>
   );
