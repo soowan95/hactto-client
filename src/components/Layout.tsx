@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
@@ -6,6 +6,13 @@ import { Alert } from "./Alert";
 import { UnsavedChangesModal } from "./UnsavedChangesModal";
 import { HelpModal } from "./HelpModal";
 import { WelcomeModal } from "./WelcomeModal";
+import { PaymentModal } from "./PaymentModal";
+import { API_BASE_URL } from "../utils";
+
+interface SubscriptionStatus {
+  plan: "MONTHLY" | "YEARLY";
+  status: "ACTIVE" | "CANCELLED" | "EXPIRED";
+}
 
 export function Layout() {
   const {
@@ -17,14 +24,36 @@ export function Layout() {
     setShowAdminModal,
     showWelcomeModal,
     setShowWelcomeModal,
+    visitorId,
   } = useApp();
 
   const navigate = useNavigate();
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [honBalance, setHonBalance] = useState<number>(0);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
 
   const hasAdminAccess = !!(
     localStorage.getItem("mk") || sessionStorage.getItem("mk")
   );
+
+  const loadBillingStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/check-ip`);
+      if (res.ok) {
+        const data = await res.json();
+        const result = data.data || data;
+        setHonBalance(result.hon?.balance || 0);
+        setSubscription(result.subscription || null);
+      }
+    } catch (err) {
+      console.error("Layout IP/Billing 조회 실패:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadBillingStatus();
+  }, [visitorId, showPaymentModal]);
 
   const handleTabClick = (e: MouseEvent<HTMLAnchorElement>, path: string) => {
     if (path === "/system" && !hasAdminAccess) {
@@ -62,7 +91,7 @@ export function Layout() {
             paddingBottom: "16px",
           }}
         >
-          <div>
+          <div style={{ display: "flex", alignItems: "center" }}>
             <span
               className="logo-glow"
               style={{ fontSize: "1.8rem", cursor: "pointer" }}
@@ -70,19 +99,50 @@ export function Layout() {
             >
               hactto
             </span>
-            <span
+            
+            {/* 남은 혼(Hon) 충전 정보 위젯 */}
+            <div
+              onClick={() => setShowPaymentModal(true)}
               style={{
-                fontSize: "0.75rem",
-                background: "rgba(0, 240, 255, 0.1)",
-                color: "var(--primary-cyan)",
-                padding: "2px 8px",
-                borderRadius: "4px",
+                marginLeft: "18px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "rgba(0, 240, 255, 0.05)",
                 border: "1px solid rgba(0, 240, 255, 0.2)",
-                marginLeft: "12px",
+                padding: "4px 10px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--primary-cyan)";
+                e.currentTarget.style.background = "rgba(0, 240, 255, 0.1)";
+                e.currentTarget.style.boxShadow = "0 0 10px rgba(0, 240, 255, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "rgba(0, 240, 255, 0.2)";
+                e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+              title="크레딧 충전 상점 열기"
             >
-              대시보드
-            </span>
+              <span style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--primary-cyan)" }}>
+                {subscription && subscription.status === "ACTIVE" ? "UNLIMITED" : `${honBalance} HON`}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  background: "var(--primary-cyan)",
+                  color: "#0a0b10",
+                  padding: "1px 4px",
+                  borderRadius: "3px",
+                  fontWeight: "bold",
+                }}
+              >
+                충전
+              </span>
+            </div>
           </div>
 
           <div
@@ -219,6 +279,11 @@ export function Layout() {
       <WelcomeModal
         isOpen={showWelcomeModal}
         onClose={() => setShowWelcomeModal(false)}
+      />
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={loadBillingStatus}
       />
     </div>
   );
