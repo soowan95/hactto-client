@@ -1,6 +1,6 @@
-import { useState } from "react";
-import type { LottoAnalysis } from "../types";
-import { getBallStyle } from "../utils";
+import { useState } from 'react';
+import type { LottoAnalysis } from '../types';
+import { getBallStyle } from '../utils';
 
 interface LottoAnalysisCardProps {
   numbers: number[];
@@ -13,12 +13,20 @@ export function LottoAnalysisCard({
   analysis,
   title,
 }: LottoAnalysisCardProps) {
-  const [hoveredNumbers, setHoveredNumbers] = useState<Set<number> | null>(null);
+  const [hoveredNumbers, setHoveredNumbers] = useState<Set<number> | null>(
+    null,
+  );
 
   if (!numbers || numbers.length === 0) return null;
   if (!analysis) {
     return (
-      <div style={{ color: "var(--text-dim)", fontSize: "0.85rem", padding: "10px 0" }}>
+      <div
+        style={{
+          color: 'var(--text-dim)',
+          fontSize: '0.85rem',
+          padding: '10px 0',
+        }}
+      >
         분석 데이터가 존재하지 않습니다.
       </div>
     );
@@ -67,7 +75,7 @@ export function LottoAnalysisCard({
   ].filter((item) => item.nums && item.nums.length > 0);
 
   // Gather temperature groups
-  const getTempNumbers = (temp: "HOT" | "WARM" | "COLD") => {
+  const getTempNumbers = (temp: 'HOT' | 'WARM' | 'COLD') => {
     if (!analysis.temperatures) return [];
     return mainNumbers.filter((num) => analysis.temperatures?.[num] === temp);
   };
@@ -75,23 +83,23 @@ export function LottoAnalysisCard({
   return (
     <div
       style={{
-        background: "rgba(255, 255, 255, 0.01)",
-        border: "1px solid rgba(255, 255, 255, 0.06)",
-        borderRadius: "16px",
-        padding: "20px",
-        marginTop: "16px",
-        boxShadow: "inset 0 0 20px rgba(255,255,255,0.01)",
+        background: 'rgba(255, 255, 255, 0.01)',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        borderRadius: '16px',
+        padding: '20px',
+        marginTop: '16px',
+        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.01)',
       }}
     >
       {title && (
         <div
           style={{
-            fontSize: "0.85rem",
-            fontWeight: "bold",
-            color: "var(--text-muted)",
-            marginBottom: "16px",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
+            fontSize: '0.85rem',
+            fontWeight: 'bold',
+            color: 'var(--text-muted)',
+            marginBottom: '16px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
           }}
         >
           {title}
@@ -101,26 +109,26 @@ export function LottoAnalysisCard({
       {/* Interactive Lotto Balls Display */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "24px",
-          background: "rgba(0, 0, 0, 0.2)",
-          padding: "16px 20px",
-          borderRadius: "12px",
-          border: "1px solid rgba(255,255,255,0.03)",
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'wrap',
+          marginBottom: '24px',
+          background: 'rgba(0, 0, 0, 0.2)',
+          padding: '16px 20px',
+          borderRadius: '12px',
+          border: '1px solid rgba(255,255,255,0.03)',
         }}
       >
         {mainNumbers.map((num, i) => {
           const active = isHighlighted(num);
           const borderStyle = active
-            ? "2px solid #ffffff"
-            : "1px solid rgba(255, 255, 255, 0.1)";
-          const scale = active ? "1.15" : "0.9";
-          const opacity = active ? "1" : "0.25";
-          const shadow = active ? getBallStyle(num).boxShadow : "none";
+            ? '2px solid #ffffff'
+            : '1px solid rgba(255, 255, 255, 0.1)';
+          const scale = active ? '1.15' : '0.9';
+          const opacity = active ? '1' : '0.25';
+          const shadow = active ? getBallStyle(num).boxShadow : 'none';
 
           return (
             <div
@@ -132,7 +140,7 @@ export function LottoAnalysisCard({
                 border: borderStyle,
                 transform: `scale(${scale})`,
                 opacity: opacity,
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               {num}
@@ -143,12 +151,12 @@ export function LottoAnalysisCard({
           <>
             <div
               style={{
-                fontSize: "1.2rem",
-                fontWeight: "bold",
-                color: "var(--text-dim)",
-                margin: "0 2px",
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                color: 'var(--text-dim)',
+                margin: '0 2px',
                 opacity: hoveredNumbers === null ? 1 : 0.25,
-                transition: "opacity 0.25s",
+                transition: 'opacity 0.25s',
               }}
             >
               +
@@ -157,10 +165,13 @@ export function LottoAnalysisCard({
               className="lotto-ball"
               style={{
                 ...getBallStyle(bonusNumber),
-                border: hoveredNumbers === null ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid rgba(255,255,255,0.05)",
-                transform: hoveredNumbers === null ? "scale(1)" : "scale(0.9)",
+                border:
+                  hoveredNumbers === null
+                    ? '1px solid rgba(255, 255, 255, 0.15)'
+                    : '1px solid rgba(255,255,255,0.05)',
+                transform: hoveredNumbers === null ? 'scale(1)' : 'scale(0.9)',
                 opacity: hoveredNumbers === null ? 1 : 0.25,
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               {bonusNumber}
@@ -172,29 +183,74 @@ export function LottoAnalysisCard({
       {/* Grid of Interactive Metrics */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-          gap: "12px",
-          marginBottom: "16px",
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: '12px',
+          marginBottom: '16px',
         }}
       >
-        <div className="feature-item" style={{ padding: "10px 14px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>총합</div>
-          <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--primary-cyan)", marginTop: "4px" }}>
+        <div
+          className="feature-item"
+          style={{
+            padding: '10px 14px',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+            총합
+          </div>
+          <div
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              color: 'var(--primary-cyan)',
+              marginTop: '4px',
+            }}
+          >
             {analysis.sum}
           </div>
         </div>
 
-        <div className="feature-item" style={{ padding: "10px 14px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>AC값</div>
-          <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--primary-cyan)", marginTop: "4px" }}>
+        <div
+          className="feature-item"
+          style={{
+            padding: '10px 14px',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+            AC값
+          </div>
+          <div
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              color: 'var(--primary-cyan)',
+              marginTop: '4px',
+            }}
+          >
             {analysis.ac}
           </div>
         </div>
 
-        <div className="feature-item" style={{ padding: "10px 14px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>끝자리 합</div>
-          <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--primary-cyan)", marginTop: "4px" }}>
+        <div
+          className="feature-item"
+          style={{
+            padding: '10px 14px',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+            끝자리 합
+          </div>
+          <div
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              color: 'var(--primary-cyan)',
+              marginTop: '4px',
+            }}
+          >
             {analysis.sumLastDigits}
           </div>
         </div>
@@ -203,19 +259,26 @@ export function LottoAnalysisCard({
       {/* Interactive Sections */}
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-          paddingTop: "16px",
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          paddingTop: '16px',
         }}
       >
         {/* Odd/Even */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", width: "65px", flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-muted)',
+              width: '65px',
+              flexShrink: 0,
+            }}
+          >
             홀짝 분석
           </span>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <span
               onMouseEnter={() =>
                 setHoveredNumbers(
@@ -224,22 +287,22 @@ export function LottoAnalysisCard({
               }
               onMouseLeave={() => setHoveredNumbers(null)}
               style={{
-                fontSize: "0.78rem",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                color: "var(--text-main)",
+                fontSize: '0.78rem',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                color: 'var(--text-main)',
               }}
               onPointerEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--primary-cyan)";
-                e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
+                e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
               }}
               onPointerLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
               }}
             >
               홀수: {analysis.odd}개
@@ -252,22 +315,22 @@ export function LottoAnalysisCard({
               }
               onMouseLeave={() => setHoveredNumbers(null)}
               style={{
-                fontSize: "0.78rem",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                color: "var(--text-main)",
+                fontSize: '0.78rem',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                color: 'var(--text-main)',
               }}
               onPointerEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--primary-cyan)";
-                e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
+                e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
               }}
               onPointerLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
               }}
             >
               짝수: {analysis.even}개
@@ -276,17 +339,24 @@ export function LottoAnalysisCard({
         </div>
 
         {/* Decades */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", width: "65px", flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-muted)',
+              width: '65px',
+              flexShrink: 0,
+            }}
+          >
             번대수 분포
           </span>
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {[
-              { label: "단번대", val: analysis.cnt0s, idx: 0 },
-              { label: "10번대", val: analysis.cnt10s, idx: 1 },
-              { label: "20번대", val: analysis.cnt20s, idx: 2 },
-              { label: "30번대", val: analysis.cnt30s, idx: 3 },
-              { label: "40번대", val: analysis.cnt40s, idx: 4 },
+              { label: '단번대', val: analysis.cnt0s, idx: 0 },
+              { label: '10번대', val: analysis.cnt10s, idx: 1 },
+              { label: '20번대', val: analysis.cnt20s, idx: 2 },
+              { label: '30번대', val: analysis.cnt30s, idx: 3 },
+              { label: '40번대', val: analysis.cnt40s, idx: 4 },
             ]
               .filter((d) => d.val > 0)
               .map((d) => (
@@ -297,22 +367,25 @@ export function LottoAnalysisCard({
                   }
                   onMouseLeave={() => setHoveredNumbers(null)}
                   style={{
-                    fontSize: "0.75rem",
-                    padding: "4px 8px",
-                    borderRadius: "6px",
-                    background: "rgba(255, 255, 255, 0.02)",
-                    border: "1px solid rgba(255, 255, 255, 0.05)",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    color: "var(--text-main)",
+                    fontSize: '0.75rem',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    color: 'var(--text-main)',
                   }}
                   onPointerEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--primary-cyan)";
-                    e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
+                    e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                    e.currentTarget.style.background =
+                      'rgba(0, 240, 255, 0.05)';
                   }}
                   onPointerLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+                    e.currentTarget.style.borderColor =
+                      'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.background =
+                      'rgba(255, 255, 255, 0.02)';
                   }}
                 >
                   {d.label}: {d.val}개
@@ -323,36 +396,47 @@ export function LottoAnalysisCard({
 
         {/* Last Digits */}
         {lastDigits.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", width: "65px", flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-muted)',
+                width: '65px',
+                flexShrink: 0,
+              }}
+            >
               끝자리 그룹
             </span>
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {lastDigits.map((item) => (
                 <span
                   key={item.digit}
                   onMouseEnter={() => setHoveredNumbers(new Set(item.nums))}
                   onMouseLeave={() => setHoveredNumbers(null)}
                   style={{
-                    fontSize: "0.75rem",
-                    padding: "4px 8px",
-                    borderRadius: "6px",
-                    background: "rgba(255, 255, 255, 0.02)",
-                    border: "1px solid rgba(255, 255, 255, 0.05)",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    color: "var(--text-main)",
+                    fontSize: '0.75rem',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    color: 'var(--text-main)',
                   }}
                   onPointerEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--primary-cyan)";
-                    e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
+                    e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                    e.currentTarget.style.background =
+                      'rgba(0, 240, 255, 0.05)';
                   }}
                   onPointerLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+                    e.currentTarget.style.borderColor =
+                      'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.background =
+                      'rgba(255, 255, 255, 0.02)';
                   }}
                 >
-                  끝자리 {item.digit}: {item.nums.join(",")} ({item.nums.length}개)
+                  끝자리 {item.digit}: {item.nums.join(',')} ({item.nums.length}
+                  개)
                 </span>
               ))}
             </div>
@@ -361,15 +445,37 @@ export function LottoAnalysisCard({
 
         {/* Temperatures */}
         {analysis.temperatures && (
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", width: "65px", flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-muted)',
+                width: '65px',
+                flexShrink: 0,
+              }}
+            >
               온도 분포
             </span>
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {[
-                { label: "열번호 🔥", color: "#ef4444", val: analysis.hot, type: "HOT" as const },
-                { label: "온번호 🟠", color: "#f97316", val: analysis.warm, type: "WARM" as const },
-                { label: "냉번호 ❄️", color: "#3b82f6", val: analysis.cold, type: "COLD" as const },
+                {
+                  label: '열번호 🔥',
+                  color: '#ef4444',
+                  val: analysis.hot,
+                  type: 'HOT' as const,
+                },
+                {
+                  label: '온번호 🟠',
+                  color: '#f97316',
+                  val: analysis.warm,
+                  type: 'WARM' as const,
+                },
+                {
+                  label: '냉번호 ❄️',
+                  color: '#3b82f6',
+                  val: analysis.cold,
+                  type: 'COLD' as const,
+                },
               ]
                 .filter((t) => t.val > 0)
                 .map((t) => (
@@ -380,22 +486,25 @@ export function LottoAnalysisCard({
                     }
                     onMouseLeave={() => setHoveredNumbers(null)}
                     style={{
-                      fontSize: "0.75rem",
-                      padding: "4px 8px",
-                      borderRadius: "6px",
-                      background: "rgba(255, 255, 255, 0.02)",
-                      border: "1px solid rgba(255, 255, 255, 0.05)",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      color: "var(--text-main)",
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      color: 'var(--text-main)',
                     }}
                     onPointerEnter={(e) => {
                       e.currentTarget.style.borderColor = t.color;
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
+                      e.currentTarget.style.background =
+                        'rgba(255, 255, 255, 0.04)';
                     }}
                     onPointerLeave={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+                      e.currentTarget.style.borderColor =
+                        'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.background =
+                        'rgba(255, 255, 255, 0.02)';
                     }}
                   >
                     {t.label}: {t.val}개
@@ -406,11 +515,18 @@ export function LottoAnalysisCard({
         )}
 
         {/* Consecutive numbers */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", width: "65px", flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-muted)',
+              width: '65px',
+              flexShrink: 0,
+            }}
+          >
             연속수 그룹
           </span>
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {analysis.consecutive && analysis.consecutive.length > 0 ? (
               analysis.consecutive.map((group, idx) => (
                 <span
@@ -418,29 +534,32 @@ export function LottoAnalysisCard({
                   onMouseEnter={() => setHoveredNumbers(new Set(group))}
                   onMouseLeave={() => setHoveredNumbers(null)}
                   style={{
-                    fontSize: "0.75rem",
-                    padding: "4px 8px",
-                    borderRadius: "6px",
-                    background: "rgba(255, 255, 255, 0.03)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    color: "var(--text-main)",
+                    fontSize: '0.75rem',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    color: 'var(--text-main)',
                   }}
                   onPointerEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--primary-cyan)";
-                    e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
+                    e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                    e.currentTarget.style.background =
+                      'rgba(0, 240, 255, 0.05)';
                   }}
                   onPointerLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                    e.currentTarget.style.borderColor =
+                      'rgba(255, 255, 255, 0.06)';
+                    e.currentTarget.style.background =
+                      'rgba(255, 255, 255, 0.03)';
                   }}
                 >
-                  {group.join("-")}
+                  {group.join('-')}
                 </span>
               ))
             ) : (
-              <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
                 연속수 없음
               </span>
             )}

@@ -1,18 +1,12 @@
-import { useState, useEffect } from "react";
-import type { MouseEvent } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useApp } from "../context/AppContext";
-import { Alert } from "./Alert";
-import { UnsavedChangesModal } from "./UnsavedChangesModal";
-import { HelpModal } from "./HelpModal";
-import { WelcomeModal } from "./WelcomeModal";
-import { PaymentModal } from "./PaymentModal";
-import { API_BASE_URL } from "../utils";
-
-interface SubscriptionStatus {
-  plan: "MONTHLY" | "YEARLY";
-  status: "ACTIVE" | "CANCELLED" | "EXPIRED";
-}
+import { useState, useEffect } from 'react';
+import type { MouseEvent } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
+import { Alert } from './Alert';
+import { UnsavedChangesModal } from './UnsavedChangesModal';
+import { HelpModal } from './HelpModal';
+import { WelcomeModal } from './WelcomeModal';
+import { PaymentModal } from './PaymentModal';
 
 export function Layout() {
   const {
@@ -25,38 +19,25 @@ export function Layout() {
     showWelcomeModal,
     setShowWelcomeModal,
     visitorId,
+    honBalance,
+    subscription,
+    checkIpStatus,
   } = useApp();
 
   const navigate = useNavigate();
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [honBalance, setHonBalance] = useState<number>(0);
-  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
 
   const hasAdminAccess = !!(
-    localStorage.getItem("mk") || sessionStorage.getItem("mk")
+    localStorage.getItem('mk') || sessionStorage.getItem('mk')
   );
 
-  const loadBillingStatus = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/check-ip`);
-      if (res.ok) {
-        const data = await res.json();
-        const result = data.data || data;
-        setHonBalance(result.hon?.balance || 0);
-        setSubscription(result.subscription || null);
-      }
-    } catch (err) {
-      console.error("Layout IP/Billing 조회 실패:", err);
-    }
-  };
-
   useEffect(() => {
-    loadBillingStatus();
-  }, [visitorId, showPaymentModal]);
+    checkIpStatus();
+  }, [visitorId, showPaymentModal, checkIpStatus]);
 
   const handleTabClick = (e: MouseEvent<HTMLAnchorElement>, path: string) => {
-    if (path === "/system" && !hasAdminAccess) {
+    if (path === '/system' && !hasAdminAccess) {
       e.preventDefault();
       setShowAdminModal(true);
       return;
@@ -74,70 +55,79 @@ export function Layout() {
   return (
     <div
       className="access-container"
-      style={{ maxWidth: "1080px", width: "100%" }}
+      style={{ maxWidth: '1080px', width: '100%' }}
     >
       <div
         className="glass-card dashboard-container"
-        style={{ textAlign: "left", padding: "30px 40px" }}
+        style={{ textAlign: 'left', padding: '30px 40px' }}
       >
         <div
           className="admin-header"
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "24px",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-            paddingBottom: "16px",
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '24px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            paddingBottom: '16px',
           }}
         >
-          <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <span
               className="logo-glow"
-              style={{ fontSize: "1.8rem", cursor: "pointer" }}
-              onClick={() => navigate("/home")}
+              style={{ fontSize: '1.8rem', cursor: 'pointer' }}
+              onClick={() => navigate('/home')}
             >
               hactto
             </span>
-            
+
             {/* 남은 혼(Hon) 충전 정보 위젯 */}
             <div
               onClick={() => setShowPaymentModal(true)}
               style={{
-                marginLeft: "18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "rgba(0, 240, 255, 0.05)",
-                border: "1px solid rgba(0, 240, 255, 0.2)",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
+                marginLeft: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(0, 240, 255, 0.05)',
+                border: '1px solid rgba(0, 240, 255, 0.2)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--primary-cyan)";
-                e.currentTarget.style.background = "rgba(0, 240, 255, 0.1)";
-                e.currentTarget.style.boxShadow = "0 0 10px rgba(0, 240, 255, 0.3)";
+                e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
+                e.currentTarget.style.boxShadow =
+                  '0 0 10px rgba(0, 240, 255, 0.3)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(0, 240, 255, 0.2)";
-                e.currentTarget.style.background = "rgba(0, 240, 255, 0.05)";
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.2)';
+                e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
               title="크레딧 충전 상점 열기"
             >
-              <span style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--primary-cyan)" }}>
-                {subscription && subscription.status === "ACTIVE" ? "UNLIMITED" : `${honBalance} HON`}
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  color: 'var(--primary-cyan)',
+                }}
+              >
+                {subscription && subscription.status === 'ACTIVE'
+                  ? 'UNLIMITED'
+                  : `${honBalance} HON`}
               </span>
               <span
                 style={{
-                  fontSize: "0.65rem",
-                  background: "var(--primary-cyan)",
-                  color: "#0a0b10",
-                  padding: "1px 4px",
-                  borderRadius: "3px",
-                  fontWeight: "bold",
+                  fontSize: '0.65rem',
+                  background: 'var(--primary-cyan)',
+                  color: '#0a0b10',
+                  padding: '1px 4px',
+                  borderRadius: '3px',
+                  fontWeight: 'bold',
                 }}
               >
                 충전
@@ -145,38 +135,37 @@ export function Layout() {
             </div>
           </div>
 
-          <div
-            style={{ display: "flex", gap: "15px", alignItems: "center" }}
-          >
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
             <button
               onClick={() => setShowHelpModal(true)}
               style={{
-                width: "24px",
-                height: "24px",
-                borderRadius: "50%",
-                background: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                color: "var(--text-dim)",
-                fontSize: "0.85rem",
-                fontWeight: "bold",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                outline: "none",
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: 'var(--text-dim)',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                outline: 'none',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.08)";
-                e.currentTarget.style.color = "#ffffff";
-                e.currentTarget.style.borderColor = "var(--primary-cyan)";
-                e.currentTarget.style.boxShadow = "0 0 10px rgba(0, 240, 255, 0.4)";
+                e.currentTarget.style.transform = 'scale(1.08)';
+                e.currentTarget.style.color = '#ffffff';
+                e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                e.currentTarget.style.boxShadow =
+                  '0 0 10px rgba(0, 240, 255, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.color = "var(--text-dim)";
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.color = 'var(--text-dim)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
               title="로또 분석 용어 사전"
             >
@@ -188,62 +177,62 @@ export function Layout() {
         <div
           className="admin-tabs"
           style={{
-            display: "flex",
-            gap: "5px",
-            marginBottom: "24px",
-            flexWrap: "wrap",
+            display: 'flex',
+            gap: '5px',
+            marginBottom: '24px',
+            flexWrap: 'wrap',
           }}
         >
           <NavLink
             to="/home"
-            onClick={(e) => handleTabClick(e, "/home")}
+            onClick={(e) => handleTabClick(e, '/home')}
             className={({ isActive }) =>
-              `tab-btn ${isActive ? "active-tab" : ""}`
+              `tab-btn ${isActive ? 'active-tab' : ''}`
             }
           >
             최근 당첨번호
           </NavLink>
           <NavLink
             to="/search"
-            onClick={(e) => handleTabClick(e, "/search")}
+            onClick={(e) => handleTabClick(e, '/search')}
             className={({ isActive }) =>
-              `tab-btn ${isActive ? "active-tab" : ""}`
+              `tab-btn ${isActive ? 'active-tab' : ''}`
             }
           >
             당첨번호 조회
           </NavLink>
           <NavLink
             to="/stats"
-            onClick={(e) => handleTabClick(e, "/stats")}
+            onClick={(e) => handleTabClick(e, '/stats')}
             className={({ isActive }) =>
-              `tab-btn ${isActive ? "active-tab" : ""}`
+              `tab-btn ${isActive ? 'active-tab' : ''}`
             }
           >
             알고리즘 통계
           </NavLink>
           <NavLink
             to="/analysis-charts"
-            onClick={(e) => handleTabClick(e, "/analysis-charts")}
+            onClick={(e) => handleTabClick(e, '/analysis-charts')}
             className={({ isActive }) =>
-              `tab-btn ${isActive ? "active-tab" : ""}`
+              `tab-btn ${isActive ? 'active-tab' : ''}`
             }
           >
             당첨통계 차트
           </NavLink>
           <NavLink
             to="/generate"
-            onClick={(e) => handleTabClick(e, "/generate")}
+            onClick={(e) => handleTabClick(e, '/generate')}
             className={({ isActive }) =>
-              `tab-btn ${isActive ? "active-tab" : ""}`
+              `tab-btn ${isActive ? 'active-tab' : ''}`
             }
           >
             예측번호 분석기
           </NavLink>
           <NavLink
             to="/history"
-            onClick={(e) => handleTabClick(e, "/history")}
+            onClick={(e) => handleTabClick(e, '/history')}
             className={({ isActive }) =>
-              `tab-btn ${isActive ? "active-tab" : ""}`
+              `tab-btn ${isActive ? 'active-tab' : ''}`
             }
           >
             내 당첨이력
@@ -254,12 +243,12 @@ export function Layout() {
           className="scroll-y-container"
           style={{
             flex: 1,
-            overflowY: "auto",
-            overflowX: "hidden",
-            paddingRight: "8px",
-            marginRight: "-8px",
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            paddingRight: '8px',
+            marginRight: '-8px',
             minHeight: 0,
-            marginBottom: "12px",
+            marginBottom: '12px',
           }}
         >
           <Outlet />
@@ -283,7 +272,7 @@ export function Layout() {
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        onSuccess={loadBillingStatus}
+        onSuccess={checkIpStatus}
       />
     </div>
   );

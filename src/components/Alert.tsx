@@ -1,4 +1,4 @@
-import type { AlertState } from "../types";
+import type { AlertState } from '../types';
 
 interface AlertProps {
   alert: AlertState | null;
@@ -9,7 +9,7 @@ export function Alert({ alert }: AlertProps) {
 
   return (
     <div className={`alert alert-${alert.type}`}>
-      <span>{alert.type === "success" ? "✓" : "⚠"}</span>
+      <span>{alert.type === 'success' ? '✓' : '⚠'}</span>
       <div>{alert.text}</div>
     </div>
   );

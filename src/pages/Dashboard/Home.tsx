@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { useApp } from "../../context/AppContext";
-import { API_BASE_URL } from "../../utils";
-import { LottoBalls } from "../../components/LottoBall";
-import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
-import type { WinningNumber } from "../../types";
+import { useState, useEffect } from 'react';
+import { useApp } from '../../context/AppContext';
+import { API_BASE_URL } from '../../utils';
+import { LottoBalls } from '../../components/LottoBall';
+import { LottoAnalysisCard } from '../../components/LottoAnalysisCard';
+import type { WinningNumber } from '../../types';
 
 export function Home() {
   const { appendAuth, showAlert } = useApp();
@@ -17,12 +17,12 @@ export function Home() {
         const res = await fetch(
           appendAuth(`${API_BASE_URL}/winning-numbers/latest`),
         );
-        if (!res.ok) throw new Error("최근 당첨번호를 가져오지 못했습니다.");
+        if (!res.ok) throw new Error('최근 당첨번호를 가져오지 못했습니다.');
         const data = await res.json();
         setLatestWinningNumber((data.data || data) as WinningNumber);
       } catch (err) {
         const error = err as Error;
-        showAlert("error", error.message);
+        showAlert('error', error.message);
       } finally {
         setLoading(false);
       }
@@ -35,30 +35,30 @@ export function Home() {
     <div>
       <h2
         className="access-title"
-        style={{ fontSize: "1.3rem", marginBottom: "16px" }}
+        style={{ fontSize: '1.3rem', marginBottom: '16px' }}
       >
         가장 최근 당첨 번호 결과
       </h2>
       {loading ? (
-        <p style={{ color: "var(--text-dim)" }}>
+        <p style={{ color: 'var(--text-dim)' }}>
           최근 당첨 번호를 로드하는 중...
         </p>
       ) : latestWinningNumber ? (
         <div
           style={{
-            background: "rgba(255,255,255,0.02)",
-            border: "var(--border-glass)",
-            padding: "24px",
-            borderRadius: "16px",
-            marginBottom: "24px",
+            background: 'rgba(255,255,255,0.02)',
+            border: 'var(--border-glass)',
+            padding: '24px',
+            borderRadius: '16px',
+            marginBottom: '24px',
           }}
         >
           <div
             style={{
-              fontSize: "1.1rem",
-              fontWeight: "bold",
-              color: "var(--primary-cyan)",
-              marginBottom: "16px",
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              color: 'var(--primary-cyan)',
+              marginBottom: '16px',
             }}
           >
             제 {latestWinningNumber.episode}회 로또 당첨번호
@@ -73,9 +73,9 @@ export function Home() {
 
           <p
             style={{
-              marginTop: "20px",
-              fontSize: "0.82rem",
-              color: "var(--text-muted)",
+              marginTop: '20px',
+              fontSize: '0.82rem',
+              color: 'var(--text-muted)',
             }}
           >
             본 결과는 동행복권 공식 데이터를 바탕으로 제공됩니다. (토요일 20시
@@ -83,12 +83,12 @@ export function Home() {
           </p>
         </div>
       ) : (
-        <p style={{ color: "var(--text-dim)" }}>
+        <p style={{ color: 'var(--text-dim)' }}>
           최근 당첨 번호 정보가 없습니다.
         </p>
       )}
 
-      <div className="features-grid" style={{ marginTop: "24px" }}>
+      <div className="features-grid" style={{ marginTop: '24px' }}>
         <div className="feature-item">
           <div className="feature-title">데이터 동기화 완료</div>
           <div className="feature-desc">

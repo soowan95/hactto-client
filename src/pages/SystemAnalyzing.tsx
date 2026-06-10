@@ -2,39 +2,39 @@ export function SystemAnalyzing() {
   return (
     <div
       className="access-container"
-      style={{ maxWidth: "640px", width: "100%", textAlign: "center" }}
+      style={{ maxWidth: '640px', width: '100%', textAlign: 'center' }}
     >
       <div
         className="glass-card allowed-dashboard"
-        style={{ position: "relative", overflow: "hidden" }}
+        style={{ position: 'relative', overflow: 'hidden' }}
       >
         {/* Ambient background pulse */}
         <div
           style={{
-            position: "absolute",
-            top: "-50%",
-            left: "-50%",
-            width: "200%",
-            height: "200%",
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
             background:
-              "radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 60%)",
-            pointerEvents: "none",
+              'radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 60%)',
+            pointerEvents: 'none',
             zIndex: 0,
           }}
         />
 
-        <div style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
           {/* Animated loading spinner icon */}
           <div
             className="status-icon"
             style={{
-              borderColor: "var(--primary-cyan)",
-              color: "var(--primary-cyan)",
-              margin: "0 auto 24px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              animation: "spin 3s linear infinite",
+              borderColor: 'var(--primary-cyan)',
+              color: 'var(--primary-cyan)',
+              margin: '0 auto 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'spin 3s linear infinite',
             }}
           >
             <svg
@@ -53,14 +53,14 @@ export function SystemAnalyzing() {
 
           <span
             className="logo-glow"
-            style={{ fontSize: "2.5rem", display: "block" }}
+            style={{ fontSize: '2.5rem', display: 'block' }}
           >
             hactto
           </span>
 
           <h1
             className="access-title"
-            style={{ marginTop: "16px", color: "var(--text-main)" }}
+            style={{ marginTop: '16px', color: 'var(--text-main)' }}
           >
             신규 당첨번호 분석 진행 중
           </h1>
@@ -68,10 +68,10 @@ export function SystemAnalyzing() {
           <p
             className="access-desc"
             style={{
-              maxWidth: "480px",
-              margin: "20px auto 30px",
-              lineHeight: "1.6",
-              color: "var(--text-muted)",
+              maxWidth: '480px',
+              margin: '20px auto 30px',
+              lineHeight: '1.6',
+              color: 'var(--text-muted)',
             }}
           >
             매주 토요일 오후 8시 30분부터 서비스 정합성을 위해
@@ -83,43 +83,45 @@ export function SystemAnalyzing() {
           <div
             className="feature-item"
             style={{
-              background: "rgba(0, 240, 255, 0.03)",
-              border: "1px solid rgba(0, 240, 255, 0.15)",
-              padding: "20px",
-              borderRadius: "12px",
-              textAlign: "left",
-              marginBottom: "10px",
+              background: 'rgba(0, 240, 255, 0.03)',
+              border: '1px solid rgba(0, 240, 255, 0.15)',
+              padding: '20px',
+              borderRadius: '12px',
+              textAlign: 'left',
+              marginBottom: '10px',
             }}
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                color: "var(--primary-cyan)",
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: 'var(--primary-cyan)',
                 fontWeight: 600,
-                marginBottom: "8px",
+                marginBottom: '8px',
               }}
             >
               <span
                 className="pulsing-dot"
                 style={{
-                  display: "inline-block",
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  background: "var(--primary-cyan)",
-                  boxShadow: "0 0 8px var(--primary-cyan)",
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: 'var(--primary-cyan)',
+                  boxShadow: '0 0 8px var(--primary-cyan)',
                 }}
               ></span>
               실시간 상태 감지 중
             </div>
             <div
               className="feature-desc"
-              style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}
+              style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}
             >
               분석이 완료되는 즉시 페이지가 자동으로 새로고침 없이 대시보드로
-              전환됩니다.<br/>브라우저 창을 닫지 마시고 잠시만 기다려주세요.
+              전환됩니다.
+              <br />
+              브라우저 창을 닫지 마시고 잠시만 기다려주세요.
             </div>
           </div>
         </div>

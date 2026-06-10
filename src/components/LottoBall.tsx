@@ -1,5 +1,5 @@
-import type { MatchResult } from "../types";
-import { getBallStyle } from "../utils";
+import type { MatchResult } from '../types';
+import { getBallStyle } from '../utils';
 
 interface LottoBallsProps {
   numbers: number[];
@@ -14,10 +14,10 @@ export function LottoBalls({ numbers, matchResult }: LottoBallsProps) {
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        flexWrap: "wrap",
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        flexWrap: 'wrap',
       }}
     >
       {mainNumbers.map((num, i) => {
@@ -33,11 +33,11 @@ export function LottoBalls({ numbers, matchResult }: LottoBallsProps) {
             : 0.35
           : 1;
         const border = isMatched
-          ? "2px solid #ffffff"
+          ? '2px solid #ffffff'
           : isBonusMatched
-            ? "2px solid #c084fc"
-            : "1px solid rgba(255,255,255,0.15)";
-        const scale = isMatched || isBonusMatched ? "1.1" : "1";
+            ? '2px solid #c084fc'
+            : '1px solid rgba(255,255,255,0.15)';
+        const scale = isMatched || isBonusMatched ? '1.1' : '1';
         return (
           <div
             key={i}
@@ -57,10 +57,10 @@ export function LottoBalls({ numbers, matchResult }: LottoBallsProps) {
         <>
           <div
             style={{
-              fontSize: "1.2rem",
-              fontWeight: "bold",
-              color: "var(--text-muted)",
-              margin: "0 4px",
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              color: 'var(--text-muted)',
+              margin: '0 4px',
             }}
           >
             +
@@ -69,9 +69,9 @@ export function LottoBalls({ numbers, matchResult }: LottoBallsProps) {
             const isBonusMatched = matchResult?.bonusMatch ?? false;
             const bonusOpacity = matchResult ? (isBonusMatched ? 1 : 0.35) : 1;
             const bonusBorder = isBonusMatched
-              ? "2px solid #ffffff"
-              : "1px solid rgba(255,255,255,0.15)";
-            const bonusScale = isBonusMatched ? "1.1" : "1";
+              ? '2px solid #ffffff'
+              : '1px solid rgba(255,255,255,0.15)';
+            const bonusScale = isBonusMatched ? '1.1' : '1';
             return (
               <div
                 className="lotto-ball"

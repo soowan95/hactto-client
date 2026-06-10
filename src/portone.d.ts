@@ -1,5 +1,6 @@
 interface Window {
   PortOne?: {
-    requestPayment: (options: any) => Promise<any>;
+    requestPayment: (options: unknown) => Promise<unknown>;
   };
 }
+
