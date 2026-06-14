@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { API_BASE_URL } from '../utils';
 import type { PaymentStatus } from '../types';
 import PortOne from '@portone/browser-sdk/v2';
+import { Alert } from './Alert';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -16,14 +17,49 @@ export function PaymentModal({
   onClose,
   onSuccess,
 }: PaymentModalProps) {
-  const { visitorId, showAlert } = useApp();
+  const { visitorId, showAlert, alert, subscription, checkIpStatus } = useApp();
   const [purchasing, setPurchasing] = useState<boolean>(false);
+  const [cancelling, setCancelling] = useState<boolean>(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     status: PaymentStatus;
     message?: string;
   }>({ status: 'READY' });
 
   if (!isOpen) return null;
+
+  const handleCancelSubscription = async () => {
+    if (cancelling) return;
+    if (
+      !window.confirm(
+        '정말로 구독을 해지하시겠습니까? 해지 시 다음 결제일부터 자동 결제가 정지됩니다.',
+      )
+    ) {
+      return;
+    }
+    try {
+      setCancelling(true);
+      const res = await fetch(`${API_BASE_URL}/payments/subscription/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || '구독 해지에 실패했습니다.');
+      }
+      showAlert(
+        'success',
+        '정기 구독 해지(예약)가 완료되었습니다. 남은 기간 동안은 정상 이용 가능합니다.',
+      );
+      await checkIpStatus();
+      onSuccess();
+    } catch (err: unknown) {
+      const error = err as Error;
+      showAlert('error', error.message || '구독 해지 중 오류가 발생했습니다.');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const handlePayment = async (amount: number, orderName: string) => {
     if (purchasing) return;
@@ -47,37 +83,97 @@ export function PaymentModal({
         throw new Error('결제 준비 작업에 실패했습니다.');
       }
 
-      // 2. 포트원 SDK 결제창 열기
+      // 2. 포트원 SDK 결제창 또는 빌링키 발급창 열기
       const storeId =
         import.meta.env.VITE_PORTONE_STORE_ID ||
         'store-61d5f308-410a-42c2-8419-58a435889e47';
-      const channelKey =
-        import.meta.env.VITE_PORTONE_CHANNEL_KEY || 'channel-key-toss-test';
 
+      const isSubscription = amount === 12000 || amount === 100000;
       setPaymentStatus({ status: 'PENDING' });
-      const payment = await PortOne.requestPayment({
-        storeId,
-        channelKey,
-        paymentId: orderId,
-        orderName,
-        totalAmount: amount,
-        currency: 'CURRENCY_KRW',
-        payMethod: 'CARD',
-        customer: {
-          fullName: 'hactto 방문자',
-        },
-      });
 
-      if (!payment) {
-        throw new Error(`[PortOne] 결제창 호출 오류`);
-      }
+      let paymentKey = '';
 
-      if (payment.code !== undefined) {
-        setPaymentStatus({
-          status: 'FAILED',
-          message: payment.message,
+      if (isSubscription) {
+        const channelKey =
+          import.meta.env.VITE_PORTONE_BILLING_CHANNEL_KEY ||
+          'channel-key-toss-billing-test';
+
+        const billingKeyRes = await PortOne.requestIssueBillingKey({
+          storeId,
+          channelKey,
+          billingKeyMethod: 'CARD',
+          issueName: orderName,
+          customer: {
+            fullName: 'hactto 방문자',
+          },
         });
-        return;
+
+        if (!billingKeyRes) {
+          throw new Error(`[PortOne] 빌링키 발급창 호출 오류`);
+        }
+
+        if (billingKeyRes.code !== undefined) {
+          await fetch(`${API_BASE_URL}/payments/fail`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId,
+              failReason: billingKeyRes.message || '빌링키 발급 실패',
+            }),
+          }).catch((e) => console.error('Failed to log payment failure:', e));
+
+          setPaymentStatus({
+            status: 'FAILED',
+            message: billingKeyRes.message,
+          });
+          showAlert(
+            'error',
+            billingKeyRes.message || '빌링키 발급에 실패했습니다.',
+          );
+          return;
+        }
+
+        paymentKey = billingKeyRes.billingKey;
+      } else {
+        const channelKey =
+          import.meta.env.VITE_PORTONE_CHANNEL_KEY || 'channel-key-toss-test';
+
+        const payment = await PortOne.requestPayment({
+          storeId,
+          channelKey,
+          paymentId: orderId,
+          orderName,
+          totalAmount: amount,
+          currency: 'CURRENCY_KRW',
+          payMethod: 'CARD',
+          customer: {
+            fullName: 'hactto 방문자',
+          },
+        });
+
+        if (!payment) {
+          throw new Error(`[PortOne] 결제창 호출 오류`);
+        }
+
+        if (payment.code !== undefined) {
+          await fetch(`${API_BASE_URL}/payments/fail`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId,
+              failReason: payment.message || '결제 실패',
+            }),
+          }).catch((e) => console.error('Failed to log payment failure:', e));
+
+          setPaymentStatus({
+            status: 'FAILED',
+            message: payment.message,
+          });
+          showAlert('error', payment.message || '결제에 실패했습니다.');
+          return;
+        }
+
+        paymentKey = payment.paymentToken || payment.paymentId || orderId;
       }
 
       // 3. API 결제 승인 요청
@@ -86,7 +182,7 @@ export function PaymentModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId,
-          paymentKey: payment.paymentToken || payment.paymentId || orderId,
+          paymentKey,
           amount,
         }),
       });
@@ -114,7 +210,6 @@ export function PaymentModal({
       setPurchasing(false);
     }
   };
-
 
   return createPortal(
     <div
@@ -165,10 +260,23 @@ export function PaymentModal({
                 marginBottom: '18px',
               }}
             />
-            <p style={{ color: '#ffffff', fontWeight: 'bold', margin: '0 0 8px 0', fontSize: '1.1rem' }}>
+            <p
+              style={{
+                color: '#ffffff',
+                fontWeight: 'bold',
+                margin: '0 0 8px 0',
+                fontSize: '1.1rem',
+              }}
+            >
               결제 요청 확인 중...
             </p>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', margin: 0 }}>
+            <p
+              style={{
+                color: 'var(--text-dim)',
+                fontSize: '0.85rem',
+                margin: 0,
+              }}
+            >
               결제창에서 결제 완료 시 자동으로 화면이 전환됩니다.
             </p>
           </div>
@@ -177,7 +285,7 @@ export function PaymentModal({
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             marginBottom: '25px',
           }}
         >
@@ -198,6 +306,17 @@ export function PaymentModal({
               혼(Hon)을 충전하거나 무제한 이용권을 구독하여 실시간 알고리즘
               분석기를 제약 없이 이용해 보세요.
             </p>
+            <p
+              style={{
+                color: '#ef4444',
+                fontSize: '0.72rem',
+                margin: '4px 0 0 0',
+                opacity: 0.85,
+              }}
+            >
+              ※ 결제 완료 후에는 환불이 절대 불가하오니 신중한 구매를
+              부탁드립니다.
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -212,6 +331,12 @@ export function PaymentModal({
             ✕
           </button>
         </div>
+
+        {alert && (
+          <div style={{ marginBottom: '20px' }}>
+            <Alert alert={alert} />
+          </div>
+        )}
 
         {/* 3열 카드 그리드 레이아웃 */}
         <div
@@ -246,15 +371,6 @@ export function PaymentModal({
             >
               혼(Hon) 단건 충전
             </h4>
-            <p
-              style={{
-                fontSize: '0.8rem',
-                color: 'var(--text-dim)',
-                margin: '0 0 20px 0',
-              }}
-            >
-              분석 1회 요청 시 1 HON이 차감됩니다.
-            </p>
 
             <div
               style={{
@@ -301,9 +417,13 @@ export function PaymentModal({
                     30 HON
                   </div>
                   <div
-                    style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-dim)',
+                      marginTop: '2px',
+                    }}
                   >
-                    + 기본 예측 분석 30회
+                    1HON당 약 33.3원
                   </div>
                 </div>
                 <div
@@ -354,9 +474,13 @@ export function PaymentModal({
                     100 HON
                   </div>
                   <div
-                    style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-dim)',
+                      marginTop: '2px',
+                    }}
                   >
-                    + 기본 예측 분석 100회
+                    1HON당 30원 (추천)
                   </div>
                 </div>
                 <div
@@ -407,9 +531,14 @@ export function PaymentModal({
                     200 HON
                   </div>
                   <div
-                    style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-dim)',
+                      marginTop: '2px',
+                      fontWeight: '600',
+                    }}
                   >
-                    + 기본 예측 분석 200회
+                    1HON당 25원 (최대 할인! 🔥)
                   </div>
                 </div>
                 <div
@@ -453,11 +582,29 @@ export function PaymentModal({
               style={{
                 fontSize: '0.8rem',
                 color: 'var(--text-dim)',
-                margin: '0 0 20px 0',
+                margin: '0 0 14px 0',
               }}
             >
               번거로운 충전 없이 한 달 동안 무제한 분석이 가능합니다.
             </p>
+            <div
+              style={{
+                fontSize: '0.8rem',
+                color: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                marginBottom: '15px',
+                textAlign: 'left',
+              }}
+            >
+              <div
+                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+              >
+                <span style={{ color: 'var(--primary-purple)' }}>✓</span>
+                <span>실시간 알고리즘 무제한 분석</span>
+              </div>
+            </div>
             <div
               style={{
                 fontSize: '1.6rem',
@@ -472,29 +619,118 @@ export function PaymentModal({
               </span>
             </div>
 
-            <button
-              onClick={() => handlePayment(12000, '월간 무제한 구독')}
-              disabled={purchasing}
-              className="action-btn"
+            {subscription?.plan === 'MONTHLY' &&
+            subscription.status === 'ACTIVE' ? (
+              <button
+                onClick={handleCancelSubscription}
+                disabled={cancelling}
+                style={{
+                  width: '100%',
+                  marginTop: 'auto',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  fontWeight: '600',
+                  fontSize: '0.95rem',
+                  padding: '14px 24px',
+                  borderRadius: '50px',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                }}
+              >
+                구독 해지하기 ⚠️
+              </button>
+            ) : subscription?.plan === 'MONTHLY' &&
+              subscription.status === 'CANCELLED' ? (
+              <div
+                style={{
+                  width: '100%',
+                  marginTop: 'auto',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  color: 'var(--text-dim)',
+                  fontWeight: '600',
+                  fontSize: '0.85rem',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                  lineHeight: '1.4',
+                }}
+              >
+                <div>해지 예약 완료</div>
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    marginTop: '4px',
+                    opacity: 0.8,
+                  }}
+                >
+                  만료 예정일:{' '}
+                  {subscription.endsAt
+                    ? new Date(subscription.endsAt).toLocaleDateString('ko-KR')
+                    : '-'}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => handlePayment(12000, '월간 무제한 구독')}
+                disabled={purchasing}
+                style={{
+                  width: '100%',
+                  marginTop: 'auto',
+                  background:
+                    'linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%)',
+                  color: '#ffffff',
+                  fontWeight: '600',
+                  fontSize: '0.95rem',
+                  padding: '14px 24px',
+                  borderRadius: '50px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(168, 85, 247, 0.35)',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow =
+                    '0 8px 30px rgba(168, 85, 247, 0.55)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow =
+                    '0 4px 20px rgba(168, 85, 247, 0.35)';
+                }}
+              >
+                월간 무제한 시작하기 ⚡
+              </button>
+            )}
+            <p
               style={{
-                width: '100%',
-                marginTop: 'auto',
-                background:
-                  'linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%)',
-                border: 'none',
+                fontSize: '0.72rem',
+                color: 'var(--text-dim)',
+                marginTop: '10px',
+                textAlign: 'center',
+                marginBottom: 0,
               }}
             >
-              정기 구독하기
-            </button>
+              ※ 언제든 자유롭게 해지할 수 있어요
+            </p>
           </div>
 
           {/* 3번째 열: 연간 무제한 이용권 */}
           <div
             className="glass-card"
             style={{
+              position: 'relative',
               padding: '24px 20px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(234, 179, 8, 0.25)',
+              background: 'rgba(234, 179, 8, 0.015)',
               display: 'flex',
               flexDirection: 'column',
               height: '100%',
@@ -503,10 +739,29 @@ export function PaymentModal({
               maxHeight: 'none',
             }}
           >
+            <div
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'rgba(234, 179, 8, 0.12)',
+                border: '1px solid #eab308',
+                color: '#eab308',
+                fontSize: '0.68rem',
+                fontWeight: 'bold',
+                padding: '3px 8px',
+                borderRadius: '20px',
+                boxShadow: '0 0 10px rgba(234, 179, 8, 0.2)',
+                letterSpacing: '0.5px',
+              }}
+            >
+              BEST
+            </div>
+
             <h4
               style={{
                 fontSize: '1.1rem',
-                color: 'var(--primary-purple)',
+                color: '#eab308',
                 margin: '0 0 8px 0',
               }}
             >
@@ -516,39 +771,190 @@ export function PaymentModal({
               style={{
                 fontSize: '0.8rem',
                 color: 'var(--text-dim)',
-                margin: '0 0 20px 0',
+                margin: '0 0 14px 0',
               }}
             >
               1년 요금 일시 선결제로 30% 정가 절감 효과를 보실 수 있습니다.
             </p>
             <div
               style={{
-                fontSize: '1.6rem',
-                fontWeight: 'bold',
+                fontSize: '0.8rem',
                 color: '#ffffff',
-                margin: '15px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                marginBottom: '15px',
+                textAlign: 'left',
               }}
             >
-              100,000 원{' '}
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                / 년
-              </span>
+              <div
+                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+              >
+                <span style={{ color: '#eab308' }}>✓</span>
+                <span>실시간 알고리즘 무제한 분석 (1년)</span>
+              </div>
+              <div
+                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+              >
+                <span style={{ color: '#eab308' }}>✓</span>
+                <span style={{ fontWeight: '600' }}>광고 제거 ✨</span>
+              </div>
+            </div>
+            <div
+              style={{
+                margin: '15px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                textAlign: 'left',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '1.05rem',
+                    textDecoration: 'line-through',
+                    color: 'var(--text-dim)',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  120,000 원
+                </span>
+                <span
+                  style={{
+                    color: '#eab308',
+                    fontSize: '0.95rem',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  ➔
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: '1.8rem',
+                  fontWeight: 'bold',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '4px',
+                }}
+              >
+                <span>100,000 원</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                  / 년
+                </span>
+              </div>
             </div>
 
-            <button
-              onClick={() => handlePayment(100000, '연간 무제한 구독')}
-              disabled={purchasing}
-              className="action-btn"
+            {subscription?.plan === 'YEARLY' &&
+            subscription.status === 'ACTIVE' ? (
+              <button
+                onClick={handleCancelSubscription}
+                disabled={cancelling}
+                style={{
+                  width: '100%',
+                  marginTop: 'auto',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  fontWeight: '600',
+                  fontSize: '0.95rem',
+                  padding: '14px 24px',
+                  borderRadius: '50px',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                }}
+              >
+                구독 해지하기 ⚠️
+              </button>
+            ) : subscription?.plan === 'YEARLY' &&
+              subscription.status === 'CANCELLED' ? (
+              <div
+                style={{
+                  width: '100%',
+                  marginTop: 'auto',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  color: 'var(--text-dim)',
+                  fontWeight: '600',
+                  fontSize: '0.85rem',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                  lineHeight: '1.4',
+                }}
+              >
+                <div>해지 예약 완료</div>
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    marginTop: '4px',
+                    opacity: 0.8,
+                  }}
+                >
+                  만료 예정일:{' '}
+                  {subscription.endsAt
+                    ? new Date(subscription.endsAt).toLocaleDateString('ko-KR')
+                    : '-'}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => handlePayment(100000, '연간 무제한 구독')}
+                disabled={purchasing}
+                style={{
+                  width: '100%',
+                  marginTop: 'auto',
+                  background:
+                    'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                  color: '#090a0f',
+                  fontWeight: '700',
+                  fontSize: '0.95rem',
+                  padding: '14px 24px',
+                  borderRadius: '50px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(234, 179, 8, 0.35)',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow =
+                    '0 8px 30px rgba(234, 179, 8, 0.55)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow =
+                    '0 4px 20px rgba(234, 179, 8, 0.35)';
+                }}
+              >
+                연간 패스로 30% 절약하기 🚀
+              </button>
+            )}
+            <p
               style={{
-                width: '100%',
-                marginTop: 'auto',
-                background:
-                  'linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%)',
-                border: 'none',
+                fontSize: '0.72rem',
+                color: 'var(--text-dim)',
+                marginTop: '10px',
+                textAlign: 'center',
+                marginBottom: 0,
               }}
             >
-              정기 구독하기
-            </button>
+              ※ 언제든 자유롭게 해지할 수 있어요
+            </p>
           </div>
         </div>
       </div>

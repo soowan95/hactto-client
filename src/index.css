@@ -804,3 +804,10 @@ body {
 .scroll-y-container::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* Responsive Google Ads Sidebars */
+@media (max-width: 1440px) {
+  .google-ad-sidebar {
+    display: none !important;
+  }
+}

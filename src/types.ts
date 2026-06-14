@@ -104,11 +104,16 @@ export interface PersonalAnalysis {
   temperatures?: Record<number, 'HOT' | 'WARM' | 'COLD'>;
 }
 
-export type PaymentStatus = 'READY' | 'PENDING' | 'PAID' | 'CANCELLED' | 'FAILED';
+export type PaymentStatus =
+  | 'READY'
+  | 'PENDING'
+  | 'PAID'
+  | 'CANCELLED'
+  | 'FAILED';
 
 export interface SubscriptionStatus {
   plan: 'MONTHLY' | 'YEARLY';
   status: 'ACTIVE' | 'CANCELLED' | 'EXPIRED';
+  startsAt?: string;
+  endsAt?: string;
 }
-
-

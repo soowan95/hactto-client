@@ -152,7 +152,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [visitorId]);
 
-
   // Fetch initial IP status / verify saved master key
   const checkIpStatus = useCallback(async () => {
     try {

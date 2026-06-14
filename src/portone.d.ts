@@ -3,4 +3,3 @@ interface Window {
     requestPayment: (options: unknown) => Promise<unknown>;
   };
 }
-

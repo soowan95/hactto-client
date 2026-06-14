@@ -419,7 +419,6 @@ export function Generate() {
         });
       }
 
-
       setAnalyzedResults(results);
       showAlert(
         'success',
