@@ -1,21 +1,21 @@
-import { useEffect } from "react";
+import { useEffect } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
-} from "react-router-dom";
-import "./App.css";
-import { AppProvider, useApp } from "./context/AppContext";
-import { Layout } from "./components/Layout";
-import { SystemAnalyzing } from "./pages/SystemAnalyzing";
-import { Home } from "./pages/Dashboard/Home";
-import { Search } from "./pages/Dashboard/Search";
-import { Stats } from "./pages/Dashboard/Stats";
-import { AnalysisCharts } from "./pages/Dashboard/AnalysisCharts";
-import { Generate } from "./pages/Dashboard/Generate";
-import { History } from "./pages/Dashboard/History";
-import { AdminLoginModal } from "./components/AdminLoginModal";
+} from 'react-router-dom';
+import './App.css';
+import { AppProvider, useApp } from './context/AppContext';
+import { Layout } from './components/Layout';
+import { SystemAnalyzing } from './pages/SystemAnalyzing';
+import { Home } from './pages/Dashboard/Home';
+import { Search } from './pages/Dashboard/Search';
+import { Stats } from './pages/Dashboard/Stats';
+import { AnalysisCharts } from './pages/Dashboard/AnalysisCharts';
+import { Generate } from './pages/Dashboard/Generate';
+import { History } from './pages/Dashboard/History';
+import { AdminLoginModal } from './components/AdminLoginModal';
 
 function AppContent() {
   const {
@@ -31,17 +31,17 @@ function AppContent() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isModifier = e.metaKey || e.ctrlKey;
       // Trigger on Cmd+Shift+H (Mac) or Ctrl+Shift+H (Windows)
-      if (isModifier && e.shiftKey && e.code === "KeyH") {
+      if (isModifier && e.shiftKey && e.code === 'KeyH') {
         e.preventDefault();
         setShowAdminModal(!showAdminModal);
-        setAdminError("");
+        setAdminError('');
         setAlert(null);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
 
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showAdminModal, setAdminError, setAlert, setShowAdminModal]);
 
   if (isSystemAnalyzing) {
@@ -77,7 +77,7 @@ function AppContent() {
         isOpen={showAdminModal}
         onClose={() => {
           setShowAdminModal(false);
-          setAdminError("");
+          setAdminError('');
           setAlert(null);
         }}
       />

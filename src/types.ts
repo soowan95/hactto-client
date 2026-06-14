@@ -1,5 +1,5 @@
 export interface AlertState {
-  type: "success" | "error";
+  type: 'success' | 'error';
   text: string;
 }
 
@@ -32,7 +32,7 @@ export interface LottoAnalysis {
   high: number;
   ac: number;
   consecutive: number[][];
-  temperatures?: Record<number, "HOT" | "WARM" | "COLD">;
+  temperatures?: Record<number, 'HOT' | 'WARM' | 'COLD'>;
 }
 
 export interface WinningNumber {
@@ -101,6 +101,19 @@ export interface PersonalAnalysis {
   win3: number;
   win4: number;
   win5: number;
-  temperatures?: Record<number, "HOT" | "WARM" | "COLD">;
+  temperatures?: Record<number, 'HOT' | 'WARM' | 'COLD'>;
 }
 
+export type PaymentStatus =
+  | 'READY'
+  | 'PENDING'
+  | 'PAID'
+  | 'CANCELLED'
+  | 'FAILED';
+
+export interface SubscriptionStatus {
+  plan: 'MONTHLY' | 'YEARLY';
+  status: 'ACTIVE' | 'CANCELLED' | 'EXPIRED';
+  startsAt?: string;
+  endsAt?: string;
+}

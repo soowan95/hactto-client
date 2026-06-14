@@ -1,4 +1,4 @@
-import { useApp } from "../context/AppContext";
+import { useApp } from '../context/AppContext';
 
 interface UnsavedChangesModalProps {
   isOpen: boolean;
@@ -32,16 +32,16 @@ export function UnsavedChangesModal({
     <div className="admin-modal-overlay">
       <div
         className="glass-card admin-modal-content"
-        style={{ maxWidth: "440px" }}
+        style={{ maxWidth: '440px' }}
       >
         {/* Warning Icon */}
         <div
           className="status-icon"
           style={{
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid #ef4444",
-            color: "#ef4444",
-            marginBottom: "20px",
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid #ef4444',
+            color: '#ef4444',
+            marginBottom: '20px',
           }}
         >
           <svg
@@ -62,7 +62,7 @@ export function UnsavedChangesModal({
 
         <h2
           className="access-title"
-          style={{ fontSize: "1.35rem", marginBottom: "8px" }}
+          style={{ fontSize: '1.35rem', marginBottom: '8px' }}
         >
           저장되지 않은 변경 사항
         </h2>
@@ -70,9 +70,9 @@ export function UnsavedChangesModal({
         <p
           className="access-desc"
           style={{
-            fontSize: "0.88rem",
-            marginBottom: "24px",
-            lineHeight: "1.6",
+            fontSize: '0.88rem',
+            marginBottom: '24px',
+            lineHeight: '1.6',
           }}
         >
           가중치 설정이 변경되었으나 아직 저장되지 않았습니다. 이동할 경우
@@ -81,19 +81,19 @@ export function UnsavedChangesModal({
         </p>
 
         {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+        <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
           <button
             type="button"
             className="btn-submit"
             style={{
               flex: 1,
-              height: "42px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
-              color: "#ffffff",
-              boxShadow: "0 4px 15px rgba(239, 68, 68, 0.3)",
+              height: '42px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+              color: '#ffffff',
+              boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)',
               fontWeight: 600,
             }}
             onClick={handleLeave}
@@ -106,10 +106,10 @@ export function UnsavedChangesModal({
             style={{
               flex: 1,
               padding: 0,
-              height: "42px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              height: '42px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               margin: 0,
             }}
             onClick={handleStay}

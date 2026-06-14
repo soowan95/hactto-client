@@ -5,10 +5,10 @@ import {
   useState,
   useEffect,
   useCallback,
-} from "react";
-import type { ReactNode } from "react";
-import type { AlertState } from "../types";
-import { API_BASE_URL } from "../utils";
+} from 'react';
+import type { ReactNode } from 'react';
+import type { AlertState, SubscriptionStatus } from '../types';
+import { API_BASE_URL } from '../utils';
 
 interface AppContextType {
   loading: boolean;
@@ -26,7 +26,7 @@ interface AppContextType {
   visitorId: string;
   alert: AlertState | null;
   setAlert: (alert: AlertState | null) => void;
-  showAlert: (type: "success" | "error", text: string) => void;
+  showAlert: (type: 'success' | 'error', text: string) => void;
   submitting: boolean;
   setSubmitting: (val: boolean) => void;
   checkIpStatus: () => Promise<void>;
@@ -48,6 +48,8 @@ interface AppContextType {
   setIsSystemAnalyzing: (val: boolean) => void;
   showWelcomeModal: boolean;
   setShowWelcomeModal: (val: boolean) => void;
+  honBalance: number;
+  subscription: SubscriptionStatus | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,8 +59,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isSystemAnalyzing, setIsSystemAnalyzing] = useState<boolean>(false);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [pending, setPending] = useState<boolean>(false);
-  const [clientIp, setClientIp] = useState<string>("");
-  const [visitorId, setVisitorId] = useState<string>("");
+  const [clientIp, setClientIp] = useState<string>('');
+  const [visitorId, setVisitorId] = useState<string>('');
   const [showWelcomeModal, setShowWelcomeModal] = useState<boolean>(false);
 
   // Unsaved weights warning states
@@ -71,15 +73,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Admin states
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [showAdminModal, setShowAdminModal] = useState<boolean>(false);
-  const [adminKey, setAdminKey] = useState<string>("");
-  const [adminError, setAdminError] = useState<string>("");
+  const [adminKey, setAdminKey] = useState<string>('');
+  const [adminError, setAdminError] = useState<string>('');
 
   // UI state
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
+  // HON / Billing status states
+  const [honBalance, setHonBalance] = useState<number>(0);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
+    null,
+  );
+
   // Show auto-dismiss alerts
-  const showAlert = useCallback((type: "success" | "error", text: string) => {
+  const showAlert = useCallback((type: 'success' | 'error', text: string) => {
     setAlert({ type, text });
     setTimeout(() => {
       setAlert((prev) => (prev?.text === text ? null : prev));
@@ -95,25 +103,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const originalFetch = window.fetch;
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const vid = localStorage.getItem("visitor_id") || visitorId;
-      const mk = sessionStorage.getItem("mk") || localStorage.getItem("mk");
+      let urlString = '';
+      if (typeof input === 'string') {
+        urlString = input;
+      } else if (input instanceof URL) {
+        urlString = input.href;
+      } else if (input && typeof input === 'object' && 'url' in input) {
+        urlString = (input as Request).url;
+      }
+
+      const isInternalApi =
+        urlString.startsWith(API_BASE_URL) ||
+        !/^(?:https?:)?\/\//i.test(urlString);
+
+      if (!isInternalApi) {
+        return originalFetch(input, init);
+      }
+
+      const vid = localStorage.getItem('visitor_id') || visitorId;
+      const mk = sessionStorage.getItem('mk') || localStorage.getItem('mk');
 
       const newInit = { ...init };
       const headers = { ...(init?.headers || {}) } as Record<string, string>;
 
       if (vid) {
-        headers["x-visitor-id"] = vid;
+        headers['x-visitor-id'] = vid;
       }
       if (mk) {
-        headers["x-master-key"] = mk;
+        headers['x-master-key'] = mk;
       }
 
       newInit.headers = headers;
-      
+
       const response = await originalFetch(input, newInit);
-      
-      const isFirstVisit = response.headers.get("x-first-visit") === "true";
-      const hasConsented = localStorage.getItem("hactto_welcome_consented") === "true";
+
+      const isFirstVisit = response.headers.get('x-first-visit') === 'true';
+      const hasConsented =
+        localStorage.getItem('hactto_welcome_consented') === 'true';
       if (isFirstVisit && !hasConsented) {
         setShowWelcomeModal(true);
       }
@@ -131,7 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await Promise.resolve();
       setLoading(true);
-      const savedMk = localStorage.getItem("mk");
+      const savedMk = localStorage.getItem('mk');
 
       // If a Master Key is saved locally, verify it
       if (savedMk) {
@@ -142,65 +168,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const adminResult = adminData.data || adminData;
 
         if (adminRes.ok && adminResult.allowed) {
+          setHonBalance(adminResult.hon?.balance || 0);
+          setSubscription(adminResult.subscription || null);
           setAllowed(true);
           setPending(false);
-          setClientIp(adminResult.ip || "unknown");
+          setClientIp(adminResult.ip || 'unknown');
           if (adminResult.visitorId) {
             setVisitorId(adminResult.visitorId);
-            localStorage.setItem("visitor_id", adminResult.visitorId);
+            localStorage.setItem('visitor_id', adminResult.visitorId);
           }
-          const isFirstVisit = adminRes.headers.get("x-first-visit") === "true";
-          const hasConsented = localStorage.getItem("hactto_welcome_consented") === "true";
+          const isFirstVisit = adminRes.headers.get('x-first-visit') === 'true';
+          const hasConsented =
+            localStorage.getItem('hactto_welcome_consented') === 'true';
           if (!hasConsented) {
             if (isFirstVisit) {
               setShowWelcomeModal(true);
             } else {
-              localStorage.setItem("hactto_welcome_consented", "true");
+              localStorage.setItem('hactto_welcome_consented', 'true');
             }
           }
           setLoading(false);
           return;
         } else {
-          localStorage.removeItem("mk");
+          localStorage.removeItem('mk');
         }
       }
 
       // Default IP check (always allowed now)
       const res = await fetch(`${API_BASE_URL}/check-ip`, {
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (!res.ok) {
-        throw new Error("IP 상태를 조회하는 중 오류가 발생했습니다.");
+        throw new Error('IP 상태를 조회하는 중 오류가 발생했습니다.');
       }
 
       const data = await res.json();
       const result = data.data || data;
 
+      setHonBalance(result.hon?.balance || 0);
+      setSubscription(result.subscription || null);
       setAllowed(true);
       setPending(false);
-      setClientIp(result.ip || "unknown");
+      setClientIp(result.ip || 'unknown');
       if (result.visitorId) {
         setVisitorId(result.visitorId);
-        localStorage.setItem("visitor_id", result.visitorId);
+        localStorage.setItem('visitor_id', result.visitorId);
       }
-      
-      const isFirstVisit = res.headers.get("x-first-visit") === "true";
-      const hasConsented = localStorage.getItem("hactto_welcome_consented") === "true";
+
+      const isFirstVisit = res.headers.get('x-first-visit') === 'true';
+      const hasConsented =
+        localStorage.getItem('hactto_welcome_consented') === 'true';
       if (!hasConsented) {
         if (isFirstVisit) {
           setShowWelcomeModal(true);
         } else {
-          localStorage.setItem("hactto_welcome_consented", "true");
+          localStorage.setItem('hactto_welcome_consented', 'true');
         }
       }
     } catch (err: unknown) {
       console.error(err);
       setAllowed(true);
       setPending(false);
-      setClientIp("알 수 없음");
+      setClientIp('알 수 없음');
       const error = err as Error;
-      showAlert("error", error.message || "서버 연결에 실패했습니다.");
+      showAlert('error', error.message || '서버 연결에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -210,7 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleMasterKeySubmit = useCallback(
     async (key: string): Promise<boolean> => {
       if (!key.trim()) {
-        showAlert("error", "Master key를 입력해주세요.");
+        showAlert('error', 'Master key를 입력해주세요.');
         return false;
       }
 
@@ -226,14 +258,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         if (!res.ok || !result.allowed) {
           throw new Error(
-            "올바르지 않은 Master key이거나 인증에 실패했습니다.",
+            '올바르지 않은 Master key이거나 인증에 실패했습니다.',
           );
         }
 
-        localStorage.setItem("mk", key);
+        localStorage.setItem('mk', key);
         showAlert(
-          "success",
-          "Master key 인증 성공! 플랫폼 접근 권한이 부여되었습니다.",
+          'success',
+          'Master key 인증 성공! 플랫폼 접근 권한이 부여되었습니다.',
         );
 
         // Reload states
@@ -243,8 +275,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error(err);
         const error = err as Error;
         showAlert(
-          "error",
-          error.message || "Master key 검증 중 오류가 발생했습니다.",
+          'error',
+          error.message || 'Master key 검증 중 오류가 발생했습니다.',
         );
         return false;
       } finally {
@@ -258,20 +290,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadAdminData = useCallback(async (key: string) => {
     try {
       setLoading(true);
-      setAdminError("");
+      setAdminError('');
 
       const res = await fetch(
         `${API_BASE_URL}/check-ip?mk=${encodeURIComponent(key)}`,
       );
-      if (!res.ok) throw new Error("마스터키 인증 실패");
+      if (!res.ok) throw new Error('마스터키 인증 실패');
       const data = await res.json();
       const result = data.data || data;
 
       if (!result.allowed) {
-        throw new Error("올바르지 않은 마스터키입니다.");
+        throw new Error('올바르지 않은 마스터키입니다.');
       }
 
-      sessionStorage.setItem("mk", key);
+      sessionStorage.setItem('mk', key);
       setIsAdminMode(true);
 
       return {
@@ -281,9 +313,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
     } catch (err: unknown) {
       console.error(err);
-      const errMsg = "관리자 키 인증 실패 또는 데이터를 불러오지 못했습니다.";
+      const errMsg = '관리자 키 인증 실패 또는 데이터를 불러오지 못했습니다.';
       setAdminError(errMsg);
-      sessionStorage.removeItem("mk");
+      sessionStorage.removeItem('mk');
       setIsAdminMode(false);
       throw err;
     } finally {
@@ -293,9 +325,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Logout from Admin
   const handleAdminLogout = useCallback(() => {
-    sessionStorage.removeItem("mk");
+    sessionStorage.removeItem('mk');
     setIsAdminMode(false);
-    setAdminKey("");
+    setAdminKey('');
     checkIpStatus();
   }, [checkIpStatus]);
 
@@ -303,7 +335,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     checkIpStatus();
 
-    const savedKey = sessionStorage.getItem("mk");
+    const savedKey = sessionStorage.getItem('mk');
     if (savedKey) {
       setIsAdminMode(true);
       loadAdminData(savedKey).catch(() => {});
@@ -324,7 +356,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setIsSystemAnalyzing(!!result.inProgress);
         }
       } catch (err) {
-        console.error("시스템 상태 조회 실패:", err);
+        console.error('시스템 상태 조회 실패:', err);
       }
     };
 
@@ -340,12 +372,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const data = JSON.parse(event.data);
           setIsSystemAnalyzing(!!data.inProgress);
         } catch (err) {
-          console.error("시스템 상태 SSE 파싱 실패:", err);
+          console.error('시스템 상태 SSE 파싱 실패:', err);
         }
       };
 
       sse.onerror = (err) => {
-        console.error("시스템 상태 SSE 에러, 재연결 중...", err);
+        console.error('시스템 상태 SSE 에러, 재연결 중...', err);
         sse?.close();
         // Retry connection after 5 seconds
         retryTimeout = setTimeout(() => {
@@ -361,12 +393,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const handleFocus = () => {
       checkSystemStatus();
     };
-    window.addEventListener("focus", handleFocus);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       if (sse) sse.close();
       if (retryTimeout) clearTimeout(retryTimeout);
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -406,6 +438,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsSystemAnalyzing,
         showWelcomeModal,
         setShowWelcomeModal,
+        honBalance,
+        subscription,
       }}
     >
       {children}
@@ -416,7 +450,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 export function useApp() {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error("useApp must be used within an AppProvider");
+    throw new Error('useApp must be used within an AppProvider');
   }
   return context;
 }

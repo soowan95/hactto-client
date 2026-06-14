@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
-import type { FormEvent } from "react";
-import { createPortal } from "react-dom";
-import { useApp } from "../../context/AppContext";
-import { API_BASE_URL } from "../../utils";
-import { LottoBalls } from "../../components/LottoBall";
-import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
-import type { WinningNumber } from "../../types";
+import { useState, useEffect } from 'react';
+import type { FormEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { useApp } from '../../context/AppContext';
+import { API_BASE_URL } from '../../utils';
+import { LottoBalls } from '../../components/LottoBall';
+import { LottoAnalysisCard } from '../../components/LottoAnalysisCard';
+import type { WinningNumber } from '../../types';
 
 export function Search() {
   const { appendAuth } = useApp();
-  const [searchEpisode, setSearchEpisode] = useState("");
+  const [searchEpisode, setSearchEpisode] = useState('');
   const [searchResult, setSearchResult] = useState<WinningNumber | null>(null);
-  const [searchError, setSearchError] = useState("");
+  const [searchError, setSearchError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [allWinningNumbers, setAllWinningNumbers] = useState<WinningNumber[]>(
@@ -23,17 +23,19 @@ export function Search() {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
-    const scrollContainer = document.querySelector(".scroll-y-container") as HTMLElement;
+    const scrollContainer = document.querySelector(
+      '.scroll-y-container',
+    ) as HTMLElement;
     if (selectedEpisode) {
-      document.body.style.overflow = "hidden";
-      if (scrollContainer) scrollContainer.style.overflowY = "hidden";
+      document.body.style.overflow = 'hidden';
+      if (scrollContainer) scrollContainer.style.overflowY = 'hidden';
     } else {
-      document.body.style.overflow = "";
-      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+      document.body.style.overflow = '';
+      if (scrollContainer) scrollContainer.style.overflowY = 'auto';
     }
     return () => {
-      document.body.style.overflow = "";
-      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+      document.body.style.overflow = '';
+      if (scrollContainer) scrollContainer.style.overflowY = 'auto';
     };
   }, [selectedEpisode]);
 
@@ -48,7 +50,7 @@ export function Search() {
         setSelectedEpisode(result as WinningNumber);
       }
     } catch (err) {
-      console.error("Failed to fetch episode details:", err);
+      console.error('Failed to fetch episode details:', err);
     }
   };
 
@@ -75,10 +77,10 @@ export function Search() {
 
   const handleSearchEpisode = async (e: FormEvent) => {
     e.preventDefault();
-    setSearchError("");
+    setSearchError('');
     setSearchResult(null);
     if (!searchEpisode.trim() || isNaN(Number(searchEpisode))) {
-      setSearchError("올바른 회차 번호를 입력해주세요.");
+      setSearchError('올바른 회차 번호를 입력해주세요.');
       return;
     }
 
@@ -91,7 +93,7 @@ export function Search() {
         if (res.status === 404) {
           throw new Error(`${searchEpisode}회차 당첨번호가 존재하지 않습니다.`);
         }
-        throw new Error("회차 번호 검색 중 오류가 발생했습니다.");
+        throw new Error('회차 번호 검색 중 오류가 발생했습니다.');
       }
       const data = await res.json();
       const result = data.data || data;
@@ -113,7 +115,7 @@ export function Search() {
     <div>
       <h2
         className="access-title"
-        style={{ fontSize: "1.3rem", marginBottom: "16px" }}
+        style={{ fontSize: '1.3rem', marginBottom: '16px' }}
       >
         역대 로또 당첨번호 조회
       </h2>
@@ -122,13 +124,13 @@ export function Search() {
       <form
         onSubmit={handleSearchEpisode}
         style={{
-          display: "flex",
-          gap: "10px",
-          marginBottom: "24px",
-          background: "rgba(255,255,255,0.01)",
-          padding: "16px",
-          borderRadius: "12px",
-          border: "var(--border-glass)",
+          display: 'flex',
+          gap: '10px',
+          marginBottom: '24px',
+          background: 'rgba(255,255,255,0.01)',
+          padding: '16px',
+          borderRadius: '12px',
+          border: 'var(--border-glass)',
         }}
       >
         <input
@@ -144,14 +146,14 @@ export function Search() {
           className="btn-submit"
           type="submit"
           disabled={submitting}
-          style={{ whiteSpace: "nowrap" }}
+          style={{ whiteSpace: 'nowrap' }}
         >
-          {submitting ? "검색 중..." : "회차 검색"}
+          {submitting ? '검색 중...' : '회차 검색'}
         </button>
       </form>
 
       {searchError && (
-        <div className="alert alert-error" style={{ marginBottom: "20px" }}>
+        <div className="alert alert-error" style={{ marginBottom: '20px' }}>
           <span>⚠</span>
           <div>{searchError}</div>
         </div>
@@ -161,34 +163,34 @@ export function Search() {
         <div
           onClick={() => handleSelectEpisode(searchResult.episode)}
           style={{
-            background: "rgba(0, 240, 255, 0.03)",
-            border: "1px solid rgba(0, 240, 255, 0.15)",
-            padding: "20px",
-            borderRadius: "16px",
-            marginBottom: "24px",
-            cursor: "pointer",
-            transition: "background 0.2s",
+            background: 'rgba(0, 240, 255, 0.03)',
+            border: '1px solid rgba(0, 240, 255, 0.15)',
+            padding: '20px',
+            borderRadius: '16px',
+            marginBottom: '24px',
+            cursor: 'pointer',
+            transition: 'background 0.2s',
           }}
           onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(0, 240, 255, 0.06)")
+            (e.currentTarget.style.background = 'rgba(0, 240, 255, 0.06)')
           }
           onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(0, 240, 255, 0.03)")
+            (e.currentTarget.style.background = 'rgba(0, 240, 255, 0.03)')
           }
         >
           <div
             style={{
-              fontSize: "1.05rem",
-              fontWeight: "bold",
-              color: "var(--primary-cyan)",
-              marginBottom: "14px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              fontSize: '1.05rem',
+              fontWeight: 'bold',
+              color: 'var(--primary-cyan)',
+              marginBottom: '14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
             <span>제 {searchResult.episode}회 당첨번호 결과</span>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               상세 분석 보기 🔍
             </span>
           </div>
@@ -199,10 +201,10 @@ export function Search() {
       {/* Previous list */}
       <h3
         style={{
-          fontSize: "1rem",
-          fontWeight: "bold",
-          marginBottom: "12px",
-          color: "var(--text-muted)",
+          fontSize: '1rem',
+          fontWeight: 'bold',
+          marginBottom: '12px',
+          color: 'var(--text-muted)',
         }}
       >
         최근 당첨 번호 내역 (회차 클릭 시 상세 분석)
@@ -211,7 +213,7 @@ export function Search() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th style={{ width: "110px" }}>회차</th>
+              <th style={{ width: '110px' }}>회차</th>
               <th>당첨 번호</th>
             </tr>
           </thead>
@@ -220,7 +222,7 @@ export function Search() {
               <tr>
                 <td
                   colSpan={2}
-                  style={{ textAlign: "center", color: "var(--text-dim)" }}
+                  style={{ textAlign: 'center', color: 'var(--text-dim)' }}
                 >
                   불러오는 중...
                 </td>
@@ -229,7 +231,7 @@ export function Search() {
               <tr>
                 <td
                   colSpan={2}
-                  style={{ textAlign: "center", color: "var(--text-dim)" }}
+                  style={{ textAlign: 'center', color: 'var(--text-dim)' }}
                 >
                   불러온 내역이 없습니다.
                 </td>
@@ -239,10 +241,10 @@ export function Search() {
                 <tr
                   key={wn.episode}
                   onClick={() => handleSelectEpisode(wn.episode)}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: 'pointer' }}
                 >
                   <td
-                    style={{ fontWeight: "bold", color: "var(--primary-cyan)" }}
+                    style={{ fontWeight: 'bold', color: 'var(--primary-cyan)' }}
                   >
                     {wn.episode}회 🔍
                   </td>
@@ -258,42 +260,42 @@ export function Search() {
 
       {selectedEpisode &&
         createPortal(
-          <div className="admin-modal-overlay" style={{ overflow: "hidden" }}>
+          <div className="admin-modal-overlay" style={{ overflow: 'hidden' }}>
             <div
               className="glass-card admin-modal-content"
               style={{
-                maxWidth: "600px",
-                padding: "30px",
-                textAlign: "left",
-                position: "relative",
-                border: "1px solid rgba(0, 240, 255, 0.25)",
+                maxWidth: '600px',
+                padding: '30px',
+                textAlign: 'left',
+                position: 'relative',
+                border: '1px solid rgba(0, 240, 255, 0.25)',
                 boxShadow:
-                  "0 20px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.1)",
-                overflowY: "hidden",
+                  '0 20px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.1)',
+                overflowY: 'hidden',
               }}
             >
               {/* Close Button */}
               <button
                 onClick={() => setSelectedEpisode(null)}
                 style={{
-                  position: "absolute",
-                  top: "20px",
-                  right: "20px",
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-dim)",
-                  cursor: "pointer",
-                  padding: "4px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "color 0.2s",
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-dim)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'color 0.2s',
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = "var(--text-main)")
+                  (e.currentTarget.style.color = 'var(--text-main)')
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = "var(--text-dim)")
+                  (e.currentTarget.style.color = 'var(--text-dim)')
                 }
               >
                 <svg
@@ -314,18 +316,18 @@ export function Search() {
               <h2
                 className="access-title"
                 style={{
-                  fontSize: "1.25rem",
-                  color: "var(--text-main)",
-                  marginBottom: "4px",
+                  fontSize: '1.25rem',
+                  color: 'var(--text-main)',
+                  marginBottom: '4px',
                 }}
               >
                 제 {selectedEpisode.episode}회 당첨 결과 상세 분석
               </h2>
               <p
                 style={{
-                  fontSize: "0.82rem",
-                  color: "var(--text-dim)",
-                  marginBottom: "20px",
+                  fontSize: '0.82rem',
+                  color: 'var(--text-dim)',
+                  marginBottom: '20px',
                 }}
               >
                 당첨 번호 조합 및 통계 데이터를 바탕으로 분석 정보를 제공합니다.
@@ -340,18 +342,18 @@ export function Search() {
                 type="button"
                 className="btn-submit"
                 style={{
-                  width: "100%",
-                  height: "42px",
-                  marginTop: "20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  width: '100%',
+                  height: '42px',
+                  marginTop: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   background:
-                    "linear-gradient(135deg, var(--primary-cyan) 0%, #00b0ff 100%)",
-                  boxShadow: "0 4px 15px rgba(0, 240, 255, 0.25)",
-                  color: "#030712",
+                    'linear-gradient(135deg, var(--primary-cyan) 0%, #00b0ff 100%)',
+                  boxShadow: '0 4px 15px rgba(0, 240, 255, 0.25)',
+                  color: '#030712',
                   fontWeight: 600,
-                  fontSize: "0.9rem",
+                  fontSize: '0.9rem',
                 }}
                 onClick={() => setSelectedEpisode(null)}
               >

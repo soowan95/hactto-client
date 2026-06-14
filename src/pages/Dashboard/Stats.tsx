@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { useApp } from "../../context/AppContext";
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useApp } from '../../context/AppContext';
 import {
   API_BASE_URL,
   parseAlgorithmName,
   getAlgorithmDescription,
   getBallStyle,
-} from "../../utils";
-import { LottoAnalysisCard } from "../../components/LottoAnalysisCard";
+} from '../../utils';
+import { LottoAnalysisCard } from '../../components/LottoAnalysisCard';
 
 export function Stats() {
   const { appendAuth, showAlert } = useApp();
   const [activeSubTab, setActiveSubTab] = useState<
-    "leaderboard" | "weekly" | "champion" | "detail"
-  >("leaderboard");
+    'leaderboard' | 'weekly' | 'champion' | 'detail'
+  >('leaderboard');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [algorithmTypes, setAlgorithmTypes] = useState<any[]>([]);
@@ -46,7 +46,7 @@ export function Stats() {
 
   // Tab 3: Detailed Trend States
   const [selectedAlgorithm, setSelectedAlgorithm] =
-    useState<string>("MIN_COUNT");
+    useState<string>('MIN_COUNT');
   const [historyData, setHistoryData] = useState<
     { episode: number; averageScore: number }[]
   >([]);
@@ -65,17 +65,19 @@ export function Stats() {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
-    const scrollContainer = document.querySelector(".scroll-y-container") as HTMLElement;
+    const scrollContainer = document.querySelector(
+      '.scroll-y-container',
+    ) as HTMLElement;
     if (clickedPointLoading || clickedPointData) {
-      document.body.style.overflow = "hidden";
-      if (scrollContainer) scrollContainer.style.overflowY = "hidden";
+      document.body.style.overflow = 'hidden';
+      if (scrollContainer) scrollContainer.style.overflowY = 'hidden';
     } else {
-      document.body.style.overflow = "";
-      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+      document.body.style.overflow = '';
+      if (scrollContainer) scrollContainer.style.overflowY = 'auto';
     }
     return () => {
-      document.body.style.overflow = "";
-      if (scrollContainer) scrollContainer.style.overflowY = "auto";
+      document.body.style.overflow = '';
+      if (scrollContainer) scrollContainer.style.overflowY = 'auto';
     };
   }, [clickedPointLoading, clickedPointData]);
 
@@ -90,14 +92,14 @@ export function Stats() {
       );
       if (res.ok) {
         const d = await res.json();
-        console.log("Stats point click data loaded:", d.data || d);
+        console.log('Stats point click data loaded:', d.data || d);
         setClickedPointData(d.data || d);
       }
     } catch (err) {
-      console.error("Failed to fetch clicked episode best prediction", err);
+      console.error('Failed to fetch clicked episode best prediction', err);
       showAlert(
-        "error",
-        "해당 회차 최고 신뢰도 조합 정보를 불러오지 못했습니다.",
+        'error',
+        '해당 회차 최고 신뢰도 조합 정보를 불러오지 못했습니다.',
       );
     } finally {
       setClickedPointLoading(false);
@@ -147,8 +149,8 @@ export function Stats() {
           setSelectedAlgorithm(leaderboardData[0].algorithm);
         }
       } catch (err) {
-        console.error("Overview data fetch failed", err);
-        showAlert("error", "통계 데이터를 불러오지 못했습니다.");
+        console.error('Overview data fetch failed', err);
+        showAlert('error', '통계 데이터를 불러오지 못했습니다.');
       } finally {
         setOverviewLoading(false);
       }
@@ -170,8 +172,8 @@ export function Stats() {
           setChampionData(d.data ?? null);
         }
       } catch (err) {
-        console.error("Champion data fetch failed", err);
-        showAlert("error", "최고 신뢰도 데이터를 불러오지 못했습니다.");
+        console.error('Champion data fetch failed', err);
+        showAlert('error', '최고 신뢰도 데이터를 불러오지 못했습니다.');
       } finally {
         setChampionLoading(false);
       }
@@ -188,16 +190,16 @@ export function Stats() {
           setHistoryData(d.data || d);
         }
       } catch (err) {
-        console.error("History data fetch failed", err);
-        showAlert("error", "알고리즘 히스토리 데이터를 불러오지 못했습니다.");
+        console.error('History data fetch failed', err);
+        showAlert('error', '알고리즘 히스토리 데이터를 불러오지 못했습니다.');
       } finally {
         setDetailLoading(false);
       }
     };
 
-    if (activeSubTab === "champion" && !championData) {
+    if (activeSubTab === 'champion' && !championData) {
       fetchChampionData();
-    } else if (activeSubTab === "detail") {
+    } else if (activeSubTab === 'detail') {
       fetchHistoryData(selectedAlgorithm);
     }
   }, [activeSubTab, selectedAlgorithm, championData, appendAuth, showAlert]);
@@ -207,31 +209,31 @@ export function Stats() {
     switch (index) {
       case 0:
         return {
-          text: "1ST",
-          color: "#ffd700",
-          bg: "rgba(255, 215, 0, 0.15)",
-          border: "1px solid rgba(255, 215, 0, 0.3)",
+          text: '1ST',
+          color: '#ffd700',
+          bg: 'rgba(255, 215, 0, 0.15)',
+          border: '1px solid rgba(255, 215, 0, 0.3)',
         };
       case 1:
         return {
-          text: "2ND",
-          color: "#c0c0c0",
-          bg: "rgba(192, 192, 192, 0.15)",
-          border: "1px solid rgba(192, 192, 192, 0.3)",
+          text: '2ND',
+          color: '#c0c0c0',
+          bg: 'rgba(192, 192, 192, 0.15)',
+          border: '1px solid rgba(192, 192, 192, 0.3)',
         };
       case 2:
         return {
-          text: "3RD",
-          color: "#cd7f32",
-          bg: "rgba(205, 127, 50, 0.15)",
-          border: "1px solid rgba(205, 127, 50, 0.3)",
+          text: '3RD',
+          color: '#cd7f32',
+          bg: 'rgba(205, 127, 50, 0.15)',
+          border: '1px solid rgba(205, 127, 50, 0.3)',
         };
       default:
         return {
           text: `${index + 1}TH`,
-          color: "var(--text-muted)",
-          bg: "rgba(255, 255, 255, 0.05)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
+          color: 'var(--text-muted)',
+          bg: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
         };
     }
   };
@@ -239,23 +241,23 @@ export function Stats() {
   // Render sub-tabs navigation
   const renderSubTabs = () => {
     const tabs = [
-      { id: "leaderboard", label: "평균 신뢰도 순위" },
-      { id: "weekly", label: "금주 생성 분포" },
-      { id: "champion", label: "최고 신뢰도 조합" },
-      { id: "detail", label: "상세 분석" },
+      { id: 'leaderboard', label: '평균 신뢰도 순위' },
+      { id: 'weekly', label: '금주 생성 분포' },
+      { id: 'champion', label: '최고 신뢰도 조합' },
+      { id: 'detail', label: '상세 분석' },
     ] as const;
 
     return (
       <div
         style={{
-          display: "inline-flex",
-          background: "rgba(255, 255, 255, 0.03)",
-          border: "1px solid rgba(255, 255, 255, 0.06)",
-          padding: "4px",
-          borderRadius: "10px",
-          marginBottom: "24px",
-          gap: "2px",
-          flexWrap: "wrap",
+          display: 'inline-flex',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          padding: '4px',
+          borderRadius: '10px',
+          marginBottom: '24px',
+          gap: '2px',
+          flexWrap: 'wrap',
         }}
       >
         {tabs.map((tab) => {
@@ -266,24 +268,24 @@ export function Stats() {
               onClick={() => setActiveSubTab(tab.id)}
               style={{
                 background: isActive
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "transparent",
-                border: "none",
-                color: isActive ? "var(--text-main)" : "var(--text-muted)",
-                fontFamily: "var(--font-family)",
-                fontWeight: isActive ? "600" : "500",
-                fontSize: "0.85rem",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                transition: "var(--transition-fast)",
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : 'transparent',
+                border: 'none',
+                color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                fontFamily: 'var(--font-family)',
+                fontWeight: isActive ? '600' : '500',
+                fontSize: '0.85rem',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'var(--transition-fast)',
               }}
               onMouseEnter={(e) => {
-                if (!isActive) e.currentTarget.style.color = "var(--text-main)";
+                if (!isActive) e.currentTarget.style.color = 'var(--text-main)';
               }}
               onMouseLeave={(e) => {
                 if (!isActive)
-                  e.currentTarget.style.color = "var(--text-muted)";
+                  e.currentTarget.style.color = 'var(--text-muted)';
               }}
             >
               {tab.label}
@@ -298,7 +300,7 @@ export function Stats() {
   const renderLeaderboard = () => {
     if (overviewLoading) {
       return (
-        <p style={{ color: "var(--text-dim)", padding: "20px 0" }}>
+        <p style={{ color: 'var(--text-dim)', padding: '20px 0' }}>
           통계 데이터를 불러오는 중...
         </p>
       );
@@ -307,19 +309,19 @@ export function Stats() {
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-          animation: "fadeIn 0.3s ease-out",
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          animation: 'fadeIn 0.3s ease-out',
         }}
       >
         {/* Top 5 Leaderboard */}
         <div>
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
           >
             {leaderboard.length === 0 ? (
-              <p style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
+              <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
                 분석 가능한 알고리즘 결과가 없습니다.
               </p>
             ) : (
@@ -330,65 +332,65 @@ export function Stats() {
                     key={item.algorithm}
                     onClick={() => {
                       setSelectedAlgorithm(item.algorithm);
-                      setActiveSubTab("detail");
+                      setActiveSubTab('detail');
                     }}
                     style={{
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      padding: "16px 20px",
-                      borderRadius: "16px",
-                      cursor: "pointer",
-                      transition: "var(--transition-smooth)",
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      padding: '16px 20px',
+                      borderRadius: '16px',
+                      cursor: 'pointer',
+                      transition: 'var(--transition-smooth)',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background =
-                        "rgba(255,255,255,0.04)";
+                        'rgba(255,255,255,0.04)';
                       e.currentTarget.style.borderColor =
-                        "rgba(255, 255, 255, 0.15)";
-                      e.currentTarget.style.transform = "translateY(-1px)";
+                        'rgba(255, 255, 255, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background =
-                        "rgba(255,255,255,0.02)";
+                        'rgba(255,255,255,0.02)';
                       e.currentTarget.style.borderColor =
-                        "rgba(255,255,255,0.08)";
-                      e.currentTarget.style.transform = "translateY(0)";
+                        'rgba(255,255,255,0.08)';
+                      e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "10px",
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '10px',
                       }}
                     >
                       <div
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
                         }}
                       >
                         <span
                           style={{
-                            fontSize: "0.7rem",
+                            fontSize: '0.7rem',
                             fontWeight: 800,
-                            padding: "2px 6px",
-                            borderRadius: "4px",
+                            padding: '2px 6px',
+                            borderRadius: '4px',
                             color: badge.color,
                             background: badge.bg,
                             border: badge.border,
-                            fontFamily: "monospace",
+                            fontFamily: 'monospace',
                           }}
                         >
                           {badge.text}
                         </span>
                         <span
                           style={{
-                            fontWeight: "bold",
-                            color: "var(--text-main)",
-                            fontSize: "0.95rem",
+                            fontWeight: 'bold',
+                            color: 'var(--text-main)',
+                            fontSize: '0.95rem',
                           }}
                         >
                           {parseAlgorithmName(
@@ -400,10 +402,10 @@ export function Stats() {
                       </div>
                       <span
                         style={{
-                          fontWeight: "bold",
-                          color: index < 3 ? badge.color : "var(--text-muted)",
-                          fontSize: "1rem",
-                          fontFamily: "monospace",
+                          fontWeight: 'bold',
+                          color: index < 3 ? badge.color : 'var(--text-muted)',
+                          fontSize: '1rem',
+                          fontFamily: 'monospace',
                         }}
                       >
                         {item.average.toFixed(2)} %
@@ -412,21 +414,21 @@ export function Stats() {
 
                     <div
                       style={{
-                        width: "100%",
-                        height: "6px",
-                        background: "rgba(255,255,255,0.04)",
-                        borderRadius: "3px",
-                        overflow: "hidden",
+                        width: '100%',
+                        height: '6px',
+                        background: 'rgba(255,255,255,0.04)',
+                        borderRadius: '3px',
+                        overflow: 'hidden',
                       }}
                     >
                       <div
                         style={{
                           width: `${item.average}%`,
-                          height: "100%",
-                          background: `linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, ${index < 3 ? badge.color : "var(--text-muted)"} 100%)`,
-                          borderRadius: "3px",
+                          height: '100%',
+                          background: `linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, ${index < 3 ? badge.color : 'var(--text-muted)'} 100%)`,
+                          borderRadius: '3px',
                           boxShadow:
-                            index < 3 ? `0 0 8px ${badge.color}` : "none",
+                            index < 3 ? `0 0 8px ${badge.color}` : 'none',
                         }}
                       />
                     </div>
@@ -444,7 +446,7 @@ export function Stats() {
   const renderWeekly = () => {
     if (overviewLoading) {
       return (
-        <p style={{ color: "var(--text-dim)", padding: "20px 0" }}>
+        <p style={{ color: 'var(--text-dim)', padding: '20px 0' }}>
           통계 데이터를 불러오는 중...
         </p>
       );
@@ -459,49 +461,49 @@ export function Stats() {
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-          animation: "fadeIn 0.3s ease-out",
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          animation: 'fadeIn 0.3s ease-out',
         }}
       >
         {/* Weekly Activity Counts Chart */}
         <div
           style={{
-            background: "rgba(255,255,255,0.01)",
-            border: "var(--border-glass)",
-            padding: "20px",
-            borderRadius: "16px",
+            background: 'rgba(255,255,255,0.01)',
+            border: 'var(--border-glass)',
+            padding: '20px',
+            borderRadius: '16px',
           }}
         >
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "16px",
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
             }}
           >
             <h3
               style={{
-                fontSize: "1.05rem",
+                fontSize: '1.05rem',
                 fontWeight: 600,
-                color: "var(--text-main)",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
+                color: 'var(--text-main)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
               📊 금주 알고리즘 생성 횟수 분포
             </h3>
             <span
               style={{
-                fontSize: "0.75rem",
-                background: "rgba(189, 0, 255, 0.1)",
-                color: "var(--primary-purple)",
-                padding: "2px 8px",
-                borderRadius: "4px",
-                border: "1px solid rgba(189, 0, 255, 0.2)",
+                fontSize: '0.75rem',
+                background: 'rgba(189, 0, 255, 0.1)',
+                color: 'var(--primary-purple)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid rgba(189, 0, 255, 0.2)',
               }}
             >
               총 {totalUpcomingGenerated}회 생성됨
@@ -509,7 +511,7 @@ export function Stats() {
           </div>
 
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "14px" }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
           >
             {[...upcomingCounts]
               .sort((a, b) => b.count - a.count)
@@ -523,33 +525,32 @@ export function Stats() {
                   <div
                     key={c.algorithm}
                     style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
                     }}
                   >
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "0.8rem",
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.8rem',
                       }}
                     >
                       <span
-                        style={{ color: "var(--text-main)", fontWeight: 500 }}
+                        style={{ color: 'var(--text-main)', fontWeight: 500 }}
                       >
                         {parseAlgorithmName(
-                          algorithmTypes.find(
-                            (a) => a.type === c.algorithm,
-                          ) || c.algorithm,
+                          algorithmTypes.find((a) => a.type === c.algorithm) ||
+                            c.algorithm,
                         )}
                       </span>
                       <span
                         style={{
-                          fontWeight: "bold",
-                          color: "var(--text-main)",
+                          fontWeight: 'bold',
+                          color: 'var(--text-main)',
                           opacity: opacity,
-                          transition: "opacity 0.2s ease",
+                          transition: 'opacity 0.2s ease',
                         }}
                       >
                         {c.count}회
@@ -557,25 +558,25 @@ export function Stats() {
                     </div>
                     <div
                       style={{
-                        width: "100%",
-                        height: "14px",
-                        background: "rgba(255,255,255,0.03)",
-                        borderRadius: "4px",
-                        overflow: "hidden",
-                        display: "flex",
+                        width: '100%',
+                        height: '14px',
+                        background: 'rgba(255,255,255,0.03)',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        display: 'flex',
                         opacity: opacity,
-                        transition: "opacity 0.2s ease",
+                        transition: 'opacity 0.2s ease',
                       }}
                     >
                       <div
                         style={{
                           width: `${Math.max(percentage, c.count > 0 ? 5 : 0)}%`,
-                          height: "100%",
+                          height: '100%',
                           background:
-                            "linear-gradient(90deg, rgba(0, 240, 255, 0.2) 0%, var(--primary-purple) 100%)",
-                          borderRadius: "4px",
-                          boxShadow: "0 0 8px rgba(189, 0, 255, 0.25)",
-                          transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
+                            'linear-gradient(90deg, rgba(0, 240, 255, 0.2) 0%, var(--primary-purple) 100%)',
+                          borderRadius: '4px',
+                          boxShadow: '0 0 8px rgba(189, 0, 255, 0.25)',
+                          transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}
                       />
                     </div>
@@ -592,7 +593,7 @@ export function Stats() {
   const renderChampion = () => {
     if (championLoading) {
       return (
-        <p style={{ color: "var(--text-dim)", padding: "20px 0" }}>
+        <p style={{ color: 'var(--text-dim)', padding: '20px 0' }}>
           최고 신뢰도 번호 분석을 불러오는 중...
         </p>
       );
@@ -601,22 +602,22 @@ export function Stats() {
       return (
         <div
           style={{
-            textAlign: "center",
-            padding: "40px 20px",
-            color: "var(--text-dim)",
-            animation: "fadeIn 0.3s ease-out",
+            textAlign: 'center',
+            padding: '40px 20px',
+            color: 'var(--text-dim)',
+            animation: 'fadeIn 0.3s ease-out',
           }}
         >
-          <p style={{ marginBottom: "12px" }}>
+          <p style={{ marginBottom: '12px' }}>
             최근 회차의 신뢰도 분석 결과가 조회되지 않습니다.
           </p>
           <button
             className="btn-neon btn-outline"
             onClick={() => setChampionData(null)}
             style={{
-              width: "auto",
-              display: "inline-flex",
-              padding: "8px 16px",
+              width: 'auto',
+              display: 'inline-flex',
+              padding: '8px 16px',
             }}
           >
             새로고침
@@ -636,73 +637,73 @@ export function Stats() {
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          animation: "fadeIn 0.3s ease-out",
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          animation: 'fadeIn 0.3s ease-out',
         }}
       >
         <div
           style={{
             background:
-              "linear-gradient(135deg, rgba(0, 240, 255, 0.03) 0%, rgba(189, 0, 255, 0.03) 100%)",
-            border: "1px solid rgba(0, 240, 255, 0.15)",
-            padding: "24px",
-            borderRadius: "20px",
+              'linear-gradient(135deg, rgba(0, 240, 255, 0.03) 0%, rgba(189, 0, 255, 0.03) 100%)',
+            border: '1px solid rgba(0, 240, 255, 0.15)',
+            padding: '24px',
+            borderRadius: '20px',
             boxShadow:
-              "0 10px 30px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.05)",
+              '0 10px 30px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.05)',
           }}
         >
           {/* Header Info */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: "20px",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-              paddingBottom: "16px",
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '20px',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              paddingBottom: '16px',
             }}
           >
             <div>
               <span
                 style={{
-                  fontSize: "0.75rem",
-                  background: "rgba(0, 240, 255, 0.15)",
-                  color: "var(--primary-cyan)",
-                  padding: "2px 8px",
-                  borderRadius: "4px",
-                  border: "1px solid rgba(0, 240, 255, 0.25)",
-                  fontWeight: "bold",
+                  fontSize: '0.75rem',
+                  background: 'rgba(0, 240, 255, 0.15)',
+                  color: 'var(--primary-cyan)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(0, 240, 255, 0.25)',
+                  fontWeight: 'bold',
                 }}
               >
                 CHAMPION COMBO
               </span>
               <h3
                 style={{
-                  fontSize: "1.2rem",
-                  fontWeight: "bold",
-                  color: "var(--text-main)",
-                  marginTop: "8px",
+                  fontSize: '1.2rem',
+                  fontWeight: 'bold',
+                  color: 'var(--text-main)',
+                  marginTop: '8px',
                 }}
               >
                 {winningNumber?.episode ?? prediction?.episode}회차 최고 신뢰도
                 예측
               </h3>
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: 'right' }}>
               <div
                 style={{
-                  fontSize: "1.6rem",
+                  fontSize: '1.6rem',
                   fontWeight: 800,
-                  color: "var(--primary-cyan)",
-                  fontFamily: "monospace",
-                  textShadow: "0 0 10px rgba(0,240,255,0.3)",
+                  color: 'var(--primary-cyan)',
+                  fontFamily: 'monospace',
+                  textShadow: '0 0 10px rgba(0,240,255,0.3)',
                 }}
               >
                 {prediction.reliabilityScore.toFixed(2)}%
               </div>
-              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                 신뢰도 스코어
               </span>
             </div>
@@ -711,22 +712,21 @@ export function Stats() {
           {/* Algorithm Info */}
           <div
             style={{
-              fontSize: "0.85rem",
-              color: "var(--text-muted)",
-              marginBottom: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              background: "rgba(255,255,255,0.02)",
-              padding: "10px 14px",
-              borderRadius: "8px",
+              fontSize: '0.85rem',
+              color: 'var(--text-muted)',
+              marginBottom: '24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              background: 'rgba(255,255,255,0.02)',
+              padding: '10px 14px',
+              borderRadius: '8px',
             }}
           >
             <span>적용 알고리즘</span>
-            <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>
+            <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
               {parseAlgorithmName(
-                algorithmTypes.find(
-                  (a) => a.type === prediction.algorithm,
-                ) || prediction.algorithm,
+                algorithmTypes.find((a) => a.type === prediction.algorithm) ||
+                  prediction.algorithm,
               )}
             </span>
           </div>
@@ -743,15 +743,15 @@ export function Stats() {
             return (
               <div
                 style={{
-                  fontSize: "0.78rem",
-                  color: "var(--text-muted)",
-                  background: "rgba(255, 255, 255, 0.01)",
-                  border: "1px dashed rgba(255, 255, 255, 0.06)",
-                  padding: "12px 14px",
-                  borderRadius: "8px",
-                  marginBottom: "24px",
-                  textAlign: "left",
-                  lineHeight: "1.4",
+                  fontSize: '0.78rem',
+                  color: 'var(--text-muted)',
+                  background: 'rgba(255, 255, 255, 0.01)',
+                  border: '1px dashed rgba(255, 255, 255, 0.06)',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  marginBottom: '24px',
+                  textAlign: 'left',
+                  lineHeight: '1.4',
                 }}
               >
                 💡 <strong>알고리즘 설명:</strong> {desc}
@@ -760,12 +760,12 @@ export function Stats() {
           })()}
 
           {/* Prediction Numbers (Lotto Balls) */}
-          <div style={{ marginBottom: "24px", textAlign: "left" }}>
+          <div style={{ marginBottom: '24px', textAlign: 'left' }}>
             <div
               style={{
-                fontSize: "0.8rem",
-                color: "var(--text-dim)",
-                marginBottom: "8px",
+                fontSize: '0.8rem',
+                color: 'var(--text-dim)',
+                marginBottom: '8px',
                 fontWeight: 600,
               }}
             >
@@ -773,10 +773,10 @@ export function Stats() {
             </div>
             <div
               style={{
-                display: "flex",
-                gap: "8px",
-                flexWrap: "wrap",
-                alignItems: "center",
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap',
+                alignItems: 'center',
               }}
             >
               {prediction.numbers.slice(0, 6).map((num, i) => {
@@ -784,15 +784,15 @@ export function Stats() {
                 const bonusMatched = isBonusMatched(num);
 
                 const borderColor = matched
-                  ? "#10b981"
+                  ? '#10b981'
                   : bonusMatched
-                    ? "#c084fc"
-                    : "rgba(255, 255, 255, 0.15)";
+                    ? '#c084fc'
+                    : 'rgba(255, 255, 255, 0.15)';
 
                 const shadowColor = matched
-                  ? "rgba(16, 185, 129, 0.6)"
+                  ? 'rgba(16, 185, 129, 0.6)'
                   : bonusMatched
-                    ? "rgba(192, 132, 252, 0.6)"
+                    ? 'rgba(192, 132, 252, 0.6)'
                     : null;
 
                 return (
@@ -801,10 +801,11 @@ export function Stats() {
                     className="lotto-ball"
                     style={{
                       ...getBallStyle(num),
-                      position: "relative",
-                      border: matched || bonusMatched
-                        ? `2px solid ${borderColor}`
-                        : "1px solid rgba(255, 255, 255, 0.15)",
+                      position: 'relative',
+                      border:
+                        matched || bonusMatched
+                          ? `2px solid ${borderColor}`
+                          : '1px solid rgba(255, 255, 255, 0.15)',
                       boxShadow: shadowColor
                         ? `0 0 15px ${shadowColor}`
                         : getBallStyle(num).boxShadow,
@@ -814,19 +815,19 @@ export function Stats() {
                     {(matched || bonusMatched) && (
                       <div
                         style={{
-                          position: "absolute",
-                          top: "-4px",
-                          right: "-4px",
-                          background: matched ? "#10b981" : "#c084fc",
-                          color: "#fff",
-                          borderRadius: "50%",
-                          width: "14px",
-                          height: "14px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "8px",
-                          fontWeight: "bold",
+                          position: 'absolute',
+                          top: '-4px',
+                          right: '-4px',
+                          background: matched ? '#10b981' : '#c084fc',
+                          color: '#fff',
+                          borderRadius: '50%',
+                          width: '14px',
+                          height: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '8px',
+                          fontWeight: 'bold',
                         }}
                       >
                         ✓
@@ -835,26 +836,25 @@ export function Stats() {
                   </div>
                 );
               })}
-
             </div>
           </div>
 
           {/* Actual Winning Numbers */}
           <div
             style={{
-              marginBottom: "24px",
-              textAlign: "left",
-              background: "rgba(255,255,255,0.01)",
-              border: "1px dashed rgba(255,255,255,0.06)",
-              padding: "16px",
-              borderRadius: "12px",
+              marginBottom: '24px',
+              textAlign: 'left',
+              background: 'rgba(255,255,255,0.01)',
+              border: '1px dashed rgba(255,255,255,0.06)',
+              padding: '16px',
+              borderRadius: '12px',
             }}
           >
             <div
               style={{
-                fontSize: "0.8rem",
-                color: "var(--text-dim)",
-                marginBottom: "8px",
+                fontSize: '0.8rem',
+                color: 'var(--text-dim)',
+                marginBottom: '8px',
                 fontWeight: 600,
               }}
             >
@@ -862,10 +862,10 @@ export function Stats() {
             </div>
             <div
               style={{
-                display: "flex",
-                gap: "8px",
-                flexWrap: "wrap",
-                alignItems: "center",
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap',
+                alignItems: 'center',
               }}
             >
               {winningNumber?.numbers ? (
@@ -884,10 +884,10 @@ export function Stats() {
                   ))}
                   <div
                     style={{
-                      fontSize: "1.1rem",
-                      fontWeight: "bold",
-                      color: "var(--text-muted)",
-                      padding: "0 2px",
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: 'var(--text-muted)',
+                      padding: '0 2px',
                     }}
                   >
                     +
@@ -905,9 +905,9 @@ export function Stats() {
               ) : (
                 <div
                   style={{
-                    color: "var(--text-muted)",
-                    fontSize: "0.85rem",
-                    padding: "4px 0",
+                    color: 'var(--text-muted)',
+                    fontSize: '0.85rem',
+                    padding: '4px 0',
                   }}
                 >
                   당첨번호가 아직 발표되지 않았습니다.
@@ -917,12 +917,12 @@ export function Stats() {
           </div>
 
           {/* Prediction Weights Breakdown */}
-          <div style={{ textAlign: "left" }}>
+          <div style={{ textAlign: 'left' }}>
             <div
               style={{
-                fontSize: "0.8rem",
-                color: "var(--text-dim)",
-                marginBottom: "8px",
+                fontSize: '0.8rem',
+                color: 'var(--text-dim)',
+                marginBottom: '8px',
                 fontWeight: 600,
               }}
             >
@@ -930,9 +930,9 @@ export function Stats() {
             </div>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "8px",
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '8px',
               }}
             >
               {(() => {
@@ -948,27 +948,27 @@ export function Stats() {
                   <div
                     key={idx}
                     style={{
-                      background: "rgba(255,255,255,0.02)",
-                      padding: "8px 10px",
-                      borderRadius: "6px",
-                      border: "var(--border-glass)",
-                      fontSize: "0.75rem",
-                      display: "flex",
-                      justifyContent: "space-between",
+                      background: 'rgba(255,255,255,0.02)',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: 'var(--border-glass)',
+                      fontSize: '0.75rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
                     }}
                   >
                     <span
                       style={{
-                        color: "var(--text-muted)",
-                        fontFamily: "monospace",
+                        color: 'var(--text-muted)',
+                        fontFamily: 'monospace',
                       }}
                     >
                       {item.label}
                     </span>
                     <span
                       style={{
-                        color: "var(--primary-purple)",
-                        fontWeight: "bold",
+                        color: 'var(--primary-purple)',
+                        fontWeight: 'bold',
                         opacity: 0.35 + (item.val / maxWeight) * 0.65,
                       }}
                     >
@@ -988,14 +988,14 @@ export function Stats() {
   const renderDetail = () => {
     if (detailLoading) {
       return (
-        <p style={{ color: "var(--text-dim)", padding: "20px 0" }}>
+        <p style={{ color: 'var(--text-dim)', padding: '20px 0' }}>
           상세 통계 추이를 집계하는 중...
         </p>
       );
     }
 
     const getGroupKey = (type: string) => {
-      const parts = type.split("_");
+      const parts = type.split('_');
       return parts[parts.length - 1]; // 마지막 단어 (WEIGHTS, FREQUENCY 등)
     };
 
@@ -1046,21 +1046,21 @@ export function Stats() {
     // Calculate dynamically to prevent tooltip overflow/horizontal scrollbar
     const tooltipTranslateX = hoveredPoint
       ? hoveredPoint.index === 0
-        ? "0%"
+        ? '0%'
         : hoveredPoint.index === points.length - 1
-          ? "-100%"
-          : "-50%"
-      : "-50%";
+          ? '-100%'
+          : '-50%'
+      : '-50%';
 
     // Create Path String for the line
     const linePath = points
-      .map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`)
-      .join(" ");
+      .map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+      .join(' ');
 
     // Create Area Path String under the line
     const areaPath = hasHistory
       ? `${linePath} L ${points[points.length - 1].x} ${svgHeight - paddingBottom} L ${points[0].x} ${svgHeight - paddingBottom} Z`
-      : "";
+      : '';
 
     // Stats calculations
     const peakScore = hasHistory ? Math.max(...scores) : 0;
@@ -1070,7 +1070,7 @@ export function Stats() {
       : 0;
 
     const getReliabilityColor = (score: number) => {
-      if (peakScore === lowestScore) return "#00f0ff";
+      if (peakScore === lowestScore) return '#00f0ff';
       const p = (score - lowestScore) / (peakScore - lowestScore);
       let r, g, b;
       if (p < 0.5) {
@@ -1090,25 +1090,25 @@ export function Stats() {
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          animation: "fadeIn 0.3s ease-out",
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          animation: 'fadeIn 0.3s ease-out',
         }}
       >
         {/* Selector Dropdown */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
           <span
             style={{
-              fontSize: "0.9rem",
-              color: "var(--text-main)",
-              fontWeight: "bold",
+              fontSize: '0.9rem',
+              color: 'var(--text-main)',
+              fontWeight: 'bold',
             }}
           >
             상세 분석 알고리즘 선택
@@ -1117,24 +1117,24 @@ export function Stats() {
             value={selectedAlgorithm}
             onChange={(e) => setSelectedAlgorithm(e.target.value)}
             style={{
-              background: "#0f111a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              padding: "8px 12px",
-              borderRadius: "8px",
-              color: "var(--text-main)",
-              fontFamily: "var(--font-family)",
-              outline: "none",
-              cursor: "pointer",
+              background: '#0f111a',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              color: 'var(--text-main)',
+              fontFamily: 'var(--font-family)',
+              outline: 'none',
+              cursor: 'pointer',
             }}
           >
             {Object.entries(groupedLeaderboard).map(([groupName, items]) => (
               <optgroup
                 key={groupName}
                 label={
-                  groupName === "WEIGHTS"
-                    ? "가중치 분석형 (WEIGHTS)"
-                    : groupName === "FREQUENCY"
-                      ? "빈도 분석형 (FREQUENCY)"
+                  groupName === 'WEIGHTS'
+                    ? '가중치 분석형 (WEIGHTS)'
+                    : groupName === 'FREQUENCY'
+                      ? '빈도 분석형 (FREQUENCY)'
                       : groupName
                 }
               >
@@ -1154,29 +1154,29 @@ export function Stats() {
         {/* Custom SVG Line Chart Container */}
         <div
           style={{
-            background: "rgba(255, 255, 255, 0.01)",
-            border: "var(--border-glass)",
-            borderRadius: "20px",
-            padding: "20px",
-            position: "relative",
+            background: 'rgba(255, 255, 255, 0.01)',
+            border: 'var(--border-glass)',
+            borderRadius: '20px',
+            padding: '20px',
+            position: 'relative',
           }}
         >
-          <div style={{ textAlign: "left", marginBottom: "14px" }}>
+          <div style={{ textAlign: 'left', marginBottom: '14px' }}>
             <span
               style={{
-                fontSize: "0.78rem",
-                color: "var(--text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
+                fontSize: '0.78rem',
+                color: 'var(--text-dim)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
               }}
             >
               RELIABILITY TREND (LAST 20 ROUNDS)
             </span>
             <h4
               style={{
-                fontSize: "1rem",
-                fontWeight: "bold",
-                color: "var(--text-main)",
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                color: 'var(--text-main)',
               }}
             >
               회차별 신뢰도 점수 변동 추이
@@ -1186,23 +1186,23 @@ export function Stats() {
           {!hasHistory ? (
             <div
               style={{
-                height: "220px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-dim)",
-                fontSize: "0.85rem",
+                height: '220px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-dim)',
+                fontSize: '0.85rem',
               }}
             >
               해당 알고리즘에 대한 과거 분석 결과 데이터가 존재하지 않습니다.
             </div>
           ) : (
-            <div style={{ position: "relative" }}>
+            <div style={{ position: 'relative' }}>
               <svg
                 width="100%"
                 height={svgHeight}
                 viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                style={{ overflow: "visible" }}
+                style={{ overflow: 'visible' }}
               >
                 <defs>
                   {/* Glowing gradient for chart line */}
@@ -1265,7 +1265,7 @@ export function Stats() {
                         fontSize="9px"
                         fontFamily="monospace"
                         textAnchor="end"
-                        style={{ fontWeight: "600" }}
+                        style={{ fontWeight: '600' }}
                       >
                         {scoreLabel}%
                       </text>
@@ -1331,16 +1331,16 @@ export function Stats() {
                       <circle
                         cx={p.x}
                         cy={p.y}
-                        r={isHovered ? "6" : "3.5"}
-                        fill={isHovered ? "#fff" : "var(--primary-cyan)"}
+                        r={isHovered ? '6' : '3.5'}
+                        fill={isHovered ? '#fff' : 'var(--primary-cyan)'}
                         stroke={
                           isHovered
                             ? getReliabilityColor(p.score)
-                            : "rgba(8, 9, 14, 0.8)"
+                            : 'rgba(8, 9, 14, 0.8)'
                         }
-                        strokeWidth={isHovered ? "3" : "1.5"}
+                        strokeWidth={isHovered ? '3' : '1.5'}
                         style={{
-                          transition: "r 0.15s ease, stroke-width 0.15s ease",
+                          transition: 'r 0.15s ease, stroke-width 0.15s ease',
                         }}
                       />
 
@@ -1350,7 +1350,7 @@ export function Stats() {
                         cy={p.y}
                         r="16"
                         fill="transparent"
-                        style={{ cursor: "pointer" }}
+                        style={{ cursor: 'pointer' }}
                         onMouseEnter={() => setHoveredPoint(p)}
                         onMouseLeave={() => setHoveredPoint(null)}
                         onClick={() =>
@@ -1366,38 +1366,38 @@ export function Stats() {
               {hoveredPoint && (
                 <div
                   style={{
-                    position: "absolute",
+                    position: 'absolute',
                     left: `${(hoveredPoint.x / svgWidth) * 100}%`,
                     top: `${hoveredPoint.y - 48}px`,
                     transform: `translateX(${tooltipTranslateX})`,
-                    background: "rgba(15, 17, 26, 0.95)",
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
+                    background: 'rgba(15, 17, 26, 0.95)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
                     border: `1px solid ${getReliabilityColor(hoveredPoint.score)}`,
-                    padding: "6px 12px",
-                    borderRadius: "8px",
+                    padding: '6px 12px',
+                    borderRadius: '8px',
                     boxShadow: `0 5px 15px rgba(0, 0, 0, 0.5), 0 0 10px ${getReliabilityColor(hoveredPoint.score)}55`,
-                    pointerEvents: "none",
+                    pointerEvents: 'none',
                     zIndex: 2,
-                    fontSize: "0.78rem",
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
+                    fontSize: '0.78rem',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <div
-                    style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}
+                    style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}
                   >
                     {hoveredPoint.episode}회차
                   </div>
                   <div
-                    style={{ fontWeight: "bold", color: "var(--text-main)" }}
+                    style={{ fontWeight: 'bold', color: 'var(--text-main)' }}
                   >
-                    신뢰도:{" "}
+                    신뢰도:{' '}
                     <span
                       style={{
                         color: getReliabilityColor(hoveredPoint.score),
-                        fontFamily: "monospace",
-                        fontWeight: "bold",
+                        fontFamily: 'monospace',
+                        fontWeight: 'bold',
                       }}
                     >
                       {hoveredPoint.score.toFixed(2)}%
@@ -1412,34 +1412,34 @@ export function Stats() {
         {/* KPI Summaries */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "10px",
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '10px',
           }}
         >
           <div
             style={{
-              background: "rgba(255,255,255,0.01)",
-              border: "var(--border-glass)",
-              padding: "12px 8px",
-              borderRadius: "12px",
-              textAlign: "center",
+              background: 'rgba(255,255,255,0.01)',
+              border: 'var(--border-glass)',
+              padding: '12px 8px',
+              borderRadius: '12px',
+              textAlign: 'center',
             }}
           >
             <div
               style={{
-                fontSize: "0.72rem",
-                color: "var(--text-dim)",
-                marginBottom: "4px",
+                fontSize: '0.72rem',
+                color: 'var(--text-dim)',
+                marginBottom: '4px',
               }}
             >
               최고 신뢰도 (PEAK)
             </div>
             <div
               style={{
-                fontSize: "1.1rem",
+                fontSize: '1.1rem',
                 fontWeight: 800,
-                color: "var(--success)",
+                color: 'var(--success)',
               }}
             >
               {peakScore.toFixed(1)}%
@@ -1447,27 +1447,27 @@ export function Stats() {
           </div>
           <div
             style={{
-              background: "rgba(255,255,255,0.01)",
-              border: "var(--border-glass)",
-              padding: "12px 8px",
-              borderRadius: "12px",
-              textAlign: "center",
+              background: 'rgba(255,255,255,0.01)',
+              border: 'var(--border-glass)',
+              padding: '12px 8px',
+              borderRadius: '12px',
+              textAlign: 'center',
             }}
           >
             <div
               style={{
-                fontSize: "0.72rem",
-                color: "var(--text-dim)",
-                marginBottom: "4px",
+                fontSize: '0.72rem',
+                color: 'var(--text-dim)',
+                marginBottom: '4px',
               }}
             >
               평균 신뢰도 (AVG)
             </div>
             <div
               style={{
-                fontSize: "1.1rem",
+                fontSize: '1.1rem',
                 fontWeight: 800,
-                color: "var(--primary-cyan)",
+                color: 'var(--primary-cyan)',
               }}
             >
               {avgScore.toFixed(1)}%
@@ -1475,27 +1475,27 @@ export function Stats() {
           </div>
           <div
             style={{
-              background: "rgba(255,255,255,0.01)",
-              border: "var(--border-glass)",
-              padding: "12px 8px",
-              borderRadius: "12px",
-              textAlign: "center",
+              background: 'rgba(255,255,255,0.01)',
+              border: 'var(--border-glass)',
+              padding: '12px 8px',
+              borderRadius: '12px',
+              textAlign: 'center',
             }}
           >
             <div
               style={{
-                fontSize: "0.72rem",
-                color: "var(--text-dim)",
-                marginBottom: "4px",
+                fontSize: '0.72rem',
+                color: 'var(--text-dim)',
+                marginBottom: '4px',
               }}
             >
               최저 신뢰도 (LOW)
             </div>
             <div
               style={{
-                fontSize: "1.1rem",
+                fontSize: '1.1rem',
                 fontWeight: 800,
-                color: "var(--error)",
+                color: 'var(--error)',
               }}
             >
               {lowestScore.toFixed(1)}%
@@ -1506,18 +1506,18 @@ export function Stats() {
         {/* Description Info */}
         <div
           style={{
-            background: "rgba(255,255,255,0.02)",
-            border: "var(--border-glass)",
-            padding: "16px",
-            borderRadius: "12px",
-            fontSize: "0.82rem",
-            color: "var(--text-muted)",
-            lineHeight: "1.5",
-            textAlign: "left",
+            background: 'rgba(255,255,255,0.02)',
+            border: 'var(--border-glass)',
+            padding: '16px',
+            borderRadius: '12px',
+            fontSize: '0.82rem',
+            color: 'var(--text-muted)',
+            lineHeight: '1.5',
+            textAlign: 'left',
           }}
         >
           💡 <strong>신뢰도 점수(Reliability Score)란?</strong>
-          <div style={{ marginTop: "4px" }}>
+          <div style={{ marginTop: '4px' }}>
             각 회차별로 실제 발표된 당첨 번호 분포와 해당 알고리즘의 예측 번호가
             수학적으로 얼마나 근사했는지를 나타내는 점수입니다. 100%에
             가까울수록 실제 당첨 분포와 높은 연관성을 가짐을 의미합니다.
@@ -1531,13 +1531,13 @@ export function Stats() {
     <div>
       <h2
         className="access-title"
-        style={{ fontSize: "1.3rem", marginBottom: "16px" }}
+        style={{ fontSize: '1.3rem', marginBottom: '16px' }}
       >
         알고리즘 분석 통계 대시보드
       </h2>
       <p
         className="access-desc"
-        style={{ fontSize: "0.88rem", marginBottom: "24px" }}
+        style={{ fontSize: '0.88rem', marginBottom: '24px' }}
       >
         당첨 데이터 분포 시뮬레이션 분석 정보 및 다가오는 회차의 생성 통계를
         제공합니다.
@@ -1547,10 +1547,10 @@ export function Stats() {
       {renderSubTabs()}
 
       {/* Selected Tab rendering */}
-      {activeSubTab === "leaderboard" && renderLeaderboard()}
-      {activeSubTab === "weekly" && renderWeekly()}
-      {activeSubTab === "champion" && renderChampion()}
-      {activeSubTab === "detail" && renderDetail()}
+      {activeSubTab === 'leaderboard' && renderLeaderboard()}
+      {activeSubTab === 'weekly' && renderWeekly()}
+      {activeSubTab === 'champion' && renderChampion()}
+      {activeSubTab === 'detail' && renderDetail()}
 
       {/* Modal Popup */}
       {(clickedPointLoading || clickedPointData) &&
@@ -1561,22 +1561,22 @@ export function Stats() {
               setClickedPointLoading(false);
             }}
             style={{
-              position: "fixed",
+              position: 'fixed',
               top: 0,
               left: 0,
-              width: "100vw",
-              height: "100vh",
-              background: "rgba(8, 9, 14, 0.75)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(8, 9, 14, 0.75)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               zIndex: 9999,
-              padding: "20px",
-              boxSizing: "border-box",
-              animation: "backdropFadeIn 0.3s ease-out forwards",
-              overflow: "hidden",
+              padding: '20px',
+              boxSizing: 'border-box',
+              animation: 'backdropFadeIn 0.3s ease-out forwards',
+              overflow: 'hidden',
             }}
           >
             <style>{`
@@ -1606,19 +1606,19 @@ export function Stats() {
               onClick={(e) => e.stopPropagation()}
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(20, 21, 33, 0.95) 0%, rgba(10, 11, 18, 0.98) 100%)",
-                border: "1px solid rgba(189, 0, 255, 0.25)",
+                  'linear-gradient(135deg, rgba(20, 21, 33, 0.95) 0%, rgba(10, 11, 18, 0.98) 100%)',
+                border: '1px solid rgba(189, 0, 255, 0.25)',
                 boxShadow:
-                  "0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(189, 0, 255, 0.05), 0 0 30px rgba(189, 0, 255, 0.15)",
-                borderRadius: "24px",
-                padding: "28px 24px",
-                width: "100%",
-                maxWidth: "600px",
-                position: "relative",
+                  '0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(189, 0, 255, 0.05), 0 0 30px rgba(189, 0, 255, 0.15)',
+                borderRadius: '24px',
+                padding: '28px 24px',
+                width: '100%',
+                maxWidth: '600px',
+                position: 'relative',
                 animation:
-                  "modalFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
-                boxSizing: "border-box",
-                textAlign: "left",
+                  'modalFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+                boxSizing: 'border-box',
+                textAlign: 'left',
               }}
             >
               {/* Close Button */}
@@ -1628,34 +1628,34 @@ export function Stats() {
                   setClickedPointLoading(false);
                 }}
                 style={{
-                  position: "absolute",
-                  top: "20px",
-                  right: "20px",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "50%",
-                  width: "32px",
-                  height: "32px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  lineHeight: "1",
-                  transition: "all 0.2s ease",
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  lineHeight: '1',
+                  transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background =
-                    "rgba(255, 255, 255, 0.15)";
-                  e.currentTarget.style.color = "var(--text-main)";
-                  e.currentTarget.style.transform = "rotate(90deg)";
+                    'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.color = 'var(--text-main)';
+                  e.currentTarget.style.transform = 'rotate(90deg)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background =
-                    "rgba(255, 255, 255, 0.05)";
-                  e.currentTarget.style.color = "var(--text-muted)";
-                  e.currentTarget.style.transform = "rotate(0deg)";
+                    'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'rotate(0deg)';
                 }}
               >
                 ✕
@@ -1664,25 +1664,25 @@ export function Stats() {
               {clickedPointLoading && (
                 <div
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: "200px",
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '200px',
                   }}
                 >
                   <div
                     style={{
-                      width: "40px",
-                      height: "40px",
-                      border: "3px solid rgba(189, 0, 255, 0.1)",
-                      borderTopColor: "var(--primary-purple)",
-                      borderRadius: "50%",
-                      animation: "spinner 0.8s linear infinite",
-                      marginBottom: "16px",
+                      width: '40px',
+                      height: '40px',
+                      border: '3px solid rgba(189, 0, 255, 0.1)',
+                      borderTopColor: 'var(--primary-purple)',
+                      borderRadius: '50%',
+                      animation: 'spinner 0.8s linear infinite',
+                      marginBottom: '16px',
                     }}
                   />
-                  <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
+                  <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
                     최고 신뢰도 데이터를 불러오는 중...
                   </p>
                 </div>
@@ -1698,40 +1698,40 @@ export function Stats() {
                     return (
                       <div
                         style={{
-                          color: "#ffffff",
-                          padding: "20px 10px",
-                          textAlign: "center",
+                          color: '#ffffff',
+                          padding: '20px 10px',
+                          textAlign: 'center',
                         }}
                       >
                         <p
                           style={{
-                            fontWeight: "bold",
-                            marginBottom: "12px",
-                            fontSize: "1.1rem",
+                            fontWeight: 'bold',
+                            marginBottom: '12px',
+                            fontSize: '1.1rem',
                           }}
                         >
                           ⚠️ 상세 정보가 없습니다.
                         </p>
                         <p
                           style={{
-                            fontSize: "0.82rem",
-                            color: "rgba(255,255,255,0.6)",
-                            marginBottom: "16px",
+                            fontSize: '0.82rem',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginBottom: '16px',
                           }}
                         >
                           데이터를 정상적으로 처리하지 못했습니다.
                         </p>
                         <pre
                           style={{
-                            fontSize: "0.75rem",
-                            textAlign: "left",
-                            overflow: "auto",
-                            background: "rgba(0,0,0,0.4)",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            color: "rgba(255,255,255,0.8)",
-                            maxHeight: "150px",
+                            fontSize: '0.75rem',
+                            textAlign: 'left',
+                            overflow: 'auto',
+                            background: 'rgba(0,0,0,0.4)',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'rgba(255,255,255,0.8)',
+                            maxHeight: '150px',
                           }}
                         >
                           {JSON.stringify(clickedPointData, null, 2)}
@@ -1755,63 +1755,63 @@ export function Stats() {
                     bonusNumber !== undefined && bonusNumber === num;
 
                   return (
-                    <div style={{ color: "#ffffff" }}>
+                    <div style={{ color: '#ffffff' }}>
                       {/* Title / Header */}
                       <div
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          marginBottom: "20px",
-                          borderBottom: "1px solid rgba(255,255,255,0.06)",
-                          paddingBottom: "16px",
-                          paddingRight: "36px", // leave space for the X button
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '20px',
+                          borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          paddingBottom: '16px',
+                          paddingRight: '36px', // leave space for the X button
                         }}
                       >
                         <div>
                           <span
                             style={{
-                              fontSize: "0.75rem",
-                              background: "rgba(189, 0, 255, 0.15)",
-                              color: "#c084fc",
-                              padding: "2px 8px",
-                              borderRadius: "4px",
-                              border: "1px solid rgba(189, 0, 255, 0.25)",
-                              fontWeight: "bold",
+                              fontSize: '0.75rem',
+                              background: 'rgba(189, 0, 255, 0.15)',
+                              color: '#c084fc',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              border: '1px solid rgba(189, 0, 255, 0.25)',
+                              fontWeight: 'bold',
                             }}
                           >
                             EPISODE DETAIL
                           </span>
                           <h3
                             style={{
-                              fontSize: "1.15rem",
-                              fontWeight: "bold",
-                              color: "#ffffff",
-                              marginTop: "8px",
+                              fontSize: '1.15rem',
+                              fontWeight: 'bold',
+                              color: '#ffffff',
+                              marginTop: '8px',
                             }}
                           >
                             {prediction.episode}회차 최고 신뢰도 예측
                           </h3>
                         </div>
-                        <div style={{ textAlign: "right" }}>
+                        <div style={{ textAlign: 'right' }}>
                           <div
                             style={{
-                              fontSize: "1.5rem",
+                              fontSize: '1.5rem',
                               fontWeight: 800,
-                              color: "#a855f7",
-                              fontFamily: "monospace",
-                              textShadow: "0 0 10px rgba(189,0,255,0.3)",
+                              color: '#a855f7',
+                              fontFamily: 'monospace',
+                              textShadow: '0 0 10px rgba(189,0,255,0.3)',
                             }}
                           >
-                            {typeof prediction.reliabilityScore === "number"
+                            {typeof prediction.reliabilityScore === 'number'
                               ? prediction.reliabilityScore.toFixed(2)
-                              : "0.00"}
+                              : '0.00'}
                             %
                           </div>
                           <span
                             style={{
-                              fontSize: "0.7rem",
-                              color: "rgba(255,255,255,0.5)",
+                              fontSize: '0.7rem',
+                              color: 'rgba(255,255,255,0.5)',
                             }}
                           >
                             신뢰도 스코어
@@ -1820,12 +1820,12 @@ export function Stats() {
                       </div>
 
                       {/* Generated prediction numbers */}
-                      <div style={{ marginBottom: "20px" }}>
+                      <div style={{ marginBottom: '20px' }}>
                         <div
                           style={{
-                            fontSize: "0.8rem",
-                            color: "rgba(255,255,255,0.6)",
-                            marginBottom: "8px",
+                            fontSize: '0.8rem',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginBottom: '8px',
                             fontWeight: 600,
                           }}
                         >
@@ -1833,10 +1833,10 @@ export function Stats() {
                         </div>
                         <div
                           style={{
-                            display: "flex",
-                            gap: "8px",
-                            flexWrap: "wrap",
-                            alignItems: "center",
+                            display: 'flex',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
                           }}
                         >
                           {predictionNumbers
@@ -1846,15 +1846,15 @@ export function Stats() {
                               const bonusMatched = isBonusMatched(num);
 
                               const borderColor = matched
-                                ? "#10b981"
+                                ? '#10b981'
                                 : bonusMatched
-                                  ? "#c084fc"
-                                  : "rgba(255, 255, 255, 0.15)";
+                                  ? '#c084fc'
+                                  : 'rgba(255, 255, 255, 0.15)';
 
                               const shadowColor = matched
-                                ? "rgba(16, 185, 129, 0.6)"
+                                ? 'rgba(16, 185, 129, 0.6)'
                                 : bonusMatched
-                                  ? "rgba(192, 132, 252, 0.6)"
+                                  ? 'rgba(192, 132, 252, 0.6)'
                                   : null;
 
                               return (
@@ -1863,13 +1863,14 @@ export function Stats() {
                                   className="lotto-ball"
                                   style={{
                                     ...getBallStyle(num),
-                                    position: "relative",
-                                    width: "36px",
-                                    height: "36px",
-                                    fontSize: "0.95rem",
-                                    border: matched || bonusMatched
-                                      ? `2px solid ${borderColor}`
-                                      : "1px solid rgba(255, 255, 255, 0.15)",
+                                    position: 'relative',
+                                    width: '36px',
+                                    height: '36px',
+                                    fontSize: '0.95rem',
+                                    border:
+                                      matched || bonusMatched
+                                        ? `2px solid ${borderColor}`
+                                        : '1px solid rgba(255, 255, 255, 0.15)',
                                     boxShadow: shadowColor
                                       ? `0 0 15px ${shadowColor}`
                                       : getBallStyle(num).boxShadow,
@@ -1879,19 +1880,21 @@ export function Stats() {
                                   {(matched || bonusMatched) && (
                                     <div
                                       style={{
-                                        position: "absolute",
-                                        top: "-4px",
-                                        right: "-4px",
-                                        background: matched ? "#10b981" : "#c084fc",
-                                        color: "#fff",
-                                        borderRadius: "50%",
-                                        width: "14px",
-                                        height: "14px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        fontSize: "8px",
-                                        fontWeight: "bold",
+                                        position: 'absolute',
+                                        top: '-4px',
+                                        right: '-4px',
+                                        background: matched
+                                          ? '#10b981'
+                                          : '#c084fc',
+                                        color: '#fff',
+                                        borderRadius: '50%',
+                                        width: '14px',
+                                        height: '14px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '8px',
+                                        fontWeight: 'bold',
                                       }}
                                     >
                                       ✓
@@ -1900,7 +1903,6 @@ export function Stats() {
                                 </div>
                               );
                             })}
-
                         </div>
                       </div>
 
@@ -1908,18 +1910,18 @@ export function Stats() {
                       {winningNumber && winningNumbers.length > 0 && (
                         <div
                           style={{
-                            marginBottom: "20px",
-                            background: "rgba(255,255,255,0.01)",
-                            border: "1px dashed rgba(255,255,255,0.06)",
-                            padding: "14px 16px",
-                            borderRadius: "12px",
+                            marginBottom: '20px',
+                            background: 'rgba(255,255,255,0.01)',
+                            border: '1px dashed rgba(255,255,255,0.06)',
+                            padding: '14px 16px',
+                            borderRadius: '12px',
                           }}
                         >
                           <div
                             style={{
-                              fontSize: "0.8rem",
-                              color: "rgba(255,255,255,0.6)",
-                              marginBottom: "8px",
+                              fontSize: '0.8rem',
+                              color: 'rgba(255,255,255,0.6)',
+                              marginBottom: '8px',
                               fontWeight: 600,
                             }}
                           >
@@ -1927,10 +1929,10 @@ export function Stats() {
                           </div>
                           <div
                             style={{
-                              display: "flex",
-                              gap: "8px",
-                              flexWrap: "wrap",
-                              alignItems: "center",
+                              display: 'flex',
+                              gap: '8px',
+                              flexWrap: 'wrap',
+                              alignItems: 'center',
                             }}
                           >
                             {winningNumbers
@@ -1941,9 +1943,9 @@ export function Stats() {
                                   className="lotto-ball"
                                   style={{
                                     ...getBallStyle(num),
-                                    width: "36px",
-                                    height: "36px",
-                                    fontSize: "0.95rem",
+                                    width: '36px',
+                                    height: '36px',
+                                    fontSize: '0.95rem',
                                     opacity: 0.85,
                                   }}
                                 >
@@ -1952,10 +1954,10 @@ export function Stats() {
                               ))}
                             <div
                               style={{
-                                fontSize: "1.1rem",
-                                fontWeight: "bold",
-                                color: "rgba(255,255,255,0.4)",
-                                padding: "0 2px",
+                                fontSize: '1.1rem',
+                                fontWeight: 'bold',
+                                color: 'rgba(255,255,255,0.4)',
+                                padding: '0 2px',
                               }}
                             >
                               +
@@ -1964,9 +1966,9 @@ export function Stats() {
                               className="lotto-ball"
                               style={{
                                 ...getBallStyle(winningNumbers[6] ?? 0),
-                                width: "36px",
-                                height: "36px",
-                                fontSize: "0.95rem",
+                                width: '36px',
+                                height: '36px',
+                                fontSize: '0.95rem',
                                 opacity: 0.85,
                               }}
                             >
@@ -1977,7 +1979,7 @@ export function Stats() {
                       )}
 
                       {prediction.analysis && (
-                        <div style={{ marginBottom: "20px" }}>
+                        <div style={{ marginBottom: '20px' }}>
                           <LottoAnalysisCard
                             numbers={predictionNumbers}
                             analysis={prediction.analysis}
@@ -1990,9 +1992,9 @@ export function Stats() {
                       <div>
                         <div
                           style={{
-                            fontSize: "0.8rem",
-                            color: "rgba(255,255,255,0.6)",
-                            marginBottom: "8px",
+                            fontSize: '0.8rem',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginBottom: '8px',
                             fontWeight: 600,
                           }}
                         >
@@ -2000,9 +2002,9 @@ export function Stats() {
                         </div>
                         <div
                           style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(3, 1fr)",
-                            gap: "8px",
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '8px',
                           }}
                         >
                           {(() => {
@@ -2024,27 +2026,27 @@ export function Stats() {
                               <div
                                 key={idx}
                                 style={{
-                                  background: "rgba(255,255,255,0.02)",
-                                  padding: "8px 10px",
-                                  borderRadius: "6px",
-                                  border: "var(--border-glass)",
-                                  fontSize: "0.72rem",
-                                  display: "flex",
-                                  justifyContent: "space-between",
+                                  background: 'rgba(255,255,255,0.02)',
+                                  padding: '8px 10px',
+                                  borderRadius: '6px',
+                                  border: 'var(--border-glass)',
+                                  fontSize: '0.72rem',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
                                 }}
                               >
                                 <span
                                   style={{
-                                    color: "rgba(255,255,255,0.85)",
-                                    fontFamily: "monospace",
+                                    color: 'rgba(255,255,255,0.85)',
+                                    fontFamily: 'monospace',
                                   }}
                                 >
                                   {item.label}
                                 </span>
                                 <span
                                   style={{
-                                    color: "#c084fc",
-                                    fontWeight: "bold",
+                                    color: '#c084fc',
+                                    fontWeight: 'bold',
                                     opacity:
                                       0.35 + (item.val / maxWeight) * 0.65,
                                   }}
