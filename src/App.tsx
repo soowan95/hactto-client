@@ -19,7 +19,6 @@ import { History } from './pages/Dashboard/History';
 import { Support } from './pages/Dashboard/Support';
 import { AdminLoginModal } from './components/AdminLoginModal';
 
-
 function AppContent() {
   const {
     loading,
@@ -36,10 +35,10 @@ function AppContent() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isModifier = e.metaKey || e.ctrlKey;
-      const isHKey = 
-        e.code === 'KeyH' || 
-        e.key.toLowerCase() === 'h' || 
-        e.key === 'ㅗ' || 
+      const isHKey =
+        e.code === 'KeyH' ||
+        e.key.toLowerCase() === 'h' ||
+        e.key === 'ㅗ' ||
         e.key === 'ㅗ';
 
       // Trigger on Cmd+Shift+H (Mac) or Ctrl+Shift+H (Windows)
@@ -59,7 +58,15 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-dim)' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          color: 'var(--text-dim)',
+        }}
+      >
         불러오는 중...
       </div>
     );
@@ -133,7 +140,6 @@ function AppContent() {
       />
     </>
   );
-
 }
 
 export function App() {

@@ -89,7 +89,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [isBlockedUser, setIsBlockedUser] = useState<boolean>(false);
 
-
   // Show auto-dismiss alerts
   const showAlert = useCallback((type: 'success' | 'error', text: string) => {
     setAlert({ type, text });
@@ -145,7 +144,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         try {
           const clone = response.clone();
           const errData = await clone.json();
-          if (errData.message === '차단된 사용자입니다.' || errData.message?.includes('차단된')) {
+          if (
+            errData.message === '차단된 사용자입니다.' ||
+            errData.message?.includes('차단된')
+          ) {
             setIsBlockedUser(true);
             if (errData.ip) setClientIp(errData.ip);
             if (errData.visitorId) {
@@ -225,7 +227,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (res.status === 403) {
           try {
             const errData = await res.json();
-            if (errData.message === '차단된 사용자입니다.' || errData.message?.includes('차단된')) {
+            if (
+              errData.message === '차단된 사용자입니다.' ||
+              errData.message?.includes('차단된')
+            ) {
               setIsBlockedUser(true);
               if (errData.ip) setClientIp(errData.ip);
               if (errData.visitorId) {

@@ -29,15 +29,22 @@ export function Support() {
     setLoading(true);
     try {
       const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/manager/inquiries?forBlock=false`, {
-        headers: {
-          ...(vid ? { 'x-visitor-id': vid } : {}),
+      const res = await fetch(
+        `${API_BASE_URL}/manager/inquiries?forBlock=false`,
+        {
+          headers: {
+            ...(vid ? { 'x-visitor-id': vid } : {}),
+          },
         },
-      });
+      );
       if (res.ok) {
         const data = await res.json();
         // ResponseTransformInterceptor wraps response as { statusCode, data: [...] }
-        const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+        const list = Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data)
+            ? data
+            : [];
         setInquiries(list);
       }
     } catch (err) {
@@ -97,11 +104,18 @@ export function Support() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
-        <h3 className="section-title" style={{ color: 'var(--primary-cyan)', marginBottom: '8px' }}>
+        <h3
+          className="section-title"
+          style={{ color: 'var(--primary-cyan)', marginBottom: '8px' }}
+        >
           1:1 관리자 문의하기
         </h3>
-        <p className="access-desc" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-          서비스 이용 중 불편한 점이나 건의사항을 남겨주시면 관리자가 신속하게 답변해 드립니다.
+        <p
+          className="access-desc"
+          style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}
+        >
+          서비스 이용 중 불편한 점이나 건의사항을 남겨주시면 관리자가 신속하게
+          답변해 드립니다.
         </p>
       </div>
 
@@ -124,12 +138,37 @@ export function Support() {
             height: '380px',
           }}
         >
-          <h4 style={{ fontSize: '1rem', color: 'var(--text-main)', marginBottom: '16px', marginTop: 0 }}>
+          <h4
+            style={{
+              fontSize: '1rem',
+              color: 'var(--text-main)',
+              marginBottom: '16px',
+              marginTop: 0,
+            }}
+          >
             새 문의 작성
           </h4>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'left' }}>제목</label>
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              flex: 1,
+            }}
+          >
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+            >
+              <label
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-dim)',
+                  textAlign: 'left',
+                }}
+              >
+                제목
+              </label>
               <input
                 type="text"
                 className="input-glow"
@@ -140,8 +179,23 @@ export function Support() {
                 style={{ fontSize: '0.85rem' }}
               />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'left' }}>내용</label>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                flex: 1,
+              }}
+            >
+              <label
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-dim)',
+                  textAlign: 'left',
+                }}
+              >
+                내용
+              </label>
               <textarea
                 className="input-glow"
                 placeholder="문의하실 구체적인 내용을 작성해 주세요."
@@ -163,7 +217,8 @@ export function Support() {
               disabled={submitting}
               style={{
                 height: '40px',
-                background: 'linear-gradient(135deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)',
+                background:
+                  'linear-gradient(135deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)',
                 color: '#0f111a',
                 fontWeight: 'bold',
                 border: 'none',
@@ -186,18 +241,45 @@ export function Support() {
             height: '380px',
           }}
         >
-          <h4 style={{ fontSize: '1rem', color: 'var(--text-main)', marginBottom: '16px', marginTop: 0 }}>
+          <h4
+            style={{
+              fontSize: '1rem',
+              color: 'var(--text-main)',
+              marginBottom: '16px',
+              marginTop: 0,
+            }}
+          >
             내 문의 내역
           </h4>
 
           {loading && inquiries.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', textAlign: 'center' }}>
+            <p
+              style={{
+                fontSize: '0.85rem',
+                color: 'var(--text-dim)',
+                textAlign: 'center',
+              }}
+            >
               불러오는 중...
             </p>
           ) : inquiries.length === 0 ? (
             <div style={{ padding: '40px 0', textAlign: 'center' }}>
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>✉</span>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', margin: 0 }}>
+              <span
+                style={{
+                  fontSize: '2rem',
+                  display: 'block',
+                  marginBottom: '8px',
+                }}
+              >
+                ✉
+              </span>
+              <p
+                style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--text-dim)',
+                  margin: 0,
+                }}
+              >
                 등록된 문의 내역이 없습니다.
               </p>
             </div>
@@ -237,10 +319,20 @@ export function Support() {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         gap: '10px',
-                        background: isExpanded ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+                        background: isExpanded
+                          ? 'rgba(255, 255, 255, 0.03)'
+                          : 'transparent',
                       }}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          alignItems: 'flex-start',
+                          overflow: 'hidden',
+                        }}
+                      >
                         <span
                           style={{
                             fontSize: '0.85rem',
@@ -254,7 +346,12 @@ export function Support() {
                         >
                           {inq.title}
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-dim)',
+                          }}
+                        >
                           {new Date(inq.createdAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -296,7 +393,12 @@ export function Support() {
                           color: 'var(--text-muted)',
                         }}
                       >
-                        <div style={{ whiteSpace: 'pre-wrap', marginBottom: inq.answer ? '14px' : 0 }}>
+                        <div
+                          style={{
+                            whiteSpace: 'pre-wrap',
+                            marginBottom: inq.answer ? '14px' : 0,
+                          }}
+                        >
                           {inq.content}
                         </div>
 
@@ -321,7 +423,12 @@ export function Support() {
                             >
                               관리자 답변
                             </span>
-                            <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-main)' }}>
+                            <div
+                              style={{
+                                whiteSpace: 'pre-wrap',
+                                color: 'var(--text-main)',
+                              }}
+                            >
                               {inq.answer}
                             </div>
                             <span
@@ -332,7 +439,8 @@ export function Support() {
                                 marginTop: '6px',
                               }}
                             >
-                              {inq.answeredAt && new Date(inq.answeredAt).toLocaleString()}
+                              {inq.answeredAt &&
+                                new Date(inq.answeredAt).toLocaleString()}
                             </span>
                           </div>
                         )}

@@ -16,7 +16,8 @@ function NoticeText({ currentNotice }: { currentNotice: Notice }) {
   useEffect(() => {
     const checkOverflow = () => {
       if (containerRef.current && textRef.current) {
-        const isOverflowing = textRef.current.offsetWidth > containerRef.current.offsetWidth;
+        const isOverflowing =
+          textRef.current.offsetWidth > containerRef.current.offsetWidth;
         setShouldScroll(isOverflowing);
       }
     };
@@ -28,7 +29,15 @@ function NoticeText({ currentNotice }: { currentNotice: Notice }) {
   }, [currentNotice]);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflow: 'hidden' }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        flex: 1,
+        overflow: 'hidden',
+      }}
+    >
       <span
         style={{
           background: 'var(--primary-cyan)',
@@ -47,39 +56,72 @@ function NoticeText({ currentNotice }: { currentNotice: Notice }) {
       </span>
 
       {/* Fixed Title */}
-      <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: 'var(--primary-cyan)', flexShrink: 0 }}>
+      <span
+        style={{
+          fontSize: '0.82rem',
+          fontWeight: 'bold',
+          color: 'var(--primary-cyan)',
+          flexShrink: 0,
+        }}
+      >
         {currentNotice.title}
       </span>
 
       {/* Vertical divider or dash */}
-      <span style={{ color: 'rgba(255, 255, 255, 0.3)', fontSize: '0.82rem', flexShrink: 0 }}>|</span>
+      <span
+        style={{
+          color: 'rgba(255, 255, 255, 0.3)',
+          fontSize: '0.82rem',
+          flexShrink: 0,
+        }}
+      >
+        |
+      </span>
 
       {/* Marquee Content */}
       <div
         ref={containerRef}
-        className={shouldScroll ? "marquee-container" : ""}
+        className={shouldScroll ? 'marquee-container' : ''}
         style={{
           position: 'relative',
           width: '100%',
           overflow: 'hidden',
           display: 'flex',
-          maskImage: shouldScroll ? 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)' : 'none',
-          WebkitMaskImage: shouldScroll ? 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)' : 'none',
+          maskImage: shouldScroll
+            ? 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)'
+            : 'none',
+          WebkitMaskImage: shouldScroll
+            ? 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)'
+            : 'none',
         }}
       >
         <div
-          className={shouldScroll ? "marquee-content" : ""}
+          className={shouldScroll ? 'marquee-content' : ''}
           style={{
             display: 'inline-flex',
             gap: shouldScroll ? '50px' : '0px',
             whiteSpace: 'nowrap',
           }}
         >
-          <span ref={textRef} style={{ fontSize: '0.82rem', color: 'var(--text-main)', fontWeight: '500' }}>
+          <span
+            ref={textRef}
+            style={{
+              fontSize: '0.82rem',
+              color: 'var(--text-main)',
+              fontWeight: '500',
+            }}
+          >
             {currentNotice.content}
           </span>
           {shouldScroll && (
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-main)', fontWeight: '500' }} aria-hidden="true">
+            <span
+              style={{
+                fontSize: '0.82rem',
+                color: 'var(--text-main)',
+                fontWeight: '500',
+              }}
+              aria-hidden="true"
+            >
               {currentNotice.content}
             </span>
           )}
@@ -100,7 +142,11 @@ export function NoticeBanner() {
         const res = await fetch(`${API_BASE_URL}/manager/notices`);
         if (res.ok) {
           const data = await res.json();
-          const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+          const list = Array.isArray(data.data)
+            ? data.data
+            : Array.isArray(data)
+              ? data
+              : [];
           setNotices(list);
         }
       } catch (err) {
@@ -114,7 +160,9 @@ export function NoticeBanner() {
   // Check if this notice was dismissed during this session
   useEffect(() => {
     if (notices.length > 0) {
-      const dismissedNotices = JSON.parse(sessionStorage.getItem('dismissed_notices') || '[]');
+      const dismissedNotices = JSON.parse(
+        sessionStorage.getItem('dismissed_notices') || '[]',
+      );
       const currentNoticeId = notices[currentIndex]?.id;
       if (dismissedNotices.includes(currentNoticeId)) {
         setIsDismissed(true);
@@ -129,9 +177,14 @@ export function NoticeBanner() {
   const currentNotice = notices[currentIndex];
 
   const handleDismiss = () => {
-    const dismissedNotices = JSON.parse(sessionStorage.getItem('dismissed_notices') || '[]');
+    const dismissedNotices = JSON.parse(
+      sessionStorage.getItem('dismissed_notices') || '[]',
+    );
     dismissedNotices.push(currentNotice.id);
-    sessionStorage.setItem('dismissed_notices', JSON.stringify(dismissedNotices));
+    sessionStorage.setItem(
+      'dismissed_notices',
+      JSON.stringify(dismissedNotices),
+    );
     setIsDismissed(true);
   };
 
@@ -143,7 +196,8 @@ export function NoticeBanner() {
     <div
       style={{
         width: '100%',
-        background: 'linear-gradient(90deg, rgba(0, 240, 255, 0.15) 0%, rgba(157, 0, 255, 0.15) 100%)',
+        background:
+          'linear-gradient(90deg, rgba(0, 240, 255, 0.15) 0%, rgba(157, 0, 255, 0.15) 100%)',
         border: '1px solid rgba(0, 240, 255, 0.25)',
         backdropFilter: 'blur(8px)',
         borderRadius: '8px',
@@ -159,7 +213,14 @@ export function NoticeBanner() {
     >
       <NoticeText currentNotice={currentNotice} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          flexShrink: 0,
+        }}
+      >
         {notices.length > 1 && (
           <button
             onClick={handleNext}

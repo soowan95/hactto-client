@@ -9,7 +9,6 @@ import { WelcomeModal } from './WelcomeModal';
 import { PaymentModal } from './PaymentModal';
 import { NoticeBanner } from './NoticeBanner';
 
-
 export function Layout() {
   const {
     alert,
@@ -311,7 +310,6 @@ export function Layout() {
           </div>
 
           <NoticeBanner />
-
 
           <div
             className="scroll-y-container"
