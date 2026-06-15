@@ -21,7 +21,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     setIsSystemAnalyzing,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'algo' | 'system'>('algo');
+  const [activeTab, setActiveTab] = useState<'algo' | 'system' | 'notices' | 'inquiries' | 'visitors'>('algo');
   const [algorithms, setAlgorithms] = useState<
     { type: string; name?: string; complexity: number; description?: string }[]
   >([]);
@@ -40,8 +40,32 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [fetchEpisodeInput, setFetchEpisodeInput] = useState('');
   const [syncingAlgos, setSyncingAlgos] = useState(false);
 
+  // --- New Admin States ---
+  // Notice management states
+  const [adminNotices, setAdminNotices] = useState<any[]>([]);
+  const [loadingAdminNotices, setLoadingAdminNotices] = useState(false);
+  const [newNoticeTitle, setNewNoticeTitle] = useState('');
+  const [newNoticeContent, setNewNoticeContent] = useState('');
+  const [newNoticeEndsAt, setNewNoticeEndsAt] = useState('');
+
+  // Inquiry answering states
+  const [adminInquiries, setAdminInquiries] = useState<any[]>([]);
+  const [loadingAdminInquiries, setLoadingAdminInquiries] = useState(false);
+  const [inquiryFilter, setInquiryFilter] = useState<'ALL' | 'PENDING' | 'ANSWERED'>('ALL');
+  const [inquiryBlockFilter, setInquiryBlockFilter] = useState<'ALL' | 'NORMAL' | 'BLOCK'>('ALL');
+  const [inquiryAnswers, setInquiryAnswers] = useState<Record<string, string>>({});
+
+  // Visitor management states
+  const [searchVisitorId, setSearchVisitorId] = useState('');
+  const [visitorDetails, setVisitorDetails] = useState<any>(null);
+  const [loadingVisitorDetails, setLoadingVisitorDetails] = useState(false);
+  const [manageHonAmount, setManageHonAmount] = useState('');
+  const [freePassEndsAt, setFreePassEndsAt] = useState('');
+
+
   // Local authentication state so that it always asks for key on open
   const [isAuthSuccessLocal, setIsAuthSuccessLocal] = useState(false);
+
 
   // Reset local auth state and key whenever the modal opens
   useEffect(() => {
@@ -103,7 +127,19 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isAuthSuccessLocal, activeTab]);
 
+  useEffect(() => {
+    if (isOpen && isAuthSuccessLocal) {
+      if (activeTab === 'notices') {
+        fetchAdminNotices();
+      } else if (activeTab === 'inquiries') {
+        fetchAdminInquiries();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, isAuthSuccessLocal, activeTab]);
+
   if (!isOpen) return null;
+
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,6 +237,222 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       setAnalyzingReliability(false);
     }
   };
+
+  const fetchAdminNotices = async () => {
+    setLoadingAdminNotices(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/manager/admin/notices`);
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+        setAdminNotices(list);
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '공지 목록을 불러오지 못했습니다.');
+    } finally {
+      setLoadingAdminNotices(false);
+    }
+  };
+
+  const handleCreateNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNoticeTitle.trim() || !newNoticeContent.trim() || !newNoticeEndsAt) {
+      showAlert('error', '모든 필드를 입력해 주세요.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/manager/admin/notices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newNoticeTitle,
+          content: newNoticeContent,
+          endsAt: new Date(newNoticeEndsAt).toISOString(),
+        }),
+      });
+      if (res.ok) {
+        showAlert('success', '공지가 등록되었습니다.');
+        setNewNoticeTitle('');
+        setNewNoticeContent('');
+        setNewNoticeEndsAt('');
+        fetchAdminNotices();
+      } else {
+        throw new Error('공지 등록 실패');
+      }
+    } catch (err) {
+      showAlert('error', '공지 등록 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteNotice = async (id: string) => {
+    if (!confirm('정말 이 공지를 삭제하시겠습니까?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/manager/admin/notices/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        showAlert('success', '공지가 삭제되었습니다.');
+        fetchAdminNotices();
+      } else {
+        throw new Error('공지 삭제 실패');
+      }
+    } catch (err) {
+      showAlert('error', '공지 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const fetchAdminInquiries = async (blockFilter?: 'ALL' | 'NORMAL' | 'BLOCK') => {
+    setLoadingAdminInquiries(true);
+    const activeBlockFilter = blockFilter ?? inquiryBlockFilter;
+    try {
+      const params = new URLSearchParams();
+      if (activeBlockFilter === 'NORMAL') params.set('forBlock', 'false');
+      else if (activeBlockFilter === 'BLOCK') params.set('forBlock', 'true');
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`${API_BASE_URL}/manager/admin/inquiries${query}`);
+      if (res.ok) {
+        const data = await res.json();
+        // ResponseTransformInterceptor wraps response as { statusCode, data: [...] }
+        const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+        setAdminInquiries(list);
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '문의 내역을 불러오지 못했습니다.');
+    } finally {
+      setLoadingAdminInquiries(false);
+    }
+  };
+
+  const handleAnswerSubmit = async (id: string) => {
+    const answer = inquiryAnswers[id];
+    if (!answer || !answer.trim()) {
+      showAlert('error', '답변 내용을 입력해 주세요.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/manager/admin/inquiries/${id}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer }),
+      });
+      if (res.ok) {
+        showAlert('success', '답변이 등록되었습니다.');
+        setInquiryAnswers((prev) => ({ ...prev, [id]: '' }));
+        fetchAdminInquiries();
+      } else {
+        throw new Error('답변 등록 실패');
+      }
+    } catch (err) {
+      showAlert('error', '답변 등록 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSearchVisitor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchVisitorId.trim()) {
+      showAlert('error', '조회할 visitorId를 입력해 주세요.');
+      return;
+    }
+    setLoadingVisitorDetails(true);
+    setVisitorDetails(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/visitors/${searchVisitorId.trim()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVisitorDetails(data.data || data);
+      } else {
+        showAlert('error', '해당 방문자를 찾을 수 없습니다.');
+      }
+    } catch (err) {
+      showAlert('error', '방문자 정보 조회 실패');
+    } finally {
+      setLoadingVisitorDetails(false);
+    }
+  };
+
+  const handleToggleBlock = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!visitorDetails) return;
+    const isBlocked = visitorDetails.isBlocked;
+    const endpoint = isBlocked ? 'unblock' : 'block';
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/visitors/${visitorDetails.id}/${endpoint}`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        showAlert('success', isBlocked ? '차단이 해제되었습니다.' : '사용자가 차단되었습니다.');
+        // Refresh details
+        const updatedRes = await fetch(`${API_BASE_URL}/admin/visitors/${visitorDetails.id}`);
+        const updatedData = await updatedRes.json();
+        setVisitorDetails(updatedData.data || updatedData);
+      }
+    } catch (err) {
+      showAlert('error', '상태 변경 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleManageHon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!visitorDetails || !manageHonAmount.trim()) return;
+    const amount = parseInt(manageHonAmount, 10);
+    if (isNaN(amount)) {
+      showAlert('error', '올바른 숫자를 입력하세요.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/visitors/${visitorDetails.id}/hon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+      if (res.ok) {
+        showAlert('success', '혼이 정상적으로 지급/차감되었습니다.');
+        setManageHonAmount('');
+        // Refresh details
+        const updatedRes = await fetch(`${API_BASE_URL}/admin/visitors/${visitorDetails.id}`);
+        const updatedData = await updatedRes.json();
+        setVisitorDetails(updatedData.data || updatedData);
+      }
+    } catch (err) {
+      showAlert('error', '혼 조율 실패');
+    }
+  };
+
+  const handleGrantUnlimited = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!visitorDetails || !freePassEndsAt) {
+      showAlert('error', '이용권 만료 기한을 선택해 주세요.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/visitors/${visitorDetails.id}/subscription/unlimited`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endsAt: new Date(freePassEndsAt).toISOString() }),
+      });
+      if (res.ok) {
+        showAlert('success', '무제한 이용권이 지급되었습니다.');
+        setFreePassEndsAt('');
+        // Refresh details
+        const updatedRes = await fetch(`${API_BASE_URL}/admin/visitors/${visitorDetails.id}`);
+        const updatedData = await updatedRes.json();
+        setVisitorDetails(updatedData.data || updatedData);
+      } else {
+        throw new Error('지급 실패');
+      }
+    } catch (err) {
+      showAlert('error', '무제한 이용권 지급 실패');
+    }
+  };
+
+
+
+
 
   return (
     <div className="admin-modal-overlay">
@@ -333,8 +585,8 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    padding: '8px 16px',
-                    fontSize: '0.9rem',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
                     color:
                       activeTab === 'algo'
                         ? 'var(--primary-cyan)'
@@ -350,8 +602,8 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    padding: '8px 16px',
-                    fontSize: '0.9rem',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
                     color:
                       activeTab === 'system'
                         ? 'var(--primary-purple)'
@@ -361,12 +613,65 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                 >
                   시스템 관리
                 </button>
+                <button
+                  className={`tab-btn ${activeTab === 'notices' ? 'active-tab' : ''}`}
+                  onClick={() => setActiveTab('notices')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    color:
+                      activeTab === 'notices'
+                        ? 'var(--primary-cyan)'
+                        : 'var(--text-dim)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  공지 관리
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'inquiries' ? 'active-tab' : ''}`}
+                  onClick={() => setActiveTab('inquiries')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    color:
+                      activeTab === 'inquiries'
+                        ? 'var(--primary-purple)'
+                        : 'var(--text-dim)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  문의 답변
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'visitors' ? 'active-tab' : ''}`}
+                  onClick={() => setActiveTab('visitors')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    color:
+                      activeTab === 'visitors'
+                        ? 'var(--primary-cyan)'
+                        : 'var(--text-dim)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  사용자 관리
+                </button>
+
               </div>
 
               {/* Tab Contents */}
               <div style={{ flex: 1, minHeight: 0 }}>
-                {activeTab === 'algo' ? (
+                {activeTab === 'algo' && (
                   /* Algorithm Management Tab */
+
                   <div
                     style={{
                       display: 'flex',
@@ -739,8 +1044,11 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                       </div>
                     )}
                   </div>
-                ) : (
+                )}
+
+                {activeTab === 'system' && (
                   /* System Management Tab */
+
                   <div
                     style={{
                       display: 'flex',
@@ -857,9 +1165,319 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     </div>
                   </div>
                 )}
+
+                {activeTab === 'notices' && (
+                  /* Notice Management Tab */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflowY: 'auto', paddingRight: '4px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <h4 style={{ fontSize: '0.9rem', color: 'var(--primary-cyan)', margin: '0 0 12px 0' }}>새 공지사항 등록</h4>
+                      <form onSubmit={handleCreateNotice} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <input
+                          type="text"
+                          className="input-glow"
+                          placeholder="공지 제목"
+                          value={newNoticeTitle}
+                          onChange={(e) => setNewNoticeTitle(e.target.value)}
+                          style={{ height: '36px', fontSize: '0.82rem' }}
+                        />
+                        <textarea
+                          className="input-glow"
+                          placeholder="공지 내용"
+                          value={newNoticeContent}
+                          onChange={(e) => setNewNoticeContent(e.target.value)}
+                          style={{ minHeight: '80px', fontSize: '0.82rem', padding: '8px', resize: 'none' }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textAlign: 'left' }}>공지 노출 종료 시점</label>
+                          <input
+                            type="datetime-local"
+                            className="input-glow"
+                            value={newNoticeEndsAt}
+                            onChange={(e) => setNewNoticeEndsAt(e.target.value)}
+                            style={{ height: '36px', fontSize: '0.82rem' }}
+                          />
+                        </div>
+                        <button type="submit" className="btn-submit" style={{ height: '36px', fontSize: '0.82rem', background: 'var(--primary-cyan)', color: '#0a0b10', border: 'none', fontWeight: 'bold' }}>
+                          공지 등록
+                        </button>
+                      </form>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: '0 0 4px 0', textAlign: 'left' }}>현재 공지사항 목록</h4>
+                      {loadingAdminNotices ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>불러오는 중...</p>
+                      ) : adminNotices.length === 0 ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', textAlign: 'center' }}>등록된 공지가 없습니다.</p>
+                      ) : (
+                        adminNotices.map((notice) => (
+                          <div key={notice.id} style={{ background: 'rgba(255,255,255,0.01)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                            <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
+                              <strong style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-main)' }}>{notice.title}</strong>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '4px 0' }}>{notice.content}</p>
+                              <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>노출 기한: {new Date(notice.endsAt).toLocaleString()}</span>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteNotice(notice.id)}
+                              style={{ background: 'rgba(255, 75, 75, 0.1)', border: '1px solid rgba(255, 75, 75, 0.3)', color: '#ff4b4b', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'inquiries' && (() => {
+                  const filteredInquiries = adminInquiries.filter((inq) =>
+                    inquiryFilter === 'ALL' ? true : inq.status === inquiryFilter
+                  );
+                  const pendingCount = adminInquiries.filter((i) => i.status === 'PENDING').length;
+                  const answeredCount = adminInquiries.filter((i) => i.status === 'ANSWERED').length;
+                  const normalCount = adminInquiries.filter((i) => !i.isForBlock).length;
+                  const blockCount = adminInquiries.filter((i) => i.isForBlock).length;
+
+                  const emptyMsg =
+                    inquiryBlockFilter === 'BLOCK' ? '차단 소명 문의가 없습니다.' :
+                    inquiryBlockFilter === 'NORMAL' ? '일반 문의가 없습니다.' :
+                    inquiryFilter === 'PENDING' ? '미답변 문의가 없습니다.' :
+                    inquiryFilter === 'ANSWERED' ? '답변 완료된 문의가 없습니다.' : '등록된 문의가 없습니다.';
+
+                  return (
+                    /* Inquiry Answering Tab */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', overflowY: 'auto', paddingRight: '4px' }}>
+                      {/* Header */}
+                      <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: 0, textAlign: 'left' }}>사용자 문의 리스트</h4>
+
+                      {/* 유형 필터 row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', flexShrink: 0 }}>유형</span>
+                        {([
+                          { key: 'ALL' as const, label: `전체 (${adminInquiries.length})`, border: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.08)', text: 'var(--text-main)' },
+                          { key: 'NORMAL' as const, label: `일반 문의 (${normalCount})`, border: 'rgba(0,240,255,0.5)', bg: 'rgba(0,240,255,0.08)', text: 'var(--primary-cyan)' },
+                          { key: 'BLOCK' as const, label: `차단 소명 (${blockCount})`, border: 'rgba(255,165,0,0.6)', bg: 'rgba(255,165,0,0.1)', text: '#ffa500' },
+                        ]).map(({ key, label, border, bg, text }) => {
+                          const isActive = inquiryBlockFilter === key;
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => {
+                                setInquiryBlockFilter(key);
+                                setInquiryFilter('ALL');
+                                fetchAdminInquiries(key);
+                              }}
+                              style={{
+                                fontSize: '0.72rem', padding: '3px 10px', borderRadius: '20px',
+                                border: isActive ? `1px solid ${border}` : '1px solid rgba(255,255,255,0.08)',
+                                background: isActive ? bg : 'transparent',
+                                color: isActive ? text : 'var(--text-dim)',
+                                cursor: 'pointer', fontWeight: isActive ? 'bold' : 'normal',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* 답변 필터 row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', flexShrink: 0 }}>답변</span>
+                        {(['ALL', 'PENDING', 'ANSWERED'] as const).map((f) => {
+                          const label = f === 'ALL' ? '전체' : f === 'PENDING' ? `미답변 (${pendingCount})` : `답변완료 (${answeredCount})`;
+                          const isActive = inquiryFilter === f;
+                          return (
+                            <button
+                              key={f}
+                              onClick={() => setInquiryFilter(f)}
+                              style={{
+                                fontSize: '0.72rem', padding: '3px 10px', borderRadius: '20px',
+                                border: isActive
+                                  ? f === 'PENDING' ? '1px solid rgba(255,75,75,0.6)' : f === 'ANSWERED' ? '1px solid rgba(0,240,255,0.5)' : '1px solid rgba(255,255,255,0.3)'
+                                  : '1px solid rgba(255,255,255,0.08)',
+                                background: isActive
+                                  ? f === 'PENDING' ? 'rgba(255,75,75,0.12)' : f === 'ANSWERED' ? 'rgba(0,240,255,0.1)' : 'rgba(255,255,255,0.08)'
+                                  : 'transparent',
+                                color: isActive
+                                  ? f === 'PENDING' ? '#ff4b4b' : f === 'ANSWERED' ? 'var(--primary-cyan)' : 'var(--text-main)'
+                                  : 'var(--text-dim)',
+                                cursor: 'pointer', fontWeight: isActive ? 'bold' : 'normal',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {loadingAdminInquiries ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>불러오는 중...</p>
+                      ) : filteredInquiries.length === 0 ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', textAlign: 'center', paddingTop: '20px' }}>
+                          {emptyMsg}
+                        </p>
+                      ) : (
+                        filteredInquiries.map((inq) => (
+                          <div key={inq.id} style={{ background: 'rgba(255,255,255,0.01)', padding: '14px', borderRadius: '8px', border: `1px solid ${inq.status === 'PENDING' ? 'rgba(255,75,75,0.1)' : 'rgba(255,255,255,0.03)'}`, textAlign: 'left' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>ID: {inq.visitorId}</span>
+                                {inq.isForBlock && (
+                                  <span style={{ fontSize: '0.65rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(255,165,0,0.12)', color: '#ffa500', border: '1px solid rgba(255,165,0,0.3)' }}>
+                                    차단 소명
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', background: inq.status === 'ANSWERED' ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 75, 75, 0.1)', color: inq.status === 'ANSWERED' ? 'var(--primary-cyan)' : '#ff4b4b' }}>
+                                {inq.status === 'ANSWERED' ? '답변완료' : '미답변'}
+                              </span>
+                            </div>
+                            <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'block', marginBottom: '4px' }}>{inq.title}</strong>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 10px 0', whiteSpace: 'pre-wrap' }}>{inq.content}</p>
+
+                            {inq.status === 'PENDING' ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                                <textarea
+                                  className="input-glow"
+                                  placeholder="여기에 답변을 작성하세요..."
+                                  value={inquiryAnswers[inq.id] || ''}
+                                  onChange={(e) => setInquiryAnswers((prev) => ({ ...prev, [inq.id]: e.target.value }))}
+                                  style={{ minHeight: '60px', fontSize: '0.8rem', padding: '6px', resize: 'none' }}
+                                />
+                                <button
+                                  onClick={() => handleAnswerSubmit(inq.id)}
+                                  className="btn-submit"
+                                  style={{ height: '30px', fontSize: '0.78rem', background: 'var(--primary-purple)', color: '#ffffff', border: 'none', fontWeight: 'bold' }}
+                                >
+                                  답변 등록
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ padding: '8px 12px', background: 'rgba(157, 0, 255, 0.05)', borderLeft: '2px solid var(--primary-purple)', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                                <strong style={{ color: 'var(--primary-purple)', fontSize: '0.7rem', display: 'block', marginBottom: '2px' }}>관리자 답변:</strong>
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{inq.answer}</div>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {activeTab === 'visitors' && (
+                  /* Visitor Management Tab */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflowY: 'auto', paddingRight: '4px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <h4 style={{ fontSize: '0.9rem', color: 'var(--primary-cyan)', margin: '0 0 12px 0' }}>방문자 조회</h4>
+                      <form onSubmit={handleSearchVisitor} style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          className="input-glow"
+                          placeholder="visitorId 입력"
+                          value={searchVisitorId}
+                          onChange={(e) => setSearchVisitorId(e.target.value)}
+                          style={{ flex: 1, height: '36px', fontSize: '0.82rem' }}
+                        />
+                        <button type="submit" className="btn-submit" disabled={loadingVisitorDetails} style={{ height: '36px', padding: '0 14px', fontSize: '0.82rem' }}>
+                          조회
+                        </button>
+                      </form>
+                    </div>
+
+                    {loadingVisitorDetails && <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>불러오는 중...</p>}
+
+                    {visitorDetails && (
+                      <div style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '8px' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>조회 결과</span>
+                          <h4 style={{ fontSize: '0.95rem', color: 'var(--text-main)', margin: '2px 0 0 0', fontFamily: 'monospace' }}>{visitorDetails.id}</h4>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8rem' }}>
+                          <div>
+                            <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.7rem' }}>최근 IP</span>
+                            <span style={{ color: 'var(--text-main)' }}>{visitorDetails.ip}</span>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.7rem' }}>차단 상태</span>
+                            <span style={{ color: visitorDetails.isBlocked ? '#ff4b4b' : 'var(--primary-cyan)', fontWeight: 'bold' }}>
+                              {visitorDetails.isBlocked ? '차단됨' : '정상'}
+                            </span>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.7rem' }}>보유 HON</span>
+                            <span style={{ color: 'var(--primary-cyan)', fontWeight: 'bold' }}>{visitorDetails.hon.balance} HON</span>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.7rem' }}>구독 등급</span>
+                            <span style={{ color: 'var(--primary-purple)', fontWeight: 'bold' }}>
+                              {visitorDetails.subscription ? visitorDetails.subscription.plan : '구독 없음'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+                          <button
+                            type="button"
+                            onClick={handleToggleBlock}
+                            style={{
+                              width: '100%',
+                              height: '32px',
+                              fontSize: '0.78rem',
+                              background: visitorDetails.isBlocked ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 75, 75, 0.1)',
+                              border: visitorDetails.isBlocked ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid rgba(255, 75, 75, 0.3)',
+                              color: visitorDetails.isBlocked ? 'var(--primary-cyan)' : '#ff4b4b',
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            {visitorDetails.isBlocked ? '차단 해제' : '사용자 차단'}
+                          </button>
+
+                          <form onSubmit={handleGrantUnlimited} style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '12px' }}>
+                            <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textAlign: 'left' }}>이용권 만료 기한 선택</label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <input
+                                type="datetime-local"
+                                className="input-glow"
+                                value={freePassEndsAt}
+                                onChange={(e) => setFreePassEndsAt(e.target.value)}
+                                style={{ flex: 1, height: '32px', fontSize: '0.78rem' }}
+                              />
+                              <button type="submit" className="btn-submit" style={{ height: '32px', padding: '0 12px', fontSize: '0.78rem', background: 'var(--primary-purple)', color: '#ffffff', border: 'none' }}>
+                                패스 지급
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+
+
+                        <form onSubmit={handleManageHon} style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+                          <input
+                            type="number"
+                            className="input-glow"
+                            placeholder="지급/차감량 (예: 50, -50)"
+                            value={manageHonAmount}
+                            onChange={(e) => setManageHonAmount(e.target.value)}
+                            style={{ flex: 1, height: '32px', fontSize: '0.78rem' }}
+                          />
+                          <button type="submit" className="btn-submit" style={{ height: '32px', padding: '0 12px', fontSize: '0.78rem' }}>
+                            HON 지급/차감
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
+
           <Alert alert={alert} />
         </div>
 

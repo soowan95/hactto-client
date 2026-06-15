@@ -50,6 +50,8 @@ interface AppContextType {
   setShowWelcomeModal: (val: boolean) => void;
   honBalance: number;
   subscription: SubscriptionStatus | null;
+  isBlockedUser: boolean;
+  setIsBlockedUser: (val: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -85,6 +87,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
     null,
   );
+  const [isBlockedUser, setIsBlockedUser] = useState<boolean>(false);
+
 
   // Show auto-dismiss alerts
   const showAlert = useCallback((type: 'success' | 'error', text: string) => {
@@ -137,6 +141,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const response = await originalFetch(input, newInit);
 
+      if (response.status === 403) {
+        try {
+          const clone = response.clone();
+          const errData = await clone.json();
+          if (errData.message === '차단된 사용자입니다.' || errData.message?.includes('차단된')) {
+            setIsBlockedUser(true);
+            if (errData.ip) setClientIp(errData.ip);
+            if (errData.visitorId) {
+              setVisitorId(errData.visitorId);
+              localStorage.setItem('visitor_id', errData.visitorId);
+            }
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
       const isFirstVisit = response.headers.get('x-first-visit') === 'true';
       const hasConsented =
         localStorage.getItem('hactto_welcome_consented') === 'true';
@@ -177,6 +198,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setVisitorId(adminResult.visitorId);
             localStorage.setItem('visitor_id', adminResult.visitorId);
           }
+          setIsBlockedUser(false);
           const isFirstVisit = adminRes.headers.get('x-first-visit') === 'true';
           const hasConsented =
             localStorage.getItem('hactto_welcome_consented') === 'true';
@@ -200,6 +222,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
+        if (res.status === 403) {
+          try {
+            const errData = await res.json();
+            if (errData.message === '차단된 사용자입니다.' || errData.message?.includes('차단된')) {
+              setIsBlockedUser(true);
+              if (errData.ip) setClientIp(errData.ip);
+              if (errData.visitorId) {
+                setVisitorId(errData.visitorId);
+                localStorage.setItem('visitor_id', errData.visitorId);
+              }
+              setLoading(false);
+              return;
+            }
+          } catch {
+            // Ignore
+          }
+        }
         throw new Error('IP 상태를 조회하는 중 오류가 발생했습니다.');
       }
 
@@ -289,7 +328,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Load administrative data from Redis (Simplifying to only verify Master Key)
   const loadAdminData = useCallback(async (key: string) => {
     try {
-      setLoading(true);
       setAdminError('');
 
       const res = await fetch(
@@ -305,6 +343,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       sessionStorage.setItem('mk', key);
       setIsAdminMode(true);
+      setIsBlockedUser(false);
 
       return {
         pendingIps: [],
@@ -318,8 +357,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('mk');
       setIsAdminMode(false);
       throw err;
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -344,6 +381,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Handle system status check (REST) & real-time updates (SSE)
   useEffect(() => {
+    if (isBlockedUser) return;
+
     let sse: EventSource | null = null;
     let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -400,7 +439,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (retryTimeout) clearTimeout(retryTimeout);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [isBlockedUser]);
 
   return (
     <AppContext.Provider
@@ -440,6 +479,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setShowWelcomeModal,
         honBalance,
         subscription,
+        isBlockedUser,
+        setIsBlockedUser,
       }}
     >
       {children}
