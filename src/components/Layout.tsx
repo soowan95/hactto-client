@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { MouseEvent } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -7,6 +7,8 @@ import { UnsavedChangesModal } from './UnsavedChangesModal';
 import { HelpModal } from './HelpModal';
 import { WelcomeModal } from './WelcomeModal';
 import { PaymentModal } from './PaymentModal';
+import { NoticeBanner } from './NoticeBanner';
+
 
 export function Layout() {
   const {
@@ -18,7 +20,6 @@ export function Layout() {
     setShowAdminModal,
     showWelcomeModal,
     setShowWelcomeModal,
-    visitorId,
     honBalance,
     subscription,
     checkIpStatus,
@@ -31,10 +32,6 @@ export function Layout() {
   const hasAdminAccess = !!(
     localStorage.getItem('mk') || sessionStorage.getItem('mk')
   );
-
-  useEffect(() => {
-    checkIpStatus();
-  }, [visitorId, showPaymentModal, checkIpStatus]);
 
   const handleTabClick = (e: MouseEvent<HTMLAnchorElement>, path: string) => {
     if (path === '/system' && !hasAdminAccess) {
@@ -302,7 +299,19 @@ export function Layout() {
             >
               내 당첨이력
             </NavLink>
+            <NavLink
+              to="/support"
+              onClick={(e) => handleTabClick(e, '/support')}
+              className={({ isActive }) =>
+                `tab-btn ${isActive ? 'active-tab' : ''}`
+              }
+            >
+              1:1 문의
+            </NavLink>
           </div>
+
+          <NoticeBanner />
+
 
           <div
             className="scroll-y-container"

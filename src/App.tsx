@@ -9,43 +9,92 @@ import './App.css';
 import { AppProvider, useApp } from './context/AppContext';
 import { Layout } from './components/Layout';
 import { SystemAnalyzing } from './pages/SystemAnalyzing';
+import { BlockedPage } from './pages/BlockedPage';
 import { Home } from './pages/Dashboard/Home';
 import { Search } from './pages/Dashboard/Search';
 import { Stats } from './pages/Dashboard/Stats';
 import { AnalysisCharts } from './pages/Dashboard/AnalysisCharts';
 import { Generate } from './pages/Dashboard/Generate';
 import { History } from './pages/Dashboard/History';
+import { Support } from './pages/Dashboard/Support';
 import { AdminLoginModal } from './components/AdminLoginModal';
+
 
 function AppContent() {
   const {
+    loading,
+    isAdminMode,
     showAdminModal,
     setShowAdminModal,
     setAdminError,
     setAlert,
     isSystemAnalyzing,
+    isBlockedUser,
   } = useApp();
 
   // Global hotkey listener for Admin Auth modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isModifier = e.metaKey || e.ctrlKey;
+      const isHKey = 
+        e.code === 'KeyH' || 
+        e.key.toLowerCase() === 'h' || 
+        e.key === 'ㅗ' || 
+        e.key === 'ㅗ';
+
       // Trigger on Cmd+Shift+H (Mac) or Ctrl+Shift+H (Windows)
-      if (isModifier && e.shiftKey && e.code === 'KeyH') {
+      if (isModifier && e.shiftKey && isHKey) {
         e.preventDefault();
+        e.stopPropagation();
         setShowAdminModal(!showAdminModal);
         setAdminError('');
         setAlert(null);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true); // Use capturing phase to override default browser/element behaviors
 
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [showAdminModal, setAdminError, setAlert, setShowAdminModal]);
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-dim)' }}>
+        불러오는 중...
+      </div>
+    );
+  }
+
+  if (isBlockedUser && !isAdminMode) {
+    return (
+      <>
+        <BlockedPage />
+        <AdminLoginModal
+          isOpen={showAdminModal}
+          onClose={() => {
+            setShowAdminModal(false);
+            setAdminError('');
+            setAlert(null);
+          }}
+        />
+      </>
+    );
+  }
+
   if (isSystemAnalyzing) {
-    return <SystemAnalyzing />;
+    return (
+      <>
+        <SystemAnalyzing />
+        <AdminLoginModal
+          isOpen={showAdminModal}
+          onClose={() => {
+            setShowAdminModal(false);
+            setAdminError('');
+            setAlert(null);
+          }}
+        />
+      </>
+    );
   }
 
   return (
@@ -68,6 +117,7 @@ function AppContent() {
           <Route path="/analysis-charts" element={<AnalysisCharts />} />
           <Route path="/generate" element={<Generate />} />
           <Route path="/history" element={<History />} />
+          <Route path="/support" element={<Support />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Route>
       </Routes>
@@ -83,6 +133,7 @@ function AppContent() {
       />
     </>
   );
+
 }
 
 export function App() {

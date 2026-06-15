@@ -811,3 +811,31 @@ body {
     display: none !important;
   }
 }
+
+/* Notice Banner Marquee Animations */
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee-container {
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.marquee-content {
+  display: inline-flex;
+  animation: marquee 25s linear infinite;
+  padding-left: 20px;
+}
+
+.marquee-content:hover {
+  animation-play-state: paused;
+}
+
