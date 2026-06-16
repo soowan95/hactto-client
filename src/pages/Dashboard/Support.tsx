@@ -56,6 +56,7 @@ export function Support() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchInquiries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

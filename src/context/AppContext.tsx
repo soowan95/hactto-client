@@ -10,6 +10,11 @@ import type { ReactNode } from 'react';
 import type { AlertState, SubscriptionStatus } from '../types';
 import { API_BASE_URL } from '../utils';
 
+// Google Crawler Bot Detection to bypass access blocking
+const isGoogleBot =
+  typeof navigator !== 'undefined' &&
+  /googlebot|mediapartners-google|adsbot-google/i.test(navigator.userAgent);
+
 interface AppContextType {
   loading: boolean;
   allowed: boolean | null;
@@ -148,7 +153,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             errData.message === '차단된 사용자입니다.' ||
             errData.message?.includes('차단된')
           ) {
-            setIsBlockedUser(true);
+            if (!isGoogleBot) {
+              setIsBlockedUser(true);
+            }
             if (errData.ip) setClientIp(errData.ip);
             if (errData.visitorId) {
               setVisitorId(errData.visitorId);
@@ -180,6 +187,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await Promise.resolve();
       setLoading(true);
+
+      // Bypass IP block fetch for Google Crawler bots
+      if (isGoogleBot) {
+        setIsBlockedUser(false);
+        setAllowed(true);
+        setLoading(false);
+        return;
+      }
+
       const savedMk = localStorage.getItem('mk');
 
       // If a Master Key is saved locally, verify it
