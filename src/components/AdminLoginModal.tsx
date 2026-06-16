@@ -44,6 +44,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
   // --- New Admin States ---
   // Notice management states
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [adminNotices, setAdminNotices] = useState<any[]>([]);
   const [loadingAdminNotices, setLoadingAdminNotices] = useState(false);
   const [newNoticeTitle, setNewNoticeTitle] = useState('');
@@ -51,6 +52,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [newNoticeEndsAt, setNewNoticeEndsAt] = useState('');
 
   // Inquiry answering states
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [adminInquiries, setAdminInquiries] = useState<any[]>([]);
   const [loadingAdminInquiries, setLoadingAdminInquiries] = useState(false);
   const [inquiryFilter, setInquiryFilter] = useState<
@@ -65,6 +67,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
   // Visitor management states
   const [searchVisitorId, setSearchVisitorId] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [visitorDetails, setVisitorDetails] = useState<any>(null);
   const [loadingVisitorDetails, setLoadingVisitorDetails] = useState(false);
   const [manageHonAmount, setManageHonAmount] = useState('');
@@ -243,7 +246,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
   };
 
-  const fetchAdminNotices = async () => {
+  async function fetchAdminNotices() {
     setLoadingAdminNotices(true);
     try {
       const res = await fetch(`${API_BASE_URL}/manager/admin/notices`);
@@ -262,7 +265,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     } finally {
       setLoadingAdminNotices(false);
     }
-  };
+  }
 
   const handleCreateNotice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,7 +296,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       } else {
         throw new Error('공지 등록 실패');
       }
-    } catch (err) {
+    } catch {
       showAlert('error', '공지 등록 중 오류가 발생했습니다.');
     }
   };
@@ -310,14 +313,12 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       } else {
         throw new Error('공지 삭제 실패');
       }
-    } catch (err) {
+    } catch {
       showAlert('error', '공지 삭제 중 오류가 발생했습니다.');
     }
   };
 
-  const fetchAdminInquiries = async (
-    blockFilter?: 'ALL' | 'NORMAL' | 'BLOCK',
-  ) => {
+  async function fetchAdminInquiries(blockFilter?: 'ALL' | 'NORMAL' | 'BLOCK') {
     setLoadingAdminInquiries(true);
     const activeBlockFilter = blockFilter ?? inquiryBlockFilter;
     try {
@@ -344,7 +345,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     } finally {
       setLoadingAdminInquiries(false);
     }
-  };
+  }
 
   const handleAnswerSubmit = async (id: string) => {
     const answer = inquiryAnswers[id];
@@ -368,7 +369,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       } else {
         throw new Error('답변 등록 실패');
       }
-    } catch (err) {
+    } catch {
       showAlert('error', '답변 등록 중 오류가 발생했습니다.');
     }
   };
@@ -391,7 +392,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       } else {
         showAlert('error', '해당 방문자를 찾을 수 없습니다.');
       }
-    } catch (err) {
+    } catch {
       showAlert('error', '방문자 정보 조회 실패');
     } finally {
       setLoadingVisitorDetails(false);
@@ -425,7 +426,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);
       }
-    } catch (err) {
+    } catch {
       showAlert('error', '상태 변경 중 오류가 발생했습니다.');
     }
   };
@@ -457,7 +458,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);
       }
-    } catch (err) {
+    } catch {
       showAlert('error', '혼 조율 실패');
     }
   };
@@ -491,7 +492,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       } else {
         throw new Error('지급 실패');
       }
-    } catch (err) {
+    } catch {
       showAlert('error', '무제한 이용권 지급 실패');
     }
   };

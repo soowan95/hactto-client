@@ -8,6 +8,9 @@ import { HelpModal } from './HelpModal';
 import { WelcomeModal } from './WelcomeModal';
 import { PaymentModal } from './PaymentModal';
 import { NoticeBanner } from './NoticeBanner';
+import { AdSenseBanner } from './AdSenseBanner';
+import { PrivacyModal } from './PrivacyModal';
+import { TermsModal } from './TermsModal';
 
 export function Layout() {
   const {
@@ -27,6 +30,8 @@ export function Layout() {
   const navigate = useNavigate();
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const hasAdminAccess = !!(
     localStorage.getItem('mk') || sessionStorage.getItem('mk')
@@ -92,24 +97,7 @@ export function Layout() {
             boxSizing: 'border-box',
           }}
         >
-          <span
-            style={{
-              fontSize: '0.7rem',
-              textTransform: 'uppercase',
-              opacity: 0.5,
-              marginBottom: '8px',
-            }}
-          >
-            Google Ad
-          </span>
-          <div style={{ fontSize: '1.8rem', marginBottom: '10px' }}>📺</div>
-          <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.5' }}>
-            구글 스폰서 광고
-            <br />
-            <span style={{ color: 'var(--primary-cyan)', fontSize: '0.7rem' }}>
-              (구독 시 제거됨)
-            </span>
-          </p>
+          <AdSenseBanner slot="1234567890" format="vertical" />
         </div>
       )}
 
@@ -327,6 +315,78 @@ export function Layout() {
           </div>
 
           <Alert alert={alert} />
+
+          {/* Footer containing Privacy Policy and Terms of Service (Essential for AdSense Approval) */}
+          <footer
+            style={{
+              marginTop: '30px',
+              paddingTop: '20px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '16px',
+              fontSize: '0.75rem',
+              color: 'var(--text-dim)',
+              flexWrap: 'wrap',
+            }}
+          >
+            <button
+              onClick={() => setShowPrivacyModal(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                color: showPrivacyModal
+                  ? 'var(--primary-cyan)'
+                  : 'var(--text-dim)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                transition: 'color 0.2s ease',
+                outline: 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--primary-cyan)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = showPrivacyModal
+                  ? 'var(--primary-cyan)'
+                  : 'var(--text-dim)';
+              }}
+            >
+              개인정보처리방침
+            </button>
+            <span style={{ opacity: 0.2 }}>|</span>
+            <button
+              onClick={() => setShowTermsModal(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                color: showTermsModal
+                  ? 'var(--primary-cyan)'
+                  : 'var(--text-dim)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                transition: 'color 0.2s ease',
+                outline: 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--primary-cyan)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = showTermsModal
+                  ? 'var(--primary-cyan)'
+                  : 'var(--text-dim)';
+              }}
+            >
+              이용약관
+            </button>
+            <span style={{ opacity: 0.2 }}>|</span>
+            <span style={{ opacity: 0.5 }}>
+              © {new Date().getFullYear()} hactto. All rights reserved.
+            </span>
+          </footer>
         </div>
 
         <UnsavedChangesModal
@@ -345,6 +405,14 @@ export function Layout() {
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={checkIpStatus}
+        />
+        <PrivacyModal
+          isOpen={showPrivacyModal}
+          onClose={() => setShowPrivacyModal(false)}
+        />
+        <TermsModal
+          isOpen={showTermsModal}
+          onClose={() => setShowTermsModal(false)}
         />
       </div>
 
@@ -373,24 +441,7 @@ export function Layout() {
             boxSizing: 'border-box',
           }}
         >
-          <span
-            style={{
-              fontSize: '0.7rem',
-              textTransform: 'uppercase',
-              opacity: 0.5,
-              marginBottom: '8px',
-            }}
-          >
-            Google Ad
-          </span>
-          <div style={{ fontSize: '1.8rem', marginBottom: '10px' }}>📺</div>
-          <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.5' }}>
-            구글 스폰서 광고
-            <br />
-            <span style={{ color: 'var(--primary-cyan)', fontSize: '0.7rem' }}>
-              (구독 시 제거됨)
-            </span>
-          </p>
+          <AdSenseBanner slot="0987654321" format="vertical" />
         </div>
       )}
     </div>

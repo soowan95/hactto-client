@@ -165,6 +165,7 @@ export function NoticeBanner() {
       );
       const currentNoticeId = notices[currentIndex]?.id;
       if (dismissedNotices.includes(currentNoticeId)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsDismissed(true);
       } else {
         setIsDismissed(false);
