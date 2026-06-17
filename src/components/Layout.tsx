@@ -11,6 +11,7 @@ import { NoticeBanner } from './NoticeBanner';
 import { AdSenseBanner } from './AdSenseBanner';
 import { PrivacyModal } from './PrivacyModal';
 import { TermsModal } from './TermsModal';
+import { RefundPolicyModal } from './RefundPolicyModal';
 
 export function Layout() {
   const {
@@ -32,6 +33,7 @@ export function Layout() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
   useEffect(() => {
@@ -100,59 +102,90 @@ export function Layout() {
               </span>
 
               {/* 남은 혼(Hon) 충전 정보 위젯 */}
-              {!isMobileOrTablet && (
-                <div
-                  onClick={() => setShowPaymentModal(true)}
-                  style={{
-                    marginLeft: '18px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    background: 'rgba(0, 240, 255, 0.05)',
-                    border: '1px solid rgba(0, 240, 255, 0.2)',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--primary-cyan)';
-                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
-                    e.currentTarget.style.boxShadow =
-                      '0 0 10px rgba(0, 240, 255, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.2)';
-                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                  title="크레딧 충전 상점 열기"
-                >
-                  <span
+              {!isMobileOrTablet && (() => {
+                const isSubscribed = subscription && subscription.status === 'ACTIVE';
+                const isMonthly = isSubscribed && subscription.plan === 'MONTHLY';
+                const isYearly = isSubscribed && subscription.plan === 'YEARLY';
+
+                let widgetText = `${honBalance} HON`;
+                let badgeText = '충전';
+                let themeColor = 'var(--primary-cyan)';
+                let bgGlow = 'rgba(0, 240, 255, 0.05)';
+                let borderGlow = 'rgba(0, 240, 255, 0.2)';
+
+                if (isMonthly) {
+                  widgetText = '월간 무제한';
+                  badgeText = '구독';
+                  themeColor = 'var(--primary-purple)';
+                  bgGlow = 'rgba(168, 85, 247, 0.05)';
+                  borderGlow = 'rgba(168, 85, 247, 0.2)';
+                } else if (isYearly) {
+                  widgetText = '연간 무제한';
+                  badgeText = '구독';
+                  themeColor = '#eab308';
+                  bgGlow = 'rgba(234, 179, 8, 0.05)';
+                  borderGlow = 'rgba(234, 179, 8, 0.2)';
+                }
+
+                return (
+                  <div
+                    onClick={() => setShowPaymentModal(true)}
                     style={{
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      color: 'var(--primary-cyan)',
+                      marginLeft: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: bgGlow,
+                      border: `1px solid ${borderGlow}`,
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
                     }}
-                  >
-                    {subscription && subscription.status === 'ACTIVE'
-                      ? 'UNLIMITED'
-                      : `${honBalance} HON`}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '0.65rem',
-                      background: 'var(--primary-cyan)',
-                      color: '#0a0b10',
-                      padding: '1px 4px',
-                      borderRadius: '3px',
-                      fontWeight: 'bold',
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = themeColor;
+                      e.currentTarget.style.background = isMonthly
+                        ? 'rgba(168, 85, 247, 0.1)'
+                        : isYearly
+                        ? 'rgba(234, 179, 8, 0.1)'
+                        : 'rgba(0, 240, 255, 0.1)';
+                      e.currentTarget.style.boxShadow = isMonthly
+                        ? '0 0 10px rgba(168, 85, 247, 0.3)'
+                        : isYearly
+                        ? '0 0 10px rgba(234, 179, 8, 0.3)'
+                        : '0 0 10px rgba(0, 240, 255, 0.3)';
                     }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = borderGlow;
+                      e.currentTarget.style.background = bgGlow;
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    title="크레딧 충전 상점 열기"
                   >
-                    충전
-                  </span>
-                </div>
-              )}
+                    <span
+                      style={{
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        color: themeColor,
+                      }}
+                    >
+                      {widgetText}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.65rem',
+                        background: themeColor,
+                        color: isYearly ? '#090a0f' : '#0a0b10',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {badgeText}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
@@ -360,6 +393,32 @@ export function Layout() {
               이용약관
             </button>
             <span style={{ opacity: 0.2 }}>|</span>
+            <button
+              onClick={() => setShowRefundModal(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                color: showRefundModal
+                  ? 'var(--primary-cyan)'
+                  : 'var(--text-dim)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                transition: 'color 0.2s ease',
+                outline: 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--primary-cyan)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = showRefundModal
+                  ? 'var(--primary-cyan)'
+                  : 'var(--text-dim)';
+              }}
+            >
+              환불 규정
+            </button>
+            <span style={{ opacity: 0.2 }}>|</span>
             <span style={{ opacity: 0.5 }}>
               © {new Date().getFullYear()} hactto. All rights reserved.
             </span>
@@ -390,6 +449,10 @@ export function Layout() {
         <TermsModal
           isOpen={showTermsModal}
           onClose={() => setShowTermsModal(false)}
+        />
+        <RefundPolicyModal
+          isOpen={showRefundModal}
+          onClose={() => setShowRefundModal(false)}
         />
       </div>
 
