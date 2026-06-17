@@ -149,6 +149,19 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
   if (!isOpen) return null;
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminKey.trim()) {

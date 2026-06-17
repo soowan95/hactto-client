@@ -12,14 +12,7 @@ export function LottoBalls({ numbers, matchResult }: LottoBallsProps) {
   const bonusNumber = numbers[6];
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        flexWrap: 'wrap',
-      }}
-    >
+    <div className="lotto-balls-container">
       {mainNumbers.map((num, i) => {
         const isMatched = matchResult?.matchedNumbers.includes(num);
         const isBonusMatched =

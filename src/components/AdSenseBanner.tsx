@@ -24,18 +24,47 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const initialized = useRef(false);
 
   useEffect(() => {
-    // React 18/19 StrictMode나 HMR 상황에서 중복 push가 실행되어 에러가 발생하는 것을 방지
     if (initialized.current) return;
 
-    try {
-      if (typeof window !== 'undefined' && window.adsbygoogle) {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-        initialized.current = true;
+    let retries = 0;
+    const maxRetries = 5;
+
+    const initAd = () => {
+      try {
+        if (typeof window !== 'undefined' && window.adsbygoogle) {
+          const insElements = document.querySelectorAll(`.adsbygoogle[data-ad-slot="${slot}"]`);
+          let hasWidth = false;
+
+          for (let i = 0; i < insElements.length; i++) {
+            const el = insElements[i] as HTMLElement;
+            // Check if the element or its parent has width > 0
+            if (el.clientWidth > 0 || (el.parentElement && el.parentElement.clientWidth > 0)) {
+              hasWidth = true;
+              break;
+            }
+          }
+
+          if (!hasWidth) {
+            if (retries < maxRetries) {
+              retries++;
+              setTimeout(initAd, 200); // Retry in 200ms
+            } else {
+              console.warn(`AdSense slot ${slot} initialization skipped: container width is 0.`);
+            }
+            return;
+          }
+
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          initialized.current = true;
+        }
+      } catch (err) {
+        console.error('AdSense initialization error:', err);
       }
-    } catch (err) {
-      console.error('AdSense initialization error:', err);
-    }
-  }, []);
+    };
+
+    const timer = setTimeout(initAd, 150); // Initial delay for layout reflow
+    return () => clearTimeout(timer);
+  }, [slot]);
 
   return (
     <ins
