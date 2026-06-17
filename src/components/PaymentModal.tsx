@@ -5,6 +5,8 @@ import { API_BASE_URL } from '../utils';
 import type { PaymentStatus } from '../types';
 import PortOne from '@portone/browser-sdk/v2';
 import { Alert } from './Alert';
+import { RefundPolicyModal } from './RefundPolicyModal';
+import { UpgradeConfirmModal } from './UpgradeConfirmModal';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -24,6 +26,8 @@ export function PaymentModal({
     status: PaymentStatus;
     message?: string;
   }>({ status: 'READY' });
+  const [showRefundModal, setShowRefundModal] = useState<boolean>(false);
+  const [showUpgradeConfirmModal, setShowUpgradeConfirmModal] = useState<boolean>(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,8 +78,20 @@ export function PaymentModal({
     }
   };
 
-  const handlePayment = async (amount: number, orderName: string) => {
+  const handlePayment = async (amount: number, orderName: string, bypassConfirm = false) => {
     if (purchasing) return;
+    
+    // 월간 구독 -> 연간 구독 변경 시 확인 메세지 안내
+    if (
+      !bypassConfirm &&
+      amount === 100000 &&
+      subscription?.plan === 'MONTHLY' &&
+      subscription.status === 'ACTIVE'
+    ) {
+      setShowUpgradeConfirmModal(true);
+      return;
+    }
+
     try {
       setPurchasing(true);
       const orderId = `order-${crypto.randomUUID()}`;
@@ -327,8 +343,19 @@ export function PaymentModal({
                 opacity: 0.85,
               }}
             >
-              ※ 결제 완료 후에는 환불이 절대 불가하오니 신중한 구매를
-              부탁드립니다.
+              ※ 모든 환불 및 취소 요청은{' '}
+              <span
+                onClick={() => setShowRefundModal(true)}
+                style={{
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  color: 'var(--primary-cyan)',
+                  fontWeight: '600',
+                }}
+              >
+                hactto 환불 규정
+              </span>
+              에 따라 처리됩니다.
             </p>
           </div>
           <button
@@ -970,6 +997,19 @@ export function PaymentModal({
             </p>
           </div>
         </div>
+        <RefundPolicyModal
+          isOpen={showRefundModal}
+          onClose={() => setShowRefundModal(false)}
+        />
+        <UpgradeConfirmModal
+          isOpen={showUpgradeConfirmModal}
+          onClose={() => setShowUpgradeConfirmModal(false)}
+          onConfirm={() => {
+            setShowUpgradeConfirmModal(false);
+            handlePayment(100000, '연간 무제한 구독', true);
+          }}
+          subscriptionEndsAt={subscription?.endsAt}
+        />
       </div>
     </div>,
     document.body,
