@@ -21,14 +21,22 @@ export function Search() {
     null,
   );
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when modal is open and add ESC key support
   useEffect(() => {
     const scrollContainer = document.querySelector(
       '.scroll-y-container',
     ) as HTMLElement;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedEpisode(null);
+      }
+    };
+
     if (selectedEpisode) {
       document.body.style.overflow = 'hidden';
       if (scrollContainer) scrollContainer.style.overflowY = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
     } else {
       document.body.style.overflow = '';
       if (scrollContainer) scrollContainer.style.overflowY = 'auto';
@@ -36,6 +44,7 @@ export function Search() {
     return () => {
       document.body.style.overflow = '';
       if (scrollContainer) scrollContainer.style.overflowY = 'auto';
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [selectedEpisode]);
 
@@ -256,109 +265,123 @@ export function Search() {
             )}
           </tbody>
         </table>
-      </div>
-
-      {selectedEpisode &&
+      </div>      {selectedEpisode &&
         createPortal(
-          <div className="admin-modal-overlay" style={{ overflow: 'hidden' }}>
+          <div
+            className="admin-modal-overlay"
+          >
             <div
               className="glass-card admin-modal-content"
               style={{
                 maxWidth: '600px',
-                padding: '30px',
+                padding: '0',
                 textAlign: 'left',
                 position: 'relative',
                 border: '1px solid rgba(0, 240, 255, 0.25)',
                 boxShadow:
                   '0 20px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.1)',
-                overflowY: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
               }}
             >
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedEpisode(null)}
+              <div
                 style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '20px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-dim)',
-                  cursor: 'pointer',
-                  padding: '4px',
+                  padding: '30px 30px 0 30px',
+                  overflowY: 'auto',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'color 0.2s',
+                  flexDirection: 'column',
+                  flex: 1,
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = 'var(--text-main)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'var(--text-dim)')
-                }
               >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <button
+                  onClick={() => setSelectedEpisode(null)}
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    right: '20px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-dim)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'color 0.2s',
+                    zIndex: 10,
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = 'var(--text-main)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = 'var(--text-dim)')
+                  }
                 >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
 
-              <h2
-                className="access-title"
-                style={{
-                  fontSize: '1.25rem',
-                  color: 'var(--text-main)',
-                  marginBottom: '4px',
-                }}
-              >
-                제 {selectedEpisode.episode}회 당첨 결과 상세 분석
-              </h2>
-              <p
-                style={{
-                  fontSize: '0.82rem',
-                  color: 'var(--text-dim)',
-                  marginBottom: '20px',
-                }}
-              >
-                당첨 번호 조합 및 통계 데이터를 바탕으로 분석 정보를 제공합니다.
-              </p>
+                <h2
+                  className="access-title"
+                  style={{
+                    fontSize: '1.25rem',
+                    color: 'var(--text-main)',
+                    marginBottom: '4px',
+                    paddingRight: '24px',
+                  }}
+                >
+                  제 {selectedEpisode.episode}회 당첨 결과 상세 분석
+                </h2>
+                <p
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--text-dim)',
+                    marginBottom: '20px',
+                  }}
+                >
+                  당첨 번호 조합 및 통계 데이터를 바탕으로 분석 정보를 제공합니다.
+                </p>
 
-              <LottoAnalysisCard
-                numbers={selectedEpisode.numbers}
-                analysis={selectedEpisode.analysis}
-              />
+                <LottoAnalysisCard
+                  numbers={selectedEpisode.numbers}
+                  analysis={selectedEpisode.analysis}
+                />
+              </div>
 
-              <button
-                type="button"
-                className="btn-submit"
-                style={{
-                  width: '100%',
-                  height: '42px',
-                  marginTop: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background:
-                    'linear-gradient(135deg, var(--primary-cyan) 0%, #00b0ff 100%)',
-                  boxShadow: '0 4px 15px rgba(0, 240, 255, 0.25)',
-                  color: '#030712',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                }}
-                onClick={() => setSelectedEpisode(null)}
-              >
-                확인
-              </button>
+              <div style={{ padding: '20px 30px 30px 30px', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="btn-submit"
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background:
+                      'linear-gradient(135deg, var(--primary-cyan) 0%, #00b0ff 100%)',
+                    boxShadow: '0 4px 15px rgba(0, 240, 255, 0.25)',
+                    color: '#030712',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                  }}
+                  onClick={() => setSelectedEpisode(null)}
+                >
+                  확인
+                </button>
+              </div>
             </div>
           </div>,
           document.body,

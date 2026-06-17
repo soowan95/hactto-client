@@ -210,6 +210,7 @@ export function NoticeBanner() {
         gap: '12px',
         boxShadow: '0 0 15px rgba(0, 240, 255, 0.1)',
         animation: 'pulse 3s infinite alternate',
+        flexShrink: 0,
       }}
     >
       <NoticeText currentNotice={currentNotice} />

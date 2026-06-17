@@ -34,7 +34,7 @@ interface AppContextType {
   showAlert: (type: 'success' | 'error', text: string) => void;
   submitting: boolean;
   setSubmitting: (val: boolean) => void;
-  checkIpStatus: () => Promise<void>;
+  checkIpStatus: (silent?: boolean) => Promise<void>;
   handleMasterKeySubmit: (key: string) => Promise<boolean>;
   loadAdminData: (key: string) => Promise<{
     pendingIps: string[];
@@ -182,11 +182,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [visitorId]);
 
-  // Fetch initial IP status / verify saved master key
-  const checkIpStatus = useCallback(async () => {
+  const checkIpStatus = useCallback(async (silent = false) => {
     try {
       await Promise.resolve();
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       // Bypass IP block fetch for Google Crawler bots
       if (isGoogleBot) {

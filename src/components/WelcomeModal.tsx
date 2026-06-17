@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../utils';
 
 interface WelcomeModalProps {
@@ -11,6 +11,19 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
   const [showHonTooltip, setShowHonTooltip] = useState(false);
 
   if (!isOpen) return null;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
 
   const handleNext = () => {
     if (step < 4) {

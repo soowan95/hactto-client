@@ -58,12 +58,42 @@ export function Generate() {
   const [isSaving, setIsSaving] = useState(false);
   const [latestEpisode, setLatestEpisode] = useState<number>(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // Prevent body scroll when modal is open
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Prevent body scroll when modal is open and add ESC key support
   useEffect(() => {
     const scrollContainer = document.querySelector(
       '.scroll-y-container',
     ) as HTMLElement;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showWarningModal) {
+          setShowWarningModal(false);
+        } else if (showConfirmModal) {
+          setShowConfirmModal(false);
+        } else if (analyzedResults.length > 0) {
+          if (
+            Object.keys(savedPredictionIds).length === analyzedResults.length
+          ) {
+            setAnalyzedResults([]);
+          } else {
+            setShowWarningModal(true);
+          }
+        } else if (generatedNumbers) {
+          setGeneratedNumbers(null);
+        }
+      }
+    };
+
     if (
       generatedNumbers ||
       analyzedResults.length > 0 ||
@@ -72,6 +102,7 @@ export function Generate() {
     ) {
       document.body.style.overflow = 'hidden';
       if (scrollContainer) scrollContainer.style.overflowY = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
     } else {
       document.body.style.overflow = '';
       if (scrollContainer) scrollContainer.style.overflowY = 'auto';
@@ -79,6 +110,7 @@ export function Generate() {
     return () => {
       document.body.style.overflow = '';
       if (scrollContainer) scrollContainer.style.overflowY = 'auto';
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [
     generatedNumbers,
@@ -309,13 +341,22 @@ export function Generate() {
           ),
         },
       );
-      if (!res.ok) throw new Error('예측 번호 생성에 실패했습니다.');
+      if (!res.ok) {
+        let errorMsg = '예측 번호 생성에 실패했습니다.';
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errorMsg = errData.message;
+          }
+        } catch (_) {}
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
       const result = data.data || data;
       setGeneratedNumbers(result.numbers as number[]);
       setGeneratedAnalysis((result.analysis as LottoAnalysis) || null);
       showAlert('success', '새로운 당첨 예측 번호가 생성되었습니다.');
-      checkIpStatus();
+      checkIpStatus(true);
     } catch (err) {
       const error = err as Error;
       showAlert('error', error.message);
@@ -424,7 +465,7 @@ export function Generate() {
         'success',
         `${results.length}개의 예측 번호 분석이 완료되었습니다.`,
       );
-      checkIpStatus();
+      checkIpStatus(true);
     } catch (err) {
       const error = err as Error;
       showAlert('error', error.message);
@@ -1183,120 +1224,6 @@ export function Generate() {
             document.body,
           )}
 
-        {showWarningModal &&
-          createPortal(
-            <div className="admin-modal-overlay" style={{ zIndex: 1100 }}>
-              <div
-                className="glass-card admin-modal-content"
-                style={{ maxWidth: '440px', textAlign: 'center' }}
-              >
-                <div
-                  className="status-icon"
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid #ef4444',
-                    color: '#ef4444',
-                    marginBottom: '20px',
-                    display: 'inline-flex',
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '50%',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                </div>
-
-                <h2
-                  className="access-title"
-                  style={{
-                    fontSize: '1.35rem',
-                    marginBottom: '8px',
-                    color: 'var(--text-main)',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  저장하지 않은 결과가 있습니다
-                </h2>
-
-                <p
-                  className="access-desc"
-                  style={{
-                    fontSize: '0.88rem',
-                    marginBottom: '24px',
-                    lineHeight: '1.6',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  저장하지 않은 분석결과{' '}
-                  {analyzedResults.length -
-                    Object.keys(savedPredictionIds).length}
-                  개가 있습니다. 저장하지 않고 정말 종료하시겠습니까?
-                </p>
-
-                <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-                  <button
-                    type="button"
-                    className="btn-submit"
-                    style={{
-                      flex: 1,
-                      height: '42px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background:
-                        'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-                      color: '#ffffff',
-                      boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)',
-                      fontWeight: 600,
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => {
-                      setShowWarningModal(false);
-                      setAnalyzedResults([]);
-                    }}
-                  >
-                    종료하기 (저장 안 함)
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-neon btn-outline"
-                    style={{
-                      flex: 1,
-                      padding: 0,
-                      height: '42px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: 0,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setShowWarningModal(false)}
-                  >
-                    머무르기
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )}
 
         {showWarningModal &&
           createPortal(
@@ -1415,6 +1342,71 @@ export function Generate() {
       </div>
     );
   };
+
+  if (isMobile) {
+    return (
+      <div>
+        <h2
+          className="access-title"
+          style={{ fontSize: '1.3rem', marginBottom: '16px' }}
+        >
+          예측번호 분석기
+        </h2>
+        <div
+          style={{
+            background: 'rgba(3, 7, 18, 0.4)',
+            border: '1px solid rgba(0, 240, 255, 0.15)',
+            boxShadow: '0 8px 32px 0 rgba(0, 240, 255, 0.05)',
+            borderRadius: '16px',
+            padding: '40px 24px',
+            textAlign: 'center',
+            marginTop: '20px',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '2.5rem',
+              marginBottom: '8px',
+              animation: 'pulse 2s infinite',
+            }}
+          >
+            📱
+          </div>
+          <h3
+            style={{
+              fontSize: '1.15rem',
+              fontWeight: 'bold',
+              color: 'var(--text-main)',
+            }}
+          >
+            모바일 동기화 준비 중
+          </h3>
+          <p
+            style={{
+              fontSize: '0.85rem',
+              color: 'var(--text-dim)',
+              lineHeight: '1.6',
+              maxWidth: '360px',
+              margin: '0 auto',
+            }}
+          >
+            현재 hactto는 <strong>IP 기반 식별자</strong>를 사용하여 로그인 없이 간편하게 이용할 수 있도록 구축되어 있습니다.
+            <br />
+            <br />
+            모바일 네트워크 환경(LTE/5G/유동 IP) 특성상 모바일 예측/분석 및 HON 크레딧 사용 기능은 현재 <strong>준비 중</strong>에 있습니다.
+            <br />
+            <br />
+            PC 브라우저로 접속하시면 모든 예측 번호 생성 및 분석 기능을 즉시 정상 이용하실 수 있습니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -2117,153 +2109,181 @@ export function Generate() {
 
       {generatedNumbers &&
         createPortal(
-          <div className="admin-modal-overlay" style={{ overflow: 'hidden' }}>
+          <div
+            className="admin-modal-overlay"
+            style={{
+              overflowY: 'auto',
+              padding: '40px 20px',
+              alignItems: 'flex-start',
+            }}
+          >
             <div
               className="glass-card admin-modal-content"
               style={{
                 maxWidth: '600px',
-                padding: '32px',
+                padding: '0',
                 textAlign: 'center',
                 position: 'relative',
                 border: '1px solid rgba(189, 0, 255, 0.25)',
                 boxShadow:
                   '0 20px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(189, 0, 255, 0.1)',
-                overflowY: 'hidden',
+                marginTop: 'auto',
+                marginBottom: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                maxHeight: 'calc(100vh - 80px)',
               }}
             >
-              {/* Close Button */}
-              <button
-                onClick={() => setGeneratedNumbers(null)}
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '20px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-dim)',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'color 0.2s ease',
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = 'var(--text-main)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'var(--text-dim)')
-                }
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-
-              {/* Success Status Icon */}
               <div
-                className="status-icon"
                 style={{
-                  background: 'rgba(189, 0, 255, 0.1)',
-                  border: '1px solid rgba(189, 0, 255, 0.4)',
-                  color: 'var(--primary-purple)',
-                  marginBottom: '20px',
-                  display: 'inline-flex',
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
+                  padding: '32px 32px 0 32px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  flex: 1,
                 }}
               >
-                <svg
-                  width="26"
-                  height="26"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                {/* Close Button */}
+                <button
+                  onClick={() => setGeneratedNumbers(null)}
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    right: '20px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-dim)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'color 0.2s ease',
+                    zIndex: 10,
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = 'var(--text-main)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = 'var(--text-dim)')
+                  }
                 >
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+
+                {/* Success Status Icon */}
+                <div
+                  className="status-icon"
+                  style={{
+                    background: 'rgba(189, 0, 255, 0.1)',
+                    border: '1px solid rgba(189, 0, 255, 0.4)',
+                    color: 'var(--primary-purple)',
+                    marginBottom: '20px',
+                    display: 'inline-flex',
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </div>
+
+                <h2
+                  className="access-title"
+                  style={{
+                    fontSize: '1.25rem',
+                    fontWeight: 'bold',
+                    color: 'var(--text-main)',
+                    marginBottom: '8px',
+                  }}
+                >
+                  예측 조합 번호 생성 완료
+                </h2>
+
+                <p
+                  className="access-desc"
+                  style={{
+                    fontSize: '0.85rem',
+                    color: 'var(--text-muted)',
+                    marginBottom: '8px',
+                  }}
+                >
+                  [{parseAlgorithmName(generatingAlgo)}] 알고리즘을 통해 최적의
+                  번호 조합을 추출했습니다.
+                </p>
+
+                <div style={{ width: '100%', textAlign: 'left' }}>
+                  <LottoAnalysisCard
+                    numbers={generatedNumbers}
+                    analysis={generatedAnalysis}
+                    title="예측 번호 심층 분석"
+                  />
+                </div>
+
+                <p
+                  style={{
+                    fontSize: '0.78rem',
+                    color: 'var(--text-muted)',
+                    marginTop: '20px',
+                    marginBottom: '20px',
+                    lineHeight: '1.5',
+                  }}
+                >
+                  ※ 생성된 번호 조합은 <strong>[내 당첨이력]</strong> 메뉴에서
+                  <br />
+                  실제 당첨결과와 대조해 보실 수 있습니다.
+                </p>
               </div>
 
-              <h2
-                className="access-title"
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                  color: 'var(--text-main)',
-                  marginBottom: '8px',
-                }}
-              >
-                예측 조합 번호 생성 완료
-              </h2>
-
-              <p
-                className="access-desc"
-                style={{
-                  fontSize: '0.85rem',
-                  color: 'var(--text-muted)',
-                  marginBottom: '8px',
-                }}
-              >
-                [{parseAlgorithmName(generatingAlgo)}] 알고리즘을 통해 최적의
-                번호 조합을 추출했습니다.
-              </p>
-
-              <LottoAnalysisCard
-                numbers={generatedNumbers}
-                analysis={generatedAnalysis}
-                title="예측 번호 심층 분석"
-              />
-
-              <p
-                style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--text-muted)',
-                  marginTop: '20px',
-                  marginBottom: '24px',
-                  lineHeight: '1.5',
-                }}
-              >
-                ※ 생성된 번호 조합은 <strong>[내 당첨이력]</strong> 메뉴에서
-                <br />
-                실제 당첨결과와 대조해 보실 수 있습니다.
-              </p>
-
-              <button
-                type="button"
-                className="btn-submit"
-                style={{
-                  width: '100%',
-                  height: '42px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background:
-                    'linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)',
-                  boxShadow: '0 4px 15px var(--primary-purple-glow)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                }}
-                onClick={() => setGeneratedNumbers(null)}
-              >
-                확인
-              </button>
+              <div style={{ padding: '0 32px 32px 32px', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="btn-submit"
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background:
+                      'linear-gradient(135deg, var(--primary-purple) 0%, #7c3aed 100%)',
+                    boxShadow: '0 4px 15px var(--primary-purple-glow)',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                  }}
+                  onClick={() => setGeneratedNumbers(null)}
+                >
+                  확인
+                </button>
+              </div>
             </div>
           </div>,
           document.body,

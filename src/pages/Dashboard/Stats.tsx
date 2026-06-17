@@ -249,6 +249,7 @@ export function Stats() {
 
     return (
       <div
+        className="stats-sub-tabs"
         style={{
           display: 'inline-flex',
           background: 'rgba(255, 255, 255, 0.03)',
@@ -330,6 +331,7 @@ export function Stats() {
                 return (
                   <div
                     key={item.algorithm}
+                    className="stats-card click-card"
                     onClick={() => {
                       setSelectedAlgorithm(item.algorithm);
                       setActiveSubTab('detail');
@@ -469,6 +471,7 @@ export function Stats() {
       >
         {/* Weekly Activity Counts Chart */}
         <div
+          className="stats-card"
           style={{
             background: 'rgba(255,255,255,0.01)',
             border: 'var(--border-glass)',
@@ -644,6 +647,7 @@ export function Stats() {
         }}
       >
         <div
+          className="stats-card champ-card"
           style={{
             background:
               'linear-gradient(135deg, rgba(0, 240, 255, 0.03) 0%, rgba(189, 0, 255, 0.03) 100%)',
@@ -1098,6 +1102,7 @@ export function Stats() {
       >
         {/* Selector Dropdown */}
         <div
+          className="stats-selector-container"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -1153,6 +1158,7 @@ export function Stats() {
 
         {/* Custom SVG Line Chart Container */}
         <div
+          className="stats-card"
           style={{
             background: 'rgba(255, 255, 255, 0.01)',
             border: 'var(--border-glass)',
@@ -1411,6 +1417,7 @@ export function Stats() {
 
         {/* KPI Summaries */}
         <div
+          className="stats-kpi-container"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
@@ -1427,6 +1434,7 @@ export function Stats() {
             }}
           >
             <div
+              className="kpi-label"
               style={{
                 fontSize: '0.72rem',
                 color: 'var(--text-dim)',
@@ -1436,6 +1444,7 @@ export function Stats() {
               최고 신뢰도 (PEAK)
             </div>
             <div
+              className="kpi-value"
               style={{
                 fontSize: '1.1rem',
                 fontWeight: 800,
@@ -1455,6 +1464,7 @@ export function Stats() {
             }}
           >
             <div
+              className="kpi-label"
               style={{
                 fontSize: '0.72rem',
                 color: 'var(--text-dim)',
@@ -1464,6 +1474,7 @@ export function Stats() {
               평균 신뢰도 (AVG)
             </div>
             <div
+              className="kpi-value"
               style={{
                 fontSize: '1.1rem',
                 fontWeight: 800,
@@ -1483,6 +1494,7 @@ export function Stats() {
             }}
           >
             <div
+              className="kpi-label"
               style={{
                 fontSize: '0.72rem',
                 color: 'var(--text-dim)',
@@ -1492,6 +1504,7 @@ export function Stats() {
               최저 신뢰도 (LOW)
             </div>
             <div
+              className="kpi-value"
               style={{
                 fontSize: '1.1rem',
                 fontWeight: 800,
@@ -1569,14 +1582,13 @@ export function Stats() {
               background: 'rgba(8, 9, 14, 0.75)',
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: 'grid',
+              placeItems: 'center',
               zIndex: 9999,
-              padding: '20px',
+              padding: '40px 20px',
               boxSizing: 'border-box',
               animation: 'backdropFadeIn 0.3s ease-out forwards',
-              overflow: 'hidden',
+              overflowY: 'auto',
             }}
           >
             <style>{`

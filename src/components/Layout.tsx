@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -32,6 +32,16 @@ export function Layout() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileOrTablet(window.innerWidth <= 1200);
+    };
+    handleResize(); // run initially
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const hasAdminAccess = !!(
     localStorage.getItem('mk') || sessionStorage.getItem('mk')
@@ -59,56 +69,16 @@ export function Layout() {
     subscription.plan === 'YEARLY';
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        gap: '24px',
-        width: '100%',
-        maxWidth: '1500px',
-        margin: '0 auto',
-        padding: '0 20px',
-        boxSizing: 'border-box',
-      }}
-    >
+    <div className="layout-wrapper">
       {/* 좌측 구글 광고 지면 */}
-      {!isYearlySubscribed && (
-        <div
-          className="google-ad-sidebar left-ad"
-          style={{
-            width: '160px',
-            minWidth: '160px',
-            height: '600px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px dashed rgba(255, 255, 255, 0.12)',
-            borderRadius: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '12px',
-            color: 'var(--text-dim)',
-            fontSize: '0.8rem',
-            textAlign: 'center',
-            marginTop: '50px',
-            position: 'sticky',
-            top: '20px',
-            boxSizing: 'border-box',
-          }}
-        >
+      {!isYearlySubscribed && !isMobileOrTablet && (
+        <div className="google-ad-sidebar left-ad">
           <AdSenseBanner slot="1234567890" format="vertical" />
         </div>
       )}
 
-      <div
-        className="access-container"
-        style={{ maxWidth: '1080px', width: '100%', flexShrink: 1 }}
-      >
-        <div
-          className="glass-card dashboard-container"
-          style={{ textAlign: 'left', padding: '30px 40px' }}
-        >
+      <div className="access-container dashboard-main-container">
+        <div className="glass-card dashboard-container">
           <div
             className="admin-header"
             style={{
@@ -130,57 +100,59 @@ export function Layout() {
               </span>
 
               {/* 남은 혼(Hon) 충전 정보 위젯 */}
-              <div
-                onClick={() => setShowPaymentModal(true)}
-                style={{
-                  marginLeft: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(0, 240, 255, 0.05)',
-                  border: '1px solid rgba(0, 240, 255, 0.2)',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--primary-cyan)';
-                  e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
-                  e.currentTarget.style.boxShadow =
-                    '0 0 10px rgba(0, 240, 255, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.2)';
-                  e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-                title="크레딧 충전 상점 열기"
-              >
-                <span
+              {!isMobileOrTablet && (
+                <div
+                  onClick={() => setShowPaymentModal(true)}
                   style={{
-                    fontSize: '0.8rem',
-                    fontWeight: '600',
-                    color: 'var(--primary-cyan)',
+                    marginLeft: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(0, 240, 255, 0.05)',
+                    border: '1px solid rgba(0, 240, 255, 0.2)',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
                   }}
-                >
-                  {subscription && subscription.status === 'ACTIVE'
-                    ? 'UNLIMITED'
-                    : `${honBalance} HON`}
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.65rem',
-                    background: 'var(--primary-cyan)',
-                    color: '#0a0b10',
-                    padding: '1px 4px',
-                    borderRadius: '3px',
-                    fontWeight: 'bold',
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
+                    e.currentTarget.style.boxShadow =
+                      '0 0 10px rgba(0, 240, 255, 0.3)';
                   }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.2)';
+                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                  title="크레딧 충전 상점 열기"
                 >
-                  충전
-                </span>
-              </div>
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      color: 'var(--primary-cyan)',
+                    }}
+                  >
+                    {subscription && subscription.status === 'ACTIVE'
+                      ? 'UNLIMITED'
+                      : `${honBalance} HON`}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.65rem',
+                      background: 'var(--primary-cyan)',
+                      color: '#0a0b10',
+                      padding: '1px 4px',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    충전
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
@@ -223,15 +195,7 @@ export function Layout() {
             </div>
           </div>
 
-          <div
-            className="admin-tabs"
-            style={{
-              display: 'flex',
-              gap: '5px',
-              marginBottom: '24px',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="admin-tabs">
             <NavLink
               to="/home"
               onClick={(e) => handleTabClick(e, '/home')}
@@ -297,6 +261,18 @@ export function Layout() {
             </NavLink>
           </div>
 
+          {/* 모바일/태블릿용 가로형 구글 광고 지면 */}
+          {!isYearlySubscribed && isMobileOrTablet && (
+            <div className="google-ad-horizontal-wrapper">
+              <AdSenseBanner
+                slot="1234567890"
+                format="horizontal"
+                responsive="false"
+                style={{ display: 'inline-block', width: '100%', height: '74px' }}
+              />
+            </div>
+          )}
+
           <NoticeBanner />
 
           <div
@@ -329,6 +305,7 @@ export function Layout() {
               fontSize: '0.75rem',
               color: 'var(--text-dim)',
               flexWrap: 'wrap',
+              flexShrink: 0,
             }}
           >
             <button
@@ -417,30 +394,8 @@ export function Layout() {
       </div>
 
       {/* 우측 구글 광고 지면 */}
-      {!isYearlySubscribed && (
-        <div
-          className="google-ad-sidebar right-ad"
-          style={{
-            width: '160px',
-            minWidth: '160px',
-            height: '600px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px dashed rgba(255, 255, 255, 0.12)',
-            borderRadius: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '12px',
-            color: 'var(--text-dim)',
-            fontSize: '0.8rem',
-            textAlign: 'center',
-            marginTop: '50px',
-            position: 'sticky',
-            top: '20px',
-            boxSizing: 'border-box',
-          }}
-        >
+      {!isYearlySubscribed && !isMobileOrTablet && (
+        <div className="google-ad-sidebar right-ad">
           <AdSenseBanner slot="0987654321" format="vertical" />
         </div>
       )}
