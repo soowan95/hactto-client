@@ -27,7 +27,8 @@ export function PaymentModal({
     message?: string;
   }>({ status: 'READY' });
   const [showRefundModal, setShowRefundModal] = useState<boolean>(false);
-  const [showUpgradeConfirmModal, setShowUpgradeConfirmModal] = useState<boolean>(false);
+  const [showUpgradeConfirmModal, setShowUpgradeConfirmModal] =
+    useState<boolean>(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -42,7 +43,6 @@ export function PaymentModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
 
   const handleCancelSubscription = async () => {
     if (cancelling) return;
@@ -78,9 +78,13 @@ export function PaymentModal({
     }
   };
 
-  const handlePayment = async (amount: number, orderName: string, bypassConfirm = false) => {
+  const handlePayment = async (
+    amount: number,
+    orderName: string,
+    bypassConfirm = false,
+  ) => {
     if (purchasing) return;
-    
+
     // 월간 구독 -> 연간 구독 변경 시 확인 메세지 안내
     if (
       !bypassConfirm &&

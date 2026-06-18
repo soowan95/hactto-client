@@ -182,120 +182,124 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [visitorId]);
 
-  const checkIpStatus = useCallback(async (silent = false) => {
-    try {
-      await Promise.resolve();
-      if (!silent) setLoading(true);
+  const checkIpStatus = useCallback(
+    async (silent = false) => {
+      try {
+        await Promise.resolve();
+        if (!silent) setLoading(true);
 
-      // Bypass IP block fetch for Google Crawler bots
-      if (isGoogleBot) {
-        setIsBlockedUser(false);
-        setAllowed(true);
-        setLoading(false);
-        return;
-      }
-
-      const savedMk = localStorage.getItem('mk');
-
-      // If a Master Key is saved locally, verify it
-      if (savedMk) {
-        const adminRes = await fetch(
-          `${API_BASE_URL}/check-ip?mk=${encodeURIComponent(savedMk)}`,
-        );
-        const adminData = await adminRes.json();
-        const adminResult = adminData.data || adminData;
-
-        if (adminRes.ok && adminResult.allowed) {
-          setHonBalance(adminResult.hon?.balance || 0);
-          setSubscription(adminResult.subscription || null);
-          setAllowed(true);
-          setPending(false);
-          setClientIp(adminResult.ip || 'unknown');
-          if (adminResult.visitorId) {
-            setVisitorId(adminResult.visitorId);
-            localStorage.setItem('visitor_id', adminResult.visitorId);
-          }
+        // Bypass IP block fetch for Google Crawler bots
+        if (isGoogleBot) {
           setIsBlockedUser(false);
-          const isFirstVisit = adminRes.headers.get('x-first-visit') === 'true';
-          const hasConsented =
-            localStorage.getItem('hactto_welcome_consented') === 'true';
-          if (!hasConsented) {
-            if (isFirstVisit) {
-              setShowWelcomeModal(true);
-            } else {
-              localStorage.setItem('hactto_welcome_consented', 'true');
-            }
-          }
+          setAllowed(true);
           setLoading(false);
           return;
-        } else {
-          localStorage.removeItem('mk');
         }
-      }
 
-      // Default IP check (always allowed now)
-      const res = await fetch(`${API_BASE_URL}/check-ip`, {
-        credentials: 'include',
-      });
+        const savedMk = localStorage.getItem('mk');
 
-      if (!res.ok) {
-        if (res.status === 403) {
-          try {
-            const errData = await res.json();
-            if (
-              errData.message === '차단된 사용자입니다.' ||
-              errData.message?.includes('차단된')
-            ) {
-              setIsBlockedUser(true);
-              if (errData.ip) setClientIp(errData.ip);
-              if (errData.visitorId) {
-                setVisitorId(errData.visitorId);
-                localStorage.setItem('visitor_id', errData.visitorId);
-              }
-              setLoading(false);
-              return;
+        // If a Master Key is saved locally, verify it
+        if (savedMk) {
+          const adminRes = await fetch(
+            `${API_BASE_URL}/check-ip?mk=${encodeURIComponent(savedMk)}`,
+          );
+          const adminData = await adminRes.json();
+          const adminResult = adminData.data || adminData;
+
+          if (adminRes.ok && adminResult.allowed) {
+            setHonBalance(adminResult.hon?.balance || 0);
+            setSubscription(adminResult.subscription || null);
+            setAllowed(true);
+            setPending(false);
+            setClientIp(adminResult.ip || 'unknown');
+            if (adminResult.visitorId) {
+              setVisitorId(adminResult.visitorId);
+              localStorage.setItem('visitor_id', adminResult.visitorId);
             }
-          } catch {
-            // Ignore
+            setIsBlockedUser(false);
+            const isFirstVisit =
+              adminRes.headers.get('x-first-visit') === 'true';
+            const hasConsented =
+              localStorage.getItem('hactto_welcome_consented') === 'true';
+            if (!hasConsented) {
+              if (isFirstVisit) {
+                setShowWelcomeModal(true);
+              } else {
+                localStorage.setItem('hactto_welcome_consented', 'true');
+              }
+            }
+            setLoading(false);
+            return;
+          } else {
+            localStorage.removeItem('mk');
           }
         }
-        throw new Error('IP 상태를 조회하는 중 오류가 발생했습니다.');
-      }
 
-      const data = await res.json();
-      const result = data.data || data;
+        // Default IP check (always allowed now)
+        const res = await fetch(`${API_BASE_URL}/check-ip`, {
+          credentials: 'include',
+        });
 
-      setHonBalance(result.hon?.balance || 0);
-      setSubscription(result.subscription || null);
-      setAllowed(true);
-      setPending(false);
-      setClientIp(result.ip || 'unknown');
-      if (result.visitorId) {
-        setVisitorId(result.visitorId);
-        localStorage.setItem('visitor_id', result.visitorId);
-      }
-
-      const isFirstVisit = res.headers.get('x-first-visit') === 'true';
-      const hasConsented =
-        localStorage.getItem('hactto_welcome_consented') === 'true';
-      if (!hasConsented) {
-        if (isFirstVisit) {
-          setShowWelcomeModal(true);
-        } else {
-          localStorage.setItem('hactto_welcome_consented', 'true');
+        if (!res.ok) {
+          if (res.status === 403) {
+            try {
+              const errData = await res.json();
+              if (
+                errData.message === '차단된 사용자입니다.' ||
+                errData.message?.includes('차단된')
+              ) {
+                setIsBlockedUser(true);
+                if (errData.ip) setClientIp(errData.ip);
+                if (errData.visitorId) {
+                  setVisitorId(errData.visitorId);
+                  localStorage.setItem('visitor_id', errData.visitorId);
+                }
+                setLoading(false);
+                return;
+              }
+            } catch {
+              // Ignore
+            }
+          }
+          throw new Error('IP 상태를 조회하는 중 오류가 발생했습니다.');
         }
+
+        const data = await res.json();
+        const result = data.data || data;
+
+        setHonBalance(result.hon?.balance || 0);
+        setSubscription(result.subscription || null);
+        setAllowed(true);
+        setPending(false);
+        setClientIp(result.ip || 'unknown');
+        if (result.visitorId) {
+          setVisitorId(result.visitorId);
+          localStorage.setItem('visitor_id', result.visitorId);
+        }
+
+        const isFirstVisit = res.headers.get('x-first-visit') === 'true';
+        const hasConsented =
+          localStorage.getItem('hactto_welcome_consented') === 'true';
+        if (!hasConsented) {
+          if (isFirstVisit) {
+            setShowWelcomeModal(true);
+          } else {
+            localStorage.setItem('hactto_welcome_consented', 'true');
+          }
+        }
+      } catch (err: unknown) {
+        console.error(err);
+        setAllowed(true);
+        setPending(false);
+        setClientIp('알 수 없음');
+        const error = err as Error;
+        showAlert('error', error.message || '서버 연결에 실패했습니다.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err: unknown) {
-      console.error(err);
-      setAllowed(true);
-      setPending(false);
-      setClientIp('알 수 없음');
-      const error = err as Error;
-      showAlert('error', error.message || '서버 연결에 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  }, [showAlert]);
+    },
+    [showAlert],
+  );
 
   // Register/Verify Master Key
   const handleMasterKeySubmit = useCallback(

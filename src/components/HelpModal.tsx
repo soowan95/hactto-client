@@ -19,7 +19,6 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-
   const terms = [
     {
       title: '총합',

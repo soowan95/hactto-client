@@ -102,90 +102,94 @@ export function Layout() {
               </span>
 
               {/* 남은 혼(Hon) 충전 정보 위젯 */}
-              {!isMobileOrTablet && (() => {
-                const isSubscribed = subscription && subscription.status === 'ACTIVE';
-                const isMonthly = isSubscribed && subscription.plan === 'MONTHLY';
-                const isYearly = isSubscribed && subscription.plan === 'YEARLY';
+              {!isMobileOrTablet &&
+                (() => {
+                  const isSubscribed =
+                    subscription && subscription.status === 'ACTIVE';
+                  const isMonthly =
+                    isSubscribed && subscription.plan === 'MONTHLY';
+                  const isYearly =
+                    isSubscribed && subscription.plan === 'YEARLY';
 
-                let widgetText = `${honBalance} HON`;
-                let badgeText = '충전';
-                let themeColor = 'var(--primary-cyan)';
-                let bgGlow = 'rgba(0, 240, 255, 0.05)';
-                let borderGlow = 'rgba(0, 240, 255, 0.2)';
+                  let widgetText = `${honBalance} HON`;
+                  let badgeText = '충전';
+                  let themeColor = 'var(--primary-cyan)';
+                  let bgGlow = 'rgba(0, 240, 255, 0.05)';
+                  let borderGlow = 'rgba(0, 240, 255, 0.2)';
 
-                if (isMonthly) {
-                  widgetText = '월간 무제한';
-                  badgeText = '구독';
-                  themeColor = 'var(--primary-purple)';
-                  bgGlow = 'rgba(168, 85, 247, 0.05)';
-                  borderGlow = 'rgba(168, 85, 247, 0.2)';
-                } else if (isYearly) {
-                  widgetText = '연간 무제한';
-                  badgeText = '구독';
-                  themeColor = '#eab308';
-                  bgGlow = 'rgba(234, 179, 8, 0.05)';
-                  borderGlow = 'rgba(234, 179, 8, 0.2)';
-                }
+                  if (isMonthly) {
+                    widgetText = '월간 무제한';
+                    badgeText = '구독';
+                    themeColor = 'var(--primary-purple)';
+                    bgGlow = 'rgba(168, 85, 247, 0.05)';
+                    borderGlow = 'rgba(168, 85, 247, 0.2)';
+                  } else if (isYearly) {
+                    widgetText = '연간 무제한';
+                    badgeText = '구독';
+                    themeColor = '#eab308';
+                    bgGlow = 'rgba(234, 179, 8, 0.05)';
+                    borderGlow = 'rgba(234, 179, 8, 0.2)';
+                  }
 
-                return (
-                  <div
-                    onClick={() => setShowPaymentModal(true)}
-                    style={{
-                      marginLeft: '18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: bgGlow,
-                      border: `1px solid ${borderGlow}`,
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = themeColor;
-                      e.currentTarget.style.background = isMonthly
-                        ? 'rgba(168, 85, 247, 0.1)'
-                        : isYearly
-                        ? 'rgba(234, 179, 8, 0.1)'
-                        : 'rgba(0, 240, 255, 0.1)';
-                      e.currentTarget.style.boxShadow = isMonthly
-                        ? '0 0 10px rgba(168, 85, 247, 0.3)'
-                        : isYearly
-                        ? '0 0 10px rgba(234, 179, 8, 0.3)'
-                        : '0 0 10px rgba(0, 240, 255, 0.3)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = borderGlow;
-                      e.currentTarget.style.background = bgGlow;
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                    title="크레딧 충전 상점 열기"
-                  >
-                    <span
+                  return (
+                    <div
+                      onClick={() => setShowPaymentModal(true)}
                       style={{
-                        fontSize: '0.8rem',
-                        fontWeight: '600',
-                        color: themeColor,
+                        marginLeft: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: bgGlow,
+                        border: `1px solid ${borderGlow}`,
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
                       }}
-                    >
-                      {widgetText}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '0.65rem',
-                        background: themeColor,
-                        color: isYearly ? '#090a0f' : '#0a0b10',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        fontWeight: 'bold',
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = themeColor;
+                        e.currentTarget.style.background = isMonthly
+                          ? 'rgba(168, 85, 247, 0.1)'
+                          : isYearly
+                            ? 'rgba(234, 179, 8, 0.1)'
+                            : 'rgba(0, 240, 255, 0.1)';
+                        e.currentTarget.style.boxShadow = isMonthly
+                          ? '0 0 10px rgba(168, 85, 247, 0.3)'
+                          : isYearly
+                            ? '0 0 10px rgba(234, 179, 8, 0.3)'
+                            : '0 0 10px rgba(0, 240, 255, 0.3)';
                       }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = borderGlow;
+                        e.currentTarget.style.background = bgGlow;
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                      title="크레딧 충전 상점 열기"
                     >
-                      {badgeText}
-                    </span>
-                  </div>
-                );
-              })()}
+                      <span
+                        style={{
+                          fontSize: '0.8rem',
+                          fontWeight: '600',
+                          color: themeColor,
+                        }}
+                      >
+                        {widgetText}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          background: themeColor,
+                          color: isYearly ? '#090a0f' : '#0a0b10',
+                          padding: '1px 4px',
+                          borderRadius: '3px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {badgeText}
+                      </span>
+                    </div>
+                  );
+                })()}
             </div>
 
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
@@ -301,7 +305,11 @@ export function Layout() {
                 slot="1234567890"
                 format="horizontal"
                 responsive="false"
-                style={{ display: 'inline-block', width: '100%', height: '74px' }}
+                style={{
+                  display: 'inline-block',
+                  width: '100%',
+                  height: '74px',
+                }}
               />
             </div>
           )}

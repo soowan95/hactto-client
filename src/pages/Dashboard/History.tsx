@@ -5,10 +5,12 @@ import { API_BASE_URL, parseAlgorithmName } from '../../utils';
 import { LottoBalls } from '../../components/LottoBall';
 import { LottoAnalysisCard } from '../../components/LottoAnalysisCard';
 import { PersonalAnalysisCard } from '../../components/PersonalAnalysisCard';
+import { HonHistoryModal } from '../../components/HonHistoryModal';
 
 export function History() {
   const location = useLocation();
   const { visitorId, appendAuth, showAlert } = useApp();
+  const [showHonHistoryModal, setShowHonHistoryModal] = useState(false);
 
   const defaultTab =
     location.state?.defaultTab === 'personal' ? 'personal' : 'algorithm';
@@ -110,12 +112,47 @@ export function History() {
 
   return (
     <div>
-      <h2
-        className="access-title"
-        style={{ fontSize: '1.3rem', marginBottom: '16px' }}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+        }}
       >
-        내 예측 당첨이력 확인
-      </h2>
+        <h2 className="access-title" style={{ fontSize: '1.3rem', margin: 0 }}>
+          내 예측 당첨이력 확인
+        </h2>
+        <button
+          onClick={() => setShowHonHistoryModal(true)}
+          style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: 'var(--text-dim)',
+            fontSize: '0.78rem',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            outline: 'none',
+            fontWeight: '600',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.03)';
+            e.currentTarget.style.color = '#ffffff';
+            e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+            e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 240, 255, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.color = 'var(--text-dim)';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          HON 사용내역 확인
+        </button>
+      </div>
       <p
         className="access-desc"
         style={{ fontSize: '0.88rem', marginBottom: '24px' }}
@@ -282,6 +319,11 @@ export function History() {
           })
         )}
       </div>
+
+      <HonHistoryModal
+        isOpen={showHonHistoryModal}
+        onClose={() => setShowHonHistoryModal(false)}
+      />
     </div>
   );
 }

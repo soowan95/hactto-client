@@ -37,8 +37,12 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
     });
   };
 
-  const currentEndsAt = subscriptionEndsAt ? new Date(subscriptionEndsAt) : null;
-  const expectedEndsAt = currentEndsAt ? new Date(currentEndsAt.getTime()) : null;
+  const currentEndsAt = subscriptionEndsAt
+    ? new Date(subscriptionEndsAt)
+    : null;
+  const expectedEndsAt = currentEndsAt
+    ? new Date(currentEndsAt.getTime())
+    : null;
   if (expectedEndsAt) {
     expectedEndsAt.setFullYear(expectedEndsAt.getFullYear() + 1);
   }
@@ -118,7 +122,9 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
           }}
         >
           현재 <strong>월간 무제한 구독</strong>을 이용 중입니다. <br />
-          연간 구독으로 변경 시, 기존 남은 이용 기간에 <strong style={{ color: '#ffffff' }}>1년이 추가로 연장</strong>됩니다. 계속 진행하시겠습니까?
+          연간 구독으로 변경 시, 기존 남은 이용 기간에{' '}
+          <strong style={{ color: '#ffffff' }}>1년이 추가로 연장</strong>됩니다.
+          계속 진행하시겠습니까?
         </p>
 
         {currentEndsAt && expectedEndsAt && (
@@ -139,13 +145,31 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
               textAlign: 'left',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <span>현재 구독 만료일</span>
-              <span style={{ color: '#ffffff', fontWeight: '500' }}>{formatDate(currentEndsAt)}</span>
+              <span style={{ color: '#ffffff', fontWeight: '500' }}>
+                {formatDate(currentEndsAt)}
+              </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <span>연장 후 만료 예정일</span>
-              <span style={{ color: 'var(--primary-cyan)', fontWeight: 'bold' }}>{formatDate(expectedEndsAt)}</span>
+              <span
+                style={{ color: 'var(--primary-cyan)', fontWeight: 'bold' }}
+              >
+                {formatDate(expectedEndsAt)}
+              </span>
             </div>
           </div>
         )}
@@ -184,11 +208,13 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(234, 179, 8, 0.5)';
+              e.currentTarget.style.boxShadow =
+                '0 6px 20px rgba(234, 179, 8, 0.5)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 15px rgba(234, 179, 8, 0.35)';
+              e.currentTarget.style.boxShadow =
+                '0 4px 15px rgba(234, 179, 8, 0.35)';
             }}
             onClick={onConfirm}
           >
@@ -197,6 +223,6 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };

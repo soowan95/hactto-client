@@ -8,6 +8,14 @@ interface Inquiry {
   content: string;
   answer: string | null;
   status: 'PENDING' | 'ANSWERED';
+  type: 'GENERAL' | 'BLOCK' | 'REFUND';
+  refundStatus:
+    | 'NONE'
+    | 'PENDING'
+    | 'PROPOSED'
+    | 'CONFIRMED'
+    | 'REJECTED'
+    | 'CANCELLED';
   createdAt: string;
   answeredAt: string | null;
 }
@@ -21,6 +29,7 @@ export function Support() {
   // Form states
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [type, setType] = useState<'GENERAL' | 'REFUND'>('GENERAL');
 
   // Accordion expanded state
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -29,17 +38,13 @@ export function Support() {
     setLoading(true);
     try {
       const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
-        `${API_BASE_URL}/manager/inquiries?forBlock=false`,
-        {
-          headers: {
-            ...(vid ? { 'x-visitor-id': vid } : {}),
-          },
+      const res = await fetch(`${API_BASE_URL}/visitor/inquiries?type=ALL`, {
+        headers: {
+          ...(vid ? { 'x-visitor-id': vid } : {}),
         },
-      );
+      });
       if (res.ok) {
         const data = await res.json();
-        // ResponseTransformInterceptor wraps response as { statusCode, data: [...] }
         const list = Array.isArray(data.data)
           ? data.data
           : Array.isArray(data)
@@ -61,6 +66,12 @@ export function Support() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const hasPendingRefund = inquiries.some(
+    (i) =>
+      i.type === 'REFUND' &&
+      (i.status === 'PENDING' || i.refundStatus === 'PROPOSED'),
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
@@ -68,16 +79,24 @@ export function Support() {
       return;
     }
 
+    if (type === 'REFUND' && hasPendingRefund) {
+      showAlert(
+        'error',
+        '이미 처리 대기 중인 환불 문의가 존재하여 추가 접수가 불가능합니다.',
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/manager/inquiries`, {
+      const res = await fetch(`${API_BASE_URL}/visitor/inquiries`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(vid ? { 'x-visitor-id': vid } : {}),
         },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content, type }),
       });
 
       if (res.ok) {
@@ -98,12 +117,64 @@ export function Support() {
     }
   };
 
+  const handleConfirmRefund = async (inqId: string) => {
+    try {
+      const vid = visitorId || localStorage.getItem('visitor_id') || '';
+      const res = await fetch(
+        `${API_BASE_URL}/visitor/inquiries/${inqId}/confirm-refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(vid ? { 'x-visitor-id': vid } : {}),
+          },
+        },
+      );
+      if (res.ok) {
+        showAlert('success', '환불이 승인되어 완료되었습니다.');
+        fetchInquiries();
+      } else {
+        const data = await res.json();
+        showAlert('error', data.message || '환불 처리에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '환불 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleCancelRefund = async (inqId: string) => {
+    try {
+      const vid = visitorId || localStorage.getItem('visitor_id') || '';
+      const res = await fetch(
+        `${API_BASE_URL}/visitor/inquiries/${inqId}/cancel-refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(vid ? { 'x-visitor-id': vid } : {}),
+          },
+        },
+      );
+      if (res.ok) {
+        showAlert('success', '환불 문의가 취소되었습니다.');
+        fetchInquiries();
+      } else {
+        const data = await res.json();
+        showAlert('error', data.message || '문의 취소에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '문의 취소 중 오류가 발생했습니다.');
+    }
+  };
+
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div>
         <h3
           className="section-title"
@@ -136,7 +207,7 @@ export function Support() {
             border: '1px solid rgba(255, 255, 255, 0.06)',
             borderRadius: '12px',
             overflow: 'hidden',
-            height: '380px',
+            height: '420px',
           }}
         >
           <h4
@@ -154,16 +225,67 @@ export function Support() {
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px',
+              gap: '12px',
               flex: 1,
             }}
           >
             <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
             >
               <label
                 style={{
+                  fontSize: '0.72rem',
+                  color: 'var(--text-dim)',
+                  textAlign: 'left',
+                }}
+              >
+                문의 유형
+              </label>
+              <select
+                className="input-glow"
+                value={type}
+                onChange={(e) =>
+                  setType(e.target.value as 'GENERAL' | 'REFUND')
+                }
+                style={{
+                  fontSize: '0.85rem',
+                  background: 'var(--bg-main)',
+                  color: 'var(--text-main)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '6px',
+                  height: '36px',
+                  padding: '0 8px',
+                  outline: 'none',
+                }}
+              >
+                <option value="GENERAL">일반 문의</option>
+                <option value="REFUND">환불 문의 (전체 환불만 가능)</option>
+              </select>
+            </div>
+
+            {type === 'REFUND' && hasPendingRefund && (
+              <div
+                style={{
+                  background: 'rgba(255, 75, 75, 0.1)',
+                  border: '1px solid rgba(255, 75, 75, 0.2)',
+                  color: '#ff4b4b',
                   fontSize: '0.75rem',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  textAlign: 'left',
+                }}
+              >
+                현재 대기 중이거나 답변 확인 대기 중인 환불 문의가 존재하여 추가
+                환불 문의 작성이 불가능합니다.
+              </div>
+            )}
+
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
+              <label
+                style={{
+                  fontSize: '0.72rem',
                   color: 'var(--text-dim)',
                   textAlign: 'left',
                 }}
@@ -177,20 +299,21 @@ export function Support() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={100}
-                style={{ fontSize: '0.85rem' }}
+                style={{ fontSize: '0.85rem', height: '36px' }}
+                disabled={type === 'REFUND' && hasPendingRefund}
               />
             </div>
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '6px',
+                gap: '4px',
                 flex: 1,
               }}
             >
               <label
                 style={{
-                  fontSize: '0.75rem',
+                  fontSize: '0.72rem',
                   color: 'var(--text-dim)',
                   textAlign: 'left',
                 }}
@@ -199,7 +322,11 @@ export function Support() {
               </label>
               <textarea
                 className="input-glow"
-                placeholder="문의하실 구체적인 내용을 작성해 주세요."
+                placeholder={
+                  type === 'REFUND'
+                    ? '환불 요청 사유를 상세하게 작성해 주세요. (가입 이벤트로 지급된 50 HON은 보유 HON에서 제외되고 계산되며, 보유 HON이 50 이하일 경우 환불 금액은 무조건 0원입니다.)'
+                    : '문의하실 구체적인 내용을 작성해 주세요.'
+                }
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 maxLength={1000}
@@ -210,19 +337,29 @@ export function Support() {
                   padding: '10px',
                   lineHeight: '1.5',
                 }}
+                disabled={type === 'REFUND' && hasPendingRefund}
               />
             </div>
             <button
               type="submit"
               className="btn-submit"
-              disabled={submitting}
+              disabled={submitting || (type === 'REFUND' && hasPendingRefund)}
               style={{
                 height: '40px',
                 background:
-                  'linear-gradient(135deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)',
-                color: '#0f111a',
+                  type === 'REFUND' && hasPendingRefund
+                    ? 'rgba(255,255,255,0.05)'
+                    : 'linear-gradient(135deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)',
+                color:
+                  type === 'REFUND' && hasPendingRefund
+                    ? 'var(--text-dim)'
+                    : '#0f111a',
                 fontWeight: 'bold',
                 border: 'none',
+                cursor:
+                  type === 'REFUND' && hasPendingRefund
+                    ? 'not-allowed'
+                    : 'pointer',
               }}
             >
               {submitting ? '제출 중...' : '문의하기'}
@@ -239,7 +376,7 @@ export function Support() {
             border: '1px solid rgba(255, 255, 255, 0.06)',
             borderRadius: '12px',
             overflow: 'hidden',
-            height: '380px',
+            height: '420px',
           }}
         >
           <h4
@@ -334,19 +471,52 @@ export function Support() {
                           overflow: 'hidden',
                         }}
                       >
-                        <span
+                        <div
                           style={{
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            color: 'var(--text-main)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            maxWidth: '220px',
+                            display: 'flex',
+                            gap: '6px',
+                            alignItems: 'center',
                           }}
                         >
-                          {inq.title}
-                        </span>
+                          <span
+                            style={{
+                              fontSize: '0.65rem',
+                              padding: '1px 4px',
+                              borderRadius: '4px',
+                              background:
+                                inq.type === 'REFUND'
+                                  ? 'rgba(255, 75, 75, 0.15)'
+                                  : inq.type === 'BLOCK'
+                                    ? 'rgba(255, 165, 0, 0.15)'
+                                    : 'rgba(255, 255, 255, 0.06)',
+                              color:
+                                inq.type === 'REFUND'
+                                  ? '#ff4b4b'
+                                  : inq.type === 'BLOCK'
+                                    ? 'orange'
+                                    : 'var(--text-dim)',
+                            }}
+                          >
+                            {inq.type === 'REFUND'
+                              ? '환불'
+                              : inq.type === 'BLOCK'
+                                ? '제재'
+                                : '일반'}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              color: 'var(--text-main)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '150px',
+                            }}
+                          >
+                            {inq.title}
+                          </span>
+                        </div>
                         <span
                           style={{
                             fontSize: '0.7rem',
@@ -378,7 +548,15 @@ export function Support() {
                           flexShrink: 0,
                         }}
                       >
-                        {inq.status === 'ANSWERED' ? '답변 완료' : '답변 대기'}
+                        {inq.refundStatus === 'PROPOSED'
+                          ? '승인 대기'
+                          : inq.refundStatus === 'CONFIRMED'
+                            ? '환불 완료'
+                            : inq.refundStatus === 'CANCELLED'
+                              ? '취소 완료'
+                              : inq.status === 'ANSWERED'
+                                ? '답변 완료'
+                                : '답변 대기'}
                       </span>
                     </div>
 
@@ -443,6 +621,54 @@ export function Support() {
                               {inq.answeredAt &&
                                 new Date(inq.answeredAt).toLocaleString()}
                             </span>
+
+                            {/* User approval/cancel actions if proposed */}
+                            {inq.refundStatus === 'PROPOSED' && (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  gap: '8px',
+                                  marginTop: '12px',
+                                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                                  paddingTop: '8px',
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleConfirmRefund(inq.id)}
+                                  style={{
+                                    flex: 1,
+                                    height: '32px',
+                                    background:
+                                      'linear-gradient(135deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)',
+                                    color: '#0f111a',
+                                    fontWeight: 'bold',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  환불 실행
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelRefund(inq.id)}
+                                  style={{
+                                    flex: 1,
+                                    height: '32px',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    color: 'var(--text-main)',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  문의 취소
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

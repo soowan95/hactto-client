@@ -59,11 +59,14 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     'ALL' | 'PENDING' | 'ANSWERED'
   >('ALL');
   const [inquiryBlockFilter, setInquiryBlockFilter] = useState<
-    'ALL' | 'NORMAL' | 'BLOCK'
+    'ALL' | 'NORMAL' | 'BLOCK' | 'REFUND'
   >('ALL');
   const [inquiryAnswers, setInquiryAnswers] = useState<Record<string, string>>(
     {},
   );
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingInqId, setRejectingInqId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   // Visitor management states
   const [searchVisitorId, setSearchVisitorId] = useState('');
@@ -147,8 +150,6 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isAuthSuccessLocal, activeTab]);
 
-  if (!isOpen) return null;
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -161,6 +162,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  if (!isOpen) return null;
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,20 +333,20 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
   };
 
-  async function fetchAdminInquiries(blockFilter?: 'ALL' | 'NORMAL' | 'BLOCK') {
+  async function fetchAdminInquiries(
+    blockFilter?: 'ALL' | 'NORMAL' | 'BLOCK' | 'REFUND',
+  ) {
     setLoadingAdminInquiries(true);
     const activeBlockFilter = blockFilter ?? inquiryBlockFilter;
     try {
       const params = new URLSearchParams();
-      if (activeBlockFilter === 'NORMAL') params.set('forBlock', 'false');
-      else if (activeBlockFilter === 'BLOCK') params.set('forBlock', 'true');
+      if (activeBlockFilter === 'NORMAL') params.set('type', 'GENERAL');
+      else if (activeBlockFilter === 'BLOCK') params.set('type', 'BLOCK');
+      else if (activeBlockFilter === 'REFUND') params.set('type', 'REFUND');
       const query = params.toString() ? `?${params.toString()}` : '';
-      const res = await fetch(
-        `${API_BASE_URL}/manager/admin/inquiries${query}`,
-      );
+      const res = await fetch(`${API_BASE_URL}/manager/inquiries${query}`);
       if (res.ok) {
         const data = await res.json();
-        // ResponseTransformInterceptor wraps response as { statusCode, data: [...] }
         const list = Array.isArray(data.data)
           ? data.data
           : Array.isArray(data)
@@ -368,7 +370,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
     try {
       const res = await fetch(
-        `${API_BASE_URL}/manager/admin/inquiries/${id}/answer`,
+        `${API_BASE_URL}/manager/inquiries/${id}/answer`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -384,6 +386,56 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       }
     } catch {
       showAlert('error', '답변 등록 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleProposeRefund = async (inqId: string) => {
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/manager/inquiries/${inqId}/propose-refund`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+      if (res.ok) {
+        showAlert('success', '환불 승인 제안이 완료되었습니다.');
+        fetchAdminInquiries();
+      } else {
+        const data = await res.json();
+        showAlert('error', data.message || '환불 제안 실패');
+      }
+    } catch {
+      showAlert('error', '오류가 발생했습니다.');
+    }
+  };
+
+  const handleRejectRefundSubmit = async () => {
+    if (!rejectingInqId || !rejectReason.trim()) {
+      showAlert('error', '거절 사유를 입력해 주세요.');
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/manager/inquiries/${rejectingInqId}/reject-refund`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: rejectReason }),
+        },
+      );
+      if (res.ok) {
+        showAlert('success', '환불이 거절되었습니다.');
+        setRejectModalOpen(false);
+        setRejectingInqId(null);
+        setRejectReason('');
+        fetchAdminInquiries();
+      } else {
+        const data = await res.json();
+        showAlert('error', data.message || '환불 거절 실패');
+      }
+    } catch {
+      showAlert('error', '오류가 발생했습니다.');
     }
   };
 
@@ -1440,10 +1492,13 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                       (i) => i.status === 'ANSWERED',
                     ).length;
                     const normalCount = adminInquiries.filter(
-                      (i) => !i.isForBlock,
+                      (i) => i.type === 'GENERAL',
                     ).length;
                     const blockCount = adminInquiries.filter(
-                      (i) => i.isForBlock,
+                      (i) => i.type === 'BLOCK',
+                    ).length;
+                    const refundCount = adminInquiries.filter(
+                      (i) => i.type === 'REFUND',
                     ).length;
 
                     const emptyMsg =
@@ -1451,11 +1506,13 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         ? '차단 소명 문의가 없습니다.'
                         : inquiryBlockFilter === 'NORMAL'
                           ? '일반 문의가 없습니다.'
-                          : inquiryFilter === 'PENDING'
-                            ? '미답변 문의가 없습니다.'
-                            : inquiryFilter === 'ANSWERED'
-                              ? '답변 완료된 문의가 없습니다.'
-                              : '등록된 문의가 없습니다.';
+                          : inquiryBlockFilter === 'REFUND'
+                            ? '환불 문의가 없습니다.'
+                            : inquiryFilter === 'PENDING'
+                              ? '미답변 문의가 없습니다.'
+                              : inquiryFilter === 'ANSWERED'
+                                ? '답변 완료된 문의가 없습니다.'
+                                : '등록된 문의가 없습니다.';
 
                     return (
                       /* Inquiry Answering Tab */
@@ -1520,6 +1577,13 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                               border: 'rgba(255,165,0,0.6)',
                               bg: 'rgba(255,165,0,0.1)',
                               text: '#ffa500',
+                            },
+                            {
+                              key: 'REFUND' as const,
+                              label: `환불 문의 (${refundCount})`,
+                              border: 'rgba(255,75,75,0.6)',
+                              bg: 'rgba(255,75,75,0.1)',
+                              text: '#ff4b4b',
                             },
                           ].map(({ key, label, border, bg, text }) => {
                             const isActive = inquiryBlockFilter === key;
@@ -1675,21 +1739,38 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                                   >
                                     ID: {inq.visitorId}
                                   </span>
-                                  {inq.isForBlock && (
-                                    <span
-                                      style={{
-                                        fontSize: '0.65rem',
-                                        fontWeight: 'bold',
-                                        padding: '1px 5px',
-                                        borderRadius: '3px',
-                                        background: 'rgba(255,165,0,0.12)',
-                                        color: '#ffa500',
-                                        border: '1px solid rgba(255,165,0,0.3)',
-                                      }}
-                                    >
-                                      차단 소명
-                                    </span>
-                                  )}
+                                  <span
+                                    style={{
+                                      fontSize: '0.65rem',
+                                      fontWeight: 'bold',
+                                      padding: '1px 5px',
+                                      borderRadius: '3px',
+                                      background:
+                                        inq.type === 'REFUND'
+                                          ? 'rgba(255, 75, 75, 0.15)'
+                                          : inq.type === 'BLOCK'
+                                            ? 'rgba(255,165,0,0.12)'
+                                            : 'rgba(255,255,255,0.06)',
+                                      color:
+                                        inq.type === 'REFUND'
+                                          ? '#ff4b4b'
+                                          : inq.type === 'BLOCK'
+                                            ? '#ffa500'
+                                            : 'var(--text-dim)',
+                                      border:
+                                        inq.type === 'REFUND'
+                                          ? '1px solid rgba(255,75,75,0.3)'
+                                          : inq.type === 'BLOCK'
+                                            ? '1px solid rgba(255,165,0,0.3)'
+                                            : '1px solid rgba(255,255,255,0.08)',
+                                    }}
+                                  >
+                                    {inq.type === 'REFUND'
+                                      ? '환불 문의'
+                                      : inq.type === 'BLOCK'
+                                        ? '차단 소명'
+                                        : '일반 문의'}
+                                  </span>
                                 </div>
                                 <span
                                   style={{
@@ -1698,18 +1779,34 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                                     padding: '2px 6px',
                                     borderRadius: '4px',
                                     background:
-                                      inq.status === 'ANSWERED'
-                                        ? 'rgba(0, 240, 255, 0.1)'
-                                        : 'rgba(255, 75, 75, 0.1)',
+                                      inq.refundStatus === 'CONFIRMED'
+                                        ? 'rgba(0, 240, 255, 0.12)'
+                                        : inq.refundStatus === 'PROPOSED'
+                                          ? 'rgba(255, 165, 0, 0.15)'
+                                          : inq.status === 'ANSWERED'
+                                            ? 'rgba(0, 240, 255, 0.1)'
+                                            : 'rgba(255, 75, 75, 0.1)',
                                     color:
-                                      inq.status === 'ANSWERED'
+                                      inq.refundStatus === 'CONFIRMED'
                                         ? 'var(--primary-cyan)'
-                                        : '#ff4b4b',
+                                        : inq.refundStatus === 'PROPOSED'
+                                          ? '#ffa500'
+                                          : inq.status === 'ANSWERED'
+                                            ? 'var(--primary-cyan)'
+                                            : '#ff4b4b',
                                   }}
                                 >
-                                  {inq.status === 'ANSWERED'
-                                    ? '답변완료'
-                                    : '미답변'}
+                                  {inq.refundStatus === 'CONFIRMED'
+                                    ? '환불 완료'
+                                    : inq.refundStatus === 'PROPOSED'
+                                      ? '승인 대기'
+                                      : inq.refundStatus === 'CANCELLED'
+                                        ? '취소 완료'
+                                        : inq.refundStatus === 'REJECTED'
+                                          ? '환불 거절'
+                                          : inq.status === 'ANSWERED'
+                                            ? '답변 완료'
+                                            : '미답변'}
                                 </span>
                               </div>
                               <strong
@@ -1733,7 +1830,113 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                                 {inq.content}
                               </p>
 
-                              {inq.status === 'PENDING' ? (
+                              {inq.type === 'REFUND' && inq.paymentInfo && (
+                                <div
+                                  style={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    borderRadius: '6px',
+                                    padding: '8px 12px',
+                                    marginBottom: '10px',
+                                    fontSize: '0.75rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <div>
+                                    <strong>연동 결제 ID:</strong>{' '}
+                                    {inq.paymentInfo.paymentId}
+                                  </div>
+                                  <div>
+                                    <strong>결제 금액:</strong>{' '}
+                                    {inq.paymentInfo.amount?.toLocaleString()}원
+                                    (
+                                    {new Date(
+                                      inq.paymentInfo.createdAt,
+                                    ).toLocaleDateString()}
+                                    )
+                                  </div>
+                                  <div>
+                                    <strong>충전된 HON:</strong>{' '}
+                                    {inq.paymentInfo.chargedHon} HON
+                                  </div>
+                                  <div>
+                                    <strong>현재 보유 HON:</strong>{' '}
+                                    {inq.paymentInfo.currentBalance} HON
+                                  </div>
+                                  <div
+                                    style={{
+                                      color: 'var(--primary-cyan)',
+                                      fontWeight: 'bold',
+                                    }}
+                                  >
+                                    <strong>예상 환불 금액:</strong>{' '}
+                                    {inq.paymentInfo.calculatedRefundAmount?.toLocaleString()}
+                                    원
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: '0.68rem',
+                                      color: 'var(--text-dim)',
+                                      marginTop: '2px',
+                                    }}
+                                  >
+                                    * 가입 이벤트로 지급된 50 HON은 보유 HON에서
+                                    제외된 상태로 계산되었습니다.
+                                  </div>
+                                </div>
+                              )}
+
+                              {inq.type === 'REFUND' &&
+                              inq.refundStatus === 'PENDING' ? (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    gap: '8px',
+                                    marginTop: '10px',
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => handleProposeRefund(inq.id)}
+                                    className="btn-submit"
+                                    style={{
+                                      flex: 1,
+                                      height: '32px',
+                                      fontSize: '0.78rem',
+                                      background:
+                                        'linear-gradient(135deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)',
+                                      color: '#0f111a',
+                                      border: 'none',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    승인 제안
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setRejectingInqId(inq.id);
+                                      setRejectReason('');
+                                      setRejectModalOpen(true);
+                                    }}
+                                    style={{
+                                      flex: 1,
+                                      height: '32px',
+                                      fontSize: '0.78rem',
+                                      background: 'rgba(255, 75, 75, 0.15)',
+                                      color: '#ff4b4b',
+                                      border:
+                                        '1px solid rgba(255, 75, 75, 0.3)',
+                                      fontWeight: 'bold',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    환불 거절
+                                  </button>
+                                </div>
+                              ) : inq.status === 'PENDING' ? (
                                 <div
                                   style={{
                                     display: 'flex',
@@ -2151,6 +2354,102 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
             >
               닫기
             </button>
+          </div>
+        )}
+        {rejectModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+            }}
+          >
+            <div
+              className="glass-card"
+              style={{
+                maxWidth: '400px',
+                width: '90%',
+                padding: '24px',
+                border: '1px solid rgba(255, 75, 75, 0.2)',
+                background: 'rgba(15, 17, 26, 0.95)',
+                borderRadius: '12px',
+                textAlign: 'left',
+              }}
+            >
+              <h4
+                style={{
+                  color: '#ff4b4b',
+                  margin: '0 0 12px 0',
+                  fontSize: '1rem',
+                }}
+              >
+                환불 거절 사유 입력
+              </h4>
+              <textarea
+                className="input-glow"
+                placeholder="거절 사유를 작성해 주세요..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  fontSize: '0.82rem',
+                  padding: '8px',
+                  boxSizing: 'border-box',
+                  marginBottom: '16px',
+                  resize: 'none',
+                }}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  justifyContent: 'flex-end',
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setRejectModalOpen(false);
+                    setRejectingInqId(null);
+                    setRejectReason('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: 'var(--text-main)',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleRejectRefundSubmit}
+                  style={{
+                    background: 'var(--primary-purple)',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    fontSize: '0.78rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  거절 완료
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
