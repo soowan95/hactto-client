@@ -27,7 +27,6 @@ export function UnsavedChangesModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-
   const handleLeave = () => {
     if (unsavedActionTarget) {
       unsavedActionTarget();

@@ -1224,7 +1224,6 @@ export function Generate() {
             document.body,
           )}
 
-
         {showWarningModal &&
           createPortal(
             <div className="admin-modal-overlay" style={{ zIndex: 1100 }}>
@@ -1395,13 +1394,16 @@ export function Generate() {
               margin: '0 auto',
             }}
           >
-            현재 hactto는 <strong>IP 기반 식별자</strong>를 사용하여 로그인 없이 간편하게 이용할 수 있도록 구축되어 있습니다.
+            현재 hactto는 <strong>IP 기반 식별자</strong>를 사용하여 로그인 없이
+            간편하게 이용할 수 있도록 구축되어 있습니다.
             <br />
             <br />
-            모바일 네트워크 환경(LTE/5G/유동 IP) 특성상 모바일 예측/분석 및 HON 크레딧 사용 기능은 현재 <strong>준비 중</strong>에 있습니다.
+            모바일 네트워크 환경(LTE/5G/유동 IP) 특성상 모바일 예측/분석 및 HON
+            크레딧 사용 기능은 현재 <strong>준비 중</strong>에 있습니다.
             <br />
             <br />
-            PC 브라우저로 접속하시면 모든 예측 번호 생성 및 분석 기능을 즉시 정상 이용하실 수 있습니다.
+            PC 브라우저로 접속하시면 모든 예측 번호 생성 및 분석 기능을 즉시
+            정상 이용하실 수 있습니다.
           </p>
         </div>
       </div>

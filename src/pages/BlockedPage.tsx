@@ -23,14 +23,13 @@ export function BlockedPage() {
   const [viewMode, setViewMode] = useState<'form' | 'list' | 'success'>('form');
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loadingList, setLoadingList] = useState(false);
+  const hasPendingBlock = inquiries.some((i) => i.status === 'PENDING');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchInquiries = useCallback(async (silent = false) => {
     if (!silent) setLoadingList(true);
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/manager/inquiries?forBlock=true`,
-      );
+      const res = await fetch(`${API_BASE_URL}/visitor/inquiries?type=BLOCK`);
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.data)
@@ -69,12 +68,12 @@ export function BlockedPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/inquiries`, {
+      const res = await fetch(`${API_BASE_URL}/visitor/inquiries`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, content, isForBlock: true }),
+        body: JSON.stringify({ title, content, type: 'BLOCK' }),
       });
 
       if (res.ok) {
@@ -279,7 +278,13 @@ export function BlockedPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setViewMode(viewMode === 'form' ? 'list' : 'form')
+                  setViewMode(
+                    viewMode === 'form'
+                      ? 'list'
+                      : hasPendingBlock
+                        ? 'list'
+                        : 'form',
+                  )
                 }
                 style={{
                   background: 'none',
@@ -291,7 +296,11 @@ export function BlockedPage() {
                   padding: '2px 6px',
                 }}
               >
-                {viewMode === 'form' ? '답변 보기' : '재문의하기'}
+                {viewMode === 'form'
+                  ? '답변 보기'
+                  : hasPendingBlock
+                    ? '문의 내역'
+                    : '재문의하기'}
               </button>
             )}
           </div>
@@ -366,18 +375,20 @@ export function BlockedPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setViewMode('form')}
+                  onClick={() => !hasPendingBlock && setViewMode('form')}
+                  disabled={hasPendingBlock}
                   style={{
                     flex: 1,
                     height: '36px',
-                    background:
-                      'linear-gradient(135deg, #ff4b4b 0%, var(--primary-purple) 100%)',
+                    background: hasPendingBlock
+                      ? 'rgba(255, 255, 255, 0.05)'
+                      : 'linear-gradient(135deg, #ff4b4b 0%, var(--primary-purple) 100%)',
                     border: 'none',
-                    color: '#ffffff',
+                    color: hasPendingBlock ? 'var(--text-dim)' : '#ffffff',
                     borderRadius: '6px',
                     fontSize: '0.8rem',
                     fontWeight: 'bold',
-                    cursor: 'pointer',
+                    cursor: hasPendingBlock ? 'not-allowed' : 'pointer',
                   }}
                 >
                   재문의
@@ -396,6 +407,22 @@ export function BlockedPage() {
                 textAlign: 'left',
               }}
             >
+              {hasPendingBlock && (
+                <div
+                  style={{
+                    background: 'rgba(255, 75, 75, 0.1)',
+                    border: '1px solid rgba(255, 75, 75, 0.2)',
+                    color: '#ff4b4b',
+                    fontSize: '0.78rem',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    marginBottom: '4px',
+                  }}
+                >
+                  현재 답변 대기 중인 소명 문의가 있습니다. 답변을 받기 전에는
+                  추가 소명 제출이 불가능합니다.
+                </div>
+              )}
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}
               >
@@ -412,6 +439,7 @@ export function BlockedPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}
                   style={{ fontSize: '0.82rem', height: '36px' }}
+                  disabled={hasPendingBlock}
                 />
               </div>
               <div
@@ -435,22 +463,24 @@ export function BlockedPage() {
                     padding: '10px',
                     lineHeight: '1.5',
                   }}
+                  disabled={hasPendingBlock}
                 />
               </div>
               <button
                 type="submit"
                 className="btn-submit"
-                disabled={submitting}
+                disabled={submitting || hasPendingBlock}
                 style={{
                   height: '38px',
-                  background:
-                    'linear-gradient(135deg, #ff4b4b 0%, var(--primary-purple) 100%)',
-                  color: '#ffffff',
+                  background: hasPendingBlock
+                    ? 'rgba(255, 255, 255, 0.05)'
+                    : 'linear-gradient(135deg, #ff4b4b 0%, var(--primary-purple) 100%)',
+                  color: hasPendingBlock ? 'var(--text-dim)' : '#ffffff',
                   fontWeight: 'bold',
                   border: 'none',
                   fontSize: '0.82rem',
                   marginTop: '4px',
-                  cursor: 'pointer',
+                  cursor: hasPendingBlock ? 'not-allowed' : 'pointer',
                 }}
               >
                 {submitting ? '전송 중...' : '소명서 제출하기'}

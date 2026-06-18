@@ -128,7 +128,6 @@ export function Search() {
       >
         역대 로또 당첨번호 조회
       </h2>
-
       {/* Search Form */}
       <form
         onSubmit={handleSearchEpisode}
@@ -160,14 +159,12 @@ export function Search() {
           {submitting ? '검색 중...' : '회차 검색'}
         </button>
       </form>
-
       {searchError && (
         <div className="alert alert-error" style={{ marginBottom: '20px' }}>
           <span>⚠</span>
           <div>{searchError}</div>
         </div>
       )}
-
       {searchResult && (
         <div
           onClick={() => handleSelectEpisode(searchResult.episode)}
@@ -206,7 +203,6 @@ export function Search() {
           <LottoBalls numbers={searchResult.numbers} />
         </div>
       )}
-
       {/* Previous list */}
       <h3
         style={{
@@ -265,11 +261,10 @@ export function Search() {
             )}
           </tbody>
         </table>
-      </div>      {selectedEpisode &&
+      </div>{' '}
+      {selectedEpisode &&
         createPortal(
-          <div
-            className="admin-modal-overlay"
-          >
+          <div className="admin-modal-overlay">
             <div
               className="glass-card admin-modal-content"
               style={{
@@ -351,7 +346,8 @@ export function Search() {
                     marginBottom: '20px',
                   }}
                 >
-                  당첨 번호 조합 및 통계 데이터를 바탕으로 분석 정보를 제공합니다.
+                  당첨 번호 조합 및 통계 데이터를 바탕으로 분석 정보를
+                  제공합니다.
                 </p>
 
                 <LottoAnalysisCard

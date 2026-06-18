@@ -24,7 +24,6 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-
   const handleNext = () => {
     if (step < 4) {
       setStep(step + 1);

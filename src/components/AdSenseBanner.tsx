@@ -32,13 +32,18 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     const initAd = () => {
       try {
         if (typeof window !== 'undefined' && window.adsbygoogle) {
-          const insElements = document.querySelectorAll(`.adsbygoogle[data-ad-slot="${slot}"]`);
+          const insElements = document.querySelectorAll(
+            `.adsbygoogle[data-ad-slot="${slot}"]`,
+          );
           let hasWidth = false;
 
           for (let i = 0; i < insElements.length; i++) {
             const el = insElements[i] as HTMLElement;
             // Check if the element or its parent has width > 0
-            if (el.clientWidth > 0 || (el.parentElement && el.parentElement.clientWidth > 0)) {
+            if (
+              el.clientWidth > 0 ||
+              (el.parentElement && el.parentElement.clientWidth > 0)
+            ) {
               hasWidth = true;
               break;
             }
@@ -49,7 +54,9 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
               retries++;
               setTimeout(initAd, 200); // Retry in 200ms
             } else {
-              console.warn(`AdSense slot ${slot} initialization skipped: container width is 0.`);
+              console.warn(
+                `AdSense slot ${slot} initialization skipped: container width is 0.`,
+              );
             }
             return;
           }
