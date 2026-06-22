@@ -671,6 +671,34 @@ export function Support() {
                             )}
                           </div>
                         )}
+                        {inq.type === 'REFUND' && inq.status === 'PENDING' && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '8px',
+                              marginTop: '12px',
+                              borderTop: '1px solid rgba(255,255,255,0.06)',
+                              paddingTop: '8px',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleCancelRefund(inq.id)}
+                              style={{
+                                width: '100%',
+                                height: '32px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                color: '#ef4444',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              환불 요청 취소
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

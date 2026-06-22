@@ -10,8 +10,6 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
   const [step, setStep] = useState(1);
   const [showHonTooltip, setShowHonTooltip] = useState(false);
 
-  if (!isOpen) return null;
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -23,6 +21,8 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   const handleNext = () => {
     if (step < 4) {

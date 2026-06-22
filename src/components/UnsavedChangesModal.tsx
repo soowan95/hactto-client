@@ -13,8 +13,6 @@ export function UnsavedChangesModal({
   const { unsavedActionTarget, setUnsavedActionTarget, setHasUnsavedWeights } =
     useApp();
 
-  if (!isOpen) return null;
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -26,6 +24,8 @@ export function UnsavedChangesModal({
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   const handleLeave = () => {
     if (unsavedActionTarget) {

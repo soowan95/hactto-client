@@ -53,7 +53,8 @@ interface AppContextType {
   setIsSystemAnalyzing: (val: boolean) => void;
   showWelcomeModal: boolean;
   setShowWelcomeModal: (val: boolean) => void;
-  honBalance: number;
+  freeHon: number;
+  paidHon: number;
   subscription: SubscriptionStatus | null;
   isBlockedUser: boolean;
   setIsBlockedUser: (val: boolean) => void;
@@ -88,7 +89,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   // HON / Billing status states
-  const [honBalance, setHonBalance] = useState<number>(0);
+  const [freeHon, setFreeHon] = useState<number>(0);
+  const [paidHon, setPaidHon] = useState<number>(0);
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
     null,
   );
@@ -207,7 +209,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const adminResult = adminData.data || adminData;
 
           if (adminRes.ok && adminResult.allowed) {
-            setHonBalance(adminResult.hon?.balance || 0);
+            const fHon = adminResult.hon?.freeBalance || 0;
+            const pHon = adminResult.hon?.paidBalance || 0;
+            setFreeHon(fHon);
+            setPaidHon(pHon);
             setSubscription(adminResult.subscription || null);
             setAllowed(true);
             setPending(false);
@@ -267,7 +272,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         const result = data.data || data;
 
-        setHonBalance(result.hon?.balance || 0);
+        const fHon = result.hon?.freeBalance || 0;
+        const pHon = result.hon?.paidBalance || 0;
+        setFreeHon(fHon);
+        setPaidHon(pHon);
         setSubscription(result.subscription || null);
         setAllowed(true);
         setPending(false);
@@ -501,7 +509,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsSystemAnalyzing,
         showWelcomeModal,
         setShowWelcomeModal,
-        honBalance,
+        freeHon,
+        paidHon,
         subscription,
         isBlockedUser,
         setIsBlockedUser,
