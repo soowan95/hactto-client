@@ -23,7 +23,8 @@ export function Layout() {
     setShowAdminModal,
     showWelcomeModal,
     setShowWelcomeModal,
-    honBalance,
+    freeHon,
+    paidHon,
     subscription,
     checkIpStatus,
   } = useApp();
@@ -102,97 +103,212 @@ export function Layout() {
               </span>
 
               {/* 남은 혼(Hon) 충전 정보 위젯 */}
-              {!isMobileOrTablet &&
-                (() => {
-                  const isSubscribed =
-                    subscription && subscription.status === 'ACTIVE';
-                  const isMonthly =
-                    isSubscribed && subscription.plan === 'MONTHLY';
-                  const isYearly =
-                    isSubscribed && subscription.plan === 'YEARLY';
+              {(() => {
+                const isSubscribed =
+                  subscription && subscription.status === 'ACTIVE';
+                const isMonthly =
+                  isSubscribed && subscription.plan === 'MONTHLY';
+                const isYearly = isSubscribed && subscription.plan === 'YEARLY';
 
-                  let widgetText = `${honBalance} HON`;
-                  let badgeText = '충전';
-                  let themeColor = 'var(--primary-cyan)';
-                  let bgGlow = 'rgba(0, 240, 255, 0.05)';
-                  let borderGlow = 'rgba(0, 240, 255, 0.2)';
+                const totalHon = freeHon + paidHon;
+                let widgetText = `${totalHon} HON`;
+                const tooltipText = `보유 HON: ${totalHon} (이벤트 무료: ${freeHon} / 충전 유료: ${paidHon})`;
+                let badgeText = '충전';
+                let themeColor = 'var(--primary-cyan)';
+                let bgGlow = 'rgba(0, 240, 255, 0.05)';
+                let borderGlow = 'rgba(0, 240, 255, 0.2)';
 
-                  if (isMonthly) {
-                    widgetText = '월간 무제한';
-                    badgeText = '구독';
-                    themeColor = 'var(--primary-purple)';
-                    bgGlow = 'rgba(168, 85, 247, 0.05)';
-                    borderGlow = 'rgba(168, 85, 247, 0.2)';
-                  } else if (isYearly) {
-                    widgetText = '연간 무제한';
-                    badgeText = '구독';
-                    themeColor = '#eab308';
-                    bgGlow = 'rgba(234, 179, 8, 0.05)';
-                    borderGlow = 'rgba(234, 179, 8, 0.2)';
-                  }
+                if (isMonthly) {
+                  widgetText = '월간 무제한';
+                  badgeText = '구독';
+                  themeColor = 'var(--primary-purple)';
+                  bgGlow = 'rgba(168, 85, 247, 0.05)';
+                  borderGlow = 'rgba(168, 85, 247, 0.2)';
+                } else if (isYearly) {
+                  widgetText = '연간 무제한';
+                  badgeText = '구독';
+                  themeColor = '#eab308';
+                  bgGlow = 'rgba(234, 179, 8, 0.05)';
+                  borderGlow = 'rgba(234, 179, 8, 0.2)';
+                }
 
-                  return (
-                    <div
-                      onClick={() => setShowPaymentModal(true)}
-                      style={{
-                        marginLeft: '18px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        background: bgGlow,
-                        border: `1px solid ${borderGlow}`,
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = themeColor;
-                        e.currentTarget.style.background = isMonthly
-                          ? 'rgba(168, 85, 247, 0.1)'
-                          : isYearly
-                            ? 'rgba(234, 179, 8, 0.1)'
-                            : 'rgba(0, 240, 255, 0.1)';
-                        e.currentTarget.style.boxShadow = isMonthly
-                          ? '0 0 10px rgba(168, 85, 247, 0.3)'
-                          : isYearly
-                            ? '0 0 10px rgba(234, 179, 8, 0.3)'
-                            : '0 0 10px rgba(0, 240, 255, 0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = borderGlow;
-                        e.currentTarget.style.background = bgGlow;
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                      title="크레딧 충전 상점 열기"
-                    >
-                      <span
-                        style={{
-                          fontSize: '0.8rem',
-                          fontWeight: '600',
-                          color: themeColor,
-                        }}
-                      >
-                        {widgetText}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.65rem',
-                          background: themeColor,
-                          color: isYearly ? '#090a0f' : '#0a0b10',
-                          padding: '1px 4px',
-                          borderRadius: '3px',
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {badgeText}
-                      </span>
-                    </div>
-                  );
-                })()}
+                return (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: bgGlow,
+                      border: `1px solid ${borderGlow}`,
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      marginLeft: '18px',
+                    }}
+                    title={tooltipText}
+                  >
+                    {isSubscribed ? (
+                      <>
+                        <span
+                          style={{
+                            fontSize: '0.8rem',
+                            fontWeight: '600',
+                            color: themeColor,
+                          }}
+                        >
+                          {widgetText}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.65rem',
+                            background: themeColor,
+                            color: isYearly ? '#090a0f' : '#0a0b10',
+                            padding: '1px 4px',
+                            borderRadius: '3px',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {badgeText}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {!isMobileOrTablet ? (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '0.75rem',
+                            }}
+                          >
+                            <span style={{ color: 'var(--text-dim)' }}>
+                              보유 HON:
+                            </span>
+                            <span
+                              style={{ fontWeight: '700', color: '#ffffff' }}
+                            >
+                              {totalHon}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '0.7rem',
+                                color: 'rgba(255, 255, 255, 0.3)',
+                              }}
+                            >
+                              |
+                            </span>
+                            <span
+                              style={{
+                                color: 'var(--primary-cyan)',
+                                opacity: 0.9,
+                              }}
+                            >
+                              이벤트 {freeHon}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '0.7rem',
+                                color: 'rgba(255, 255, 255, 0.3)',
+                              }}
+                            >
+                              |
+                            </span>
+                            <span style={{ color: '#eab308', opacity: 0.9 }}>
+                              충전 {paidHon}
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '0.75rem',
+                            }}
+                          >
+                            <span
+                              style={{ fontWeight: '700', color: '#ffffff' }}
+                            >
+                              🪙 {totalHon}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '0.65rem',
+                                color: 'rgba(255, 255, 255, 0.4)',
+                              }}
+                            >
+                              ({freeHon}/{paidHon})
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              {/* 독립된 결제/충전 버튼 */}
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  border: '1px solid transparent',
+                  backgroundImage:
+                    'linear-gradient(rgba(10, 11, 16, 0.85), rgba(10, 11, 16, 0.85)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)',
+                  backgroundOrigin: 'border-box',
+                  backgroundClip: 'padding-box, border-box',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 0 8px rgba(0, 240, 255, 0.1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform =
+                    'translateY(-1px) scale(1.04)';
+                  e.currentTarget.style.backgroundImage =
+                    'linear-gradient(rgba(0, 240, 255, 0.1), rgba(168, 85, 247, 0.1)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)';
+                  e.currentTarget.style.boxShadow =
+                    '0 0 15px rgba(0, 240, 255, 0.35), 0 0 5px rgba(168, 85, 247, 0.35)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.backgroundImage =
+                    'linear-gradient(rgba(10, 11, 16, 0.85), rgba(10, 11, 16, 0.85)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)';
+                  e.currentTarget.style.boxShadow =
+                    '0 0 8px rgba(0, 240, 255, 0.1)';
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '0.85rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  🪙
+                </span>
+                <span
+                  style={{
+                    background:
+                      'linear-gradient(135deg, #00f0ff 0%, #e9d5ff 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  충전 / 구독
+                </span>
+              </button>
+
               <button
                 onClick={() => setShowHelpModal(true)}
                 style={{

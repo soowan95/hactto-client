@@ -19,7 +19,8 @@ export function PaymentModal({
   onClose,
   onSuccess,
 }: PaymentModalProps) {
-  const { visitorId, showAlert, alert, subscription, checkIpStatus } = useApp();
+  const { visitorId, showAlert, alert, subscription, checkIpStatus, paidHon } =
+    useApp();
   const [purchasing, setPurchasing] = useState<boolean>(false);
   const [cancelling, setCancelling] = useState<boolean>(false);
   const [paymentStatus, setPaymentStatus] = useState<{
@@ -29,6 +30,8 @@ export function PaymentModal({
   const [showRefundModal, setShowRefundModal] = useState<boolean>(false);
   const [showUpgradeConfirmModal, setShowUpgradeConfirmModal] =
     useState<boolean>(false);
+
+  const [hasActiveRefund, setHasActiveRefund] = useState<boolean>(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,6 +44,31 @@ export function PaymentModal({
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (isOpen && visitorId) {
+      const checkRefundInquiries = async () => {
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/visitor/inquiries?type=REFUND`,
+          );
+          if (res.ok) {
+            const result = await res.json();
+            const refundList = result.data || [];
+            // Check if there's any inquiry where status is PENDING or refundStatus is PROPOSED
+            const active = refundList.some(
+              (inq: { status: string; refundStatus?: string }) =>
+                inq.status === 'PENDING' || inq.refundStatus === 'PROPOSED',
+            );
+            setHasActiveRefund(active);
+          }
+        } catch (err) {
+          console.error('Failed to check refund inquiries:', err);
+        }
+      };
+      checkRefundInquiries();
+    }
+  }, [isOpen, visitorId]);
 
   if (!isOpen) return null;
 
@@ -113,7 +141,8 @@ export function PaymentModal({
       });
 
       if (!readyRes.ok) {
-        throw new Error('결제 준비 작업에 실패했습니다.');
+        const errJson = await readyRes.json().catch(() => ({}));
+        throw new Error(errJson.message || '결제 준비 작업에 실패했습니다.');
       }
 
       // 2. 포트원 SDK 결제창 또는 빌링키 발급창 열기
@@ -382,6 +411,71 @@ export function PaymentModal({
           </div>
         )}
 
+        {hasActiveRefund && (
+          <div
+            style={{
+              marginBottom: '20px',
+              padding: '12px 16px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: '8px',
+              color: '#ef4444',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            ⚠️ 진행 중인 환불 문의 또는 최종 수락 대기 중인 환불 건이 있어 추가
+            결제 및 구독 신청이 제한됩니다.
+          </div>
+        )}
+
+        {subscription?.status === 'ACTIVE' && (
+          <div
+            style={{
+              marginBottom: '20px',
+              padding: '12px 16px',
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+              borderRadius: '8px',
+              color: '#60a5fa',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            ℹ️ 현재 {subscription.plan === 'YEARLY' ? '연간' : '월간'} 무제한
+            구독이 활성화되어 있어 HON 추가 결제가 불가능합니다.
+            {subscription.plan === 'YEARLY' &&
+              ' (연간 구독 중에는 월간 구독 결제도 불가합니다)'}
+          </div>
+        )}
+
+        {subscription?.status !== 'ACTIVE' && paidHon > 0 && (
+          <div
+            style={{
+              marginBottom: '20px',
+              padding: '12px 16px',
+              background: 'rgba(234, 179, 8, 0.1)',
+              border: '1px solid rgba(234, 179, 8, 0.25)',
+              borderRadius: '8px',
+              color: '#facc15',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            💡 보유하고 계신 충전/유료 HON({paidHon} HON)은 정기 구독을
+            취소/만료하신 후에 언제든 다시 이어서 이용하실 수 있습니다.
+          </div>
+        )}
+
         {/* 3열 카드 그리드 레이아웃 */}
         <div
           style={{
@@ -426,7 +520,11 @@ export function PaymentModal({
             >
               {/* 1,000원 -> 30혼 가로 미니 카드 */}
               <div
-                onClick={() => handlePayment(1000, '30 HON 충전')}
+                onClick={() =>
+                  !hasActiveRefund &&
+                  subscription?.status !== 'ACTIVE' &&
+                  handlePayment(1000, '30 HON 충전')
+                }
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -435,15 +533,26 @@ export function PaymentModal({
                   background: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(255, 255, 255, 0.06)',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor:
+                    hasActiveRefund || subscription?.status === 'ACTIVE'
+                      ? 'not-allowed'
+                      : 'pointer',
                   transition: 'all 0.2s ease',
                   flex: 1,
+                  opacity:
+                    hasActiveRefund || subscription?.status === 'ACTIVE'
+                      ? 0.4
+                      : 1,
                 }}
                 onMouseEnter={(e) => {
+                  if (hasActiveRefund || subscription?.status === 'ACTIVE')
+                    return;
                   e.currentTarget.style.borderColor = 'var(--primary-cyan)';
                   e.currentTarget.style.background = 'rgba(0, 240, 255, 0.04)';
                 }}
                 onMouseLeave={(e) => {
+                  if (hasActiveRefund || subscription?.status === 'ACTIVE')
+                    return;
                   e.currentTarget.style.borderColor =
                     'rgba(255, 255, 255, 0.06)';
                   e.currentTarget.style.background =
@@ -483,7 +592,11 @@ export function PaymentModal({
 
               {/* 3,000원 -> 100혼 가로 미니 카드 */}
               <div
-                onClick={() => handlePayment(3000, '100 HON 충전')}
+                onClick={() =>
+                  !hasActiveRefund &&
+                  subscription?.status !== 'ACTIVE' &&
+                  handlePayment(3000, '100 HON 충전')
+                }
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -492,15 +605,26 @@ export function PaymentModal({
                   background: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(255, 255, 255, 0.06)',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor:
+                    hasActiveRefund || subscription?.status === 'ACTIVE'
+                      ? 'not-allowed'
+                      : 'pointer',
                   transition: 'all 0.2s ease',
                   flex: 1,
+                  opacity:
+                    hasActiveRefund || subscription?.status === 'ACTIVE'
+                      ? 0.4
+                      : 1,
                 }}
                 onMouseEnter={(e) => {
+                  if (hasActiveRefund || subscription?.status === 'ACTIVE')
+                    return;
                   e.currentTarget.style.borderColor = 'var(--primary-cyan)';
                   e.currentTarget.style.background = 'rgba(0, 240, 255, 0.04)';
                 }}
                 onMouseLeave={(e) => {
+                  if (hasActiveRefund || subscription?.status === 'ACTIVE')
+                    return;
                   e.currentTarget.style.borderColor =
                     'rgba(255, 255, 255, 0.06)';
                   e.currentTarget.style.background =
@@ -540,7 +664,11 @@ export function PaymentModal({
 
               {/* 5,000원 -> 200혼 가로 미니 카드 */}
               <div
-                onClick={() => handlePayment(5000, '200 HON 충전')}
+                onClick={() =>
+                  !hasActiveRefund &&
+                  subscription?.status !== 'ACTIVE' &&
+                  handlePayment(5000, '200 HON 충전')
+                }
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -549,15 +677,26 @@ export function PaymentModal({
                   background: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(255, 255, 255, 0.06)',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor:
+                    hasActiveRefund || subscription?.status === 'ACTIVE'
+                      ? 'not-allowed'
+                      : 'pointer',
                   transition: 'all 0.2s ease',
                   flex: 1,
+                  opacity:
+                    hasActiveRefund || subscription?.status === 'ACTIVE'
+                      ? 0.4
+                      : 1,
                 }}
                 onMouseEnter={(e) => {
+                  if (hasActiveRefund || subscription?.status === 'ACTIVE')
+                    return;
                   e.currentTarget.style.borderColor = 'var(--primary-cyan)';
                   e.currentTarget.style.background = 'rgba(0, 240, 255, 0.04)';
                 }}
                 onMouseLeave={(e) => {
+                  if (hasActiveRefund || subscription?.status === 'ACTIVE')
+                    return;
                   e.currentTarget.style.borderColor =
                     'rgba(255, 255, 255, 0.06)';
                   e.currentTarget.style.background =
@@ -724,28 +863,70 @@ export function PaymentModal({
             ) : (
               <button
                 onClick={() => handlePayment(12000, '월간 무제한 구독')}
-                disabled={purchasing}
+                disabled={
+                  purchasing ||
+                  hasActiveRefund ||
+                  (subscription?.status === 'ACTIVE' &&
+                    subscription?.plan === 'YEARLY')
+                }
                 style={{
                   width: '100%',
                   marginTop: 'auto',
                   background:
-                    'linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%)',
-                  color: '#ffffff',
+                    hasActiveRefund ||
+                    (subscription?.status === 'ACTIVE' &&
+                      subscription?.plan === 'YEARLY')
+                      ? 'rgba(255, 255, 255, 0.05)'
+                      : 'linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%)',
+                  color:
+                    hasActiveRefund ||
+                    (subscription?.status === 'ACTIVE' &&
+                      subscription?.plan === 'YEARLY')
+                      ? 'var(--text-dim)'
+                      : '#ffffff',
                   fontWeight: '600',
                   fontSize: '0.95rem',
                   padding: '14px 24px',
                   borderRadius: '50px',
                   border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 20px rgba(168, 85, 247, 0.35)',
+                  cursor:
+                    hasActiveRefund ||
+                    (subscription?.status === 'ACTIVE' &&
+                      subscription?.plan === 'YEARLY')
+                      ? 'not-allowed'
+                      : 'pointer',
+                  boxShadow:
+                    hasActiveRefund ||
+                    (subscription?.status === 'ACTIVE' &&
+                      subscription?.plan === 'YEARLY')
+                      ? 'none'
+                      : '0 4px 20px rgba(168, 85, 247, 0.35)',
                   transition: 'all 0.2s ease-in-out',
+                  opacity:
+                    hasActiveRefund ||
+                    (subscription?.status === 'ACTIVE' &&
+                      subscription?.plan === 'YEARLY')
+                      ? 0.5
+                      : 1,
                 }}
                 onMouseEnter={(e) => {
+                  if (
+                    hasActiveRefund ||
+                    (subscription?.status === 'ACTIVE' &&
+                      subscription?.plan === 'YEARLY')
+                  )
+                    return;
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow =
                     '0 8px 30px rgba(168, 85, 247, 0.55)';
                 }}
                 onMouseLeave={(e) => {
+                  if (
+                    hasActiveRefund ||
+                    (subscription?.status === 'ACTIVE' &&
+                      subscription?.plan === 'YEARLY')
+                  )
+                    return;
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow =
                     '0 4px 20px rgba(168, 85, 247, 0.35)';
@@ -958,28 +1139,34 @@ export function PaymentModal({
             ) : (
               <button
                 onClick={() => handlePayment(100000, '연간 무제한 구독')}
-                disabled={purchasing}
+                disabled={purchasing || hasActiveRefund}
                 style={{
                   width: '100%',
                   marginTop: 'auto',
-                  background:
-                    'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
-                  color: '#090a0f',
+                  background: hasActiveRefund
+                    ? 'rgba(255, 255, 255, 0.05)'
+                    : 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                  color: hasActiveRefund ? 'var(--text-dim)' : '#090a0f',
                   fontWeight: '700',
                   fontSize: '0.95rem',
                   padding: '14px 24px',
                   borderRadius: '50px',
                   border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 20px rgba(234, 179, 8, 0.35)',
+                  cursor: hasActiveRefund ? 'not-allowed' : 'pointer',
+                  boxShadow: hasActiveRefund
+                    ? 'none'
+                    : '0 4px 20px rgba(234, 179, 8, 0.35)',
                   transition: 'all 0.2s ease-in-out',
+                  opacity: hasActiveRefund ? 0.5 : 1,
                 }}
                 onMouseEnter={(e) => {
+                  if (hasActiveRefund) return;
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow =
                     '0 8px 30px rgba(234, 179, 8, 0.55)';
                 }}
                 onMouseLeave={(e) => {
+                  if (hasActiveRefund) return;
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow =
                     '0 4px 20px rgba(234, 179, 8, 0.35)';

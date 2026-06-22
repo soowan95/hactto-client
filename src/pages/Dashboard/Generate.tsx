@@ -348,7 +348,9 @@ export function Generate() {
           if (errData && errData.message) {
             errorMsg = errData.message;
           }
-        } catch (_) {}
+        } catch {
+          // ignore error
+        }
         throw new Error(errorMsg);
       }
       const data = await res.json();
