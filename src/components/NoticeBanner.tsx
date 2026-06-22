@@ -139,7 +139,7 @@ export function NoticeBanner() {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/manager/notices`);
+        const res = await fetch(`${API_BASE_URL}/visitor/notices`);
         if (res.ok) {
           const data = await res.json();
           const list = Array.isArray(data.data)

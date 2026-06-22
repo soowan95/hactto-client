@@ -117,6 +117,7 @@ export function Generate() {
     analyzedResults.length,
     showWarningModal,
     showConfirmModal,
+    savedPredictionIds,
   ]);
 
   // Fetch the latest episode on mount

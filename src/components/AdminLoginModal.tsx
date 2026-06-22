@@ -264,7 +264,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   async function fetchAdminNotices() {
     setLoadingAdminNotices(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/admin/notices`);
+      const res = await fetch(`${API_BASE_URL}/manager/notices`);
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.data)
@@ -293,7 +293,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/admin/notices`, {
+      const res = await fetch(`${API_BASE_URL}/manager/notices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -319,7 +319,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const handleDeleteNotice = async (id: string) => {
     if (!confirm('정말 이 공지를 삭제하시겠습니까?')) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/admin/notices/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/manager/notices/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -449,7 +449,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     setVisitorDetails(null);
     try {
       const res = await fetch(
-        `${API_BASE_URL}/admin/visitors/${searchVisitorId.trim()}`,
+        `${API_BASE_URL}/manager/visitors/${searchVisitorId.trim()}`,
       );
       if (res.ok) {
         const data = await res.json();
@@ -474,7 +474,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     const endpoint = isBlocked ? 'unblock' : 'block';
     try {
       const res = await fetch(
-        `${API_BASE_URL}/admin/visitors/${visitorDetails.id}/${endpoint}`,
+        `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/${endpoint}`,
         {
           method: 'POST',
         },
@@ -486,7 +486,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         );
         // Refresh details
         const updatedRes = await fetch(
-          `${API_BASE_URL}/admin/visitors/${visitorDetails.id}`,
+          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}`,
         );
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);
@@ -506,7 +506,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
     try {
       const res = await fetch(
-        `${API_BASE_URL}/admin/visitors/${visitorDetails.id}/hon`,
+        `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/hon`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -518,7 +518,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         setManageHonAmount('');
         // Refresh details
         const updatedRes = await fetch(
-          `${API_BASE_URL}/admin/visitors/${visitorDetails.id}`,
+          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}`,
         );
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);
@@ -536,7 +536,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
     try {
       const res = await fetch(
-        `${API_BASE_URL}/admin/visitors/${visitorDetails.id}/subscription/unlimited`,
+        `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/subscription/unlimited`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -550,7 +550,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         setFreePassEndsAt('');
         // Refresh details
         const updatedRes = await fetch(
-          `${API_BASE_URL}/admin/visitors/${visitorDetails.id}`,
+          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}`,
         );
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);

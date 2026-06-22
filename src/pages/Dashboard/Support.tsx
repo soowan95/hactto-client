@@ -651,22 +651,6 @@ export function Support() {
                                 >
                                   환불 실행
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancelRefund(inq.id)}
-                                  style={{
-                                    flex: 1,
-                                    height: '32px',
-                                    background: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    color: 'var(--text-main)',
-                                    borderRadius: '4px',
-                                    fontSize: '0.75rem',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  문의 취소
-                                </button>
                               </div>
                             )}
                           </div>
