@@ -7,6 +7,7 @@ import PortOne from '@portone/browser-sdk/v2';
 import { Alert } from './Alert';
 import { RefundPolicyModal } from './RefundPolicyModal';
 import { UpgradeConfirmModal } from './UpgradeConfirmModal';
+import { SubscriptionCancelModal } from './SubscriptionCancelModal';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function PaymentModal({
   const [showRefundModal, setShowRefundModal] = useState<boolean>(false);
   const [showUpgradeConfirmModal, setShowUpgradeConfirmModal] =
     useState<boolean>(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
 
   const [hasActiveRefund, setHasActiveRefund] = useState<boolean>(false);
 
@@ -74,13 +76,6 @@ export function PaymentModal({
 
   const handleCancelSubscription = async () => {
     if (cancelling) return;
-    if (
-      !window.confirm(
-        '정말로 구독을 해지하시겠습니까? 해지 시 다음 결제일부터 자동 결제가 정지됩니다.',
-      )
-    ) {
-      return;
-    }
     try {
       setCancelling(true);
       const res = await fetch(`${API_BASE_URL}/payments/subscription/cancel`, {
@@ -97,6 +92,7 @@ export function PaymentModal({
         '정기 구독 해지(예약)가 완료되었습니다. 남은 기간 동안은 정상 이용 가능합니다.',
       );
       await checkIpStatus();
+      setCancelModalOpen(false);
       onSuccess();
     } catch (err: unknown) {
       const error = err as Error;
@@ -444,14 +440,28 @@ export function PaymentModal({
               fontSize: '0.85rem',
               fontWeight: '600',
               display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '4px',
             }}
           >
-            ℹ️ 현재 {subscription.plan === 'YEARLY' ? '연간' : '월간'} 무제한
-            구독이 활성화되어 있어 HON 추가 결제가 불가능합니다.
-            {subscription.plan === 'YEARLY' &&
-              ' (연간 구독 중에는 월간 구독 결제도 불가합니다)'}
+            <div>
+              ℹ️ 현재 {subscription.plan === 'YEARLY' ? '연간' : '월간'} 무제한
+              구독이 활성화되어 있어 HON 추가 결제가 불가능합니다.
+              {subscription.plan === 'YEARLY' &&
+                ' (연간 구독 중에는 월간 구독 결제도 불가합니다)'}
+            </div>
+            {subscription.endsAt && (
+              <div
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'rgba(255, 255, 255, 0.65)',
+                }}
+              >
+                구독 유효기간 (다음 결제일):{' '}
+                {new Date(subscription.endsAt).toLocaleDateString('ko-KR')}
+              </div>
+            )}
           </div>
         )}
 
@@ -804,31 +814,52 @@ export function PaymentModal({
 
             {subscription?.plan === 'MONTHLY' &&
             subscription.status === 'ACTIVE' ? (
-              <button
-                onClick={handleCancelSubscription}
-                disabled={cancelling}
+              <div
                 style={{
                   width: '100%',
                   marginTop: 'auto',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  color: '#ef4444',
-                  fontWeight: '600',
-                  fontSize: '0.95rem',
-                  padding: '14px 24px',
-                  borderRadius: '50px',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease-in-out',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                구독 해지하기 ⚠️
-              </button>
+                {subscription.endsAt && (
+                  <div
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--text-dim)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    구독 유효기간 (다음 결제일):{' '}
+                    {new Date(subscription.endsAt).toLocaleDateString('ko-KR')}
+                  </div>
+                )}
+                <button
+                  onClick={() => setCancelModalOpen(true)}
+                  disabled={cancelling}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    fontWeight: '600',
+                    fontSize: '0.95rem',
+                    padding: '14px 24px',
+                    borderRadius: '50px',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  }}
+                >
+                  구독 해지하기 ⚠️
+                </button>
+              </div>
             ) : subscription?.plan === 'MONTHLY' &&
               subscription.status === 'CANCELLED' ? (
               <div
@@ -847,17 +878,11 @@ export function PaymentModal({
                 }}
               >
                 <div>해지 예약 완료</div>
-                <div
-                  style={{
-                    fontSize: '0.75rem',
-                    marginTop: '4px',
-                    opacity: 0.8,
-                  }}
-                >
-                  만료 예정일:{' '}
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                  구독권 유효기간:{' '}
                   {subscription.endsAt
                     ? new Date(subscription.endsAt).toLocaleDateString('ko-KR')
-                    : '-'}
+                    : ''}
                 </div>
               </div>
             ) : (
@@ -1080,31 +1105,52 @@ export function PaymentModal({
 
             {subscription?.plan === 'YEARLY' &&
             subscription.status === 'ACTIVE' ? (
-              <button
-                onClick={handleCancelSubscription}
-                disabled={cancelling}
+              <div
                 style={{
                   width: '100%',
                   marginTop: 'auto',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  color: '#ef4444',
-                  fontWeight: '600',
-                  fontSize: '0.95rem',
-                  padding: '14px 24px',
-                  borderRadius: '50px',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease-in-out',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                구독 해지하기 ⚠️
-              </button>
+                {subscription.endsAt && (
+                  <div
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--text-dim)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    구독 유효기간 (다음 결제일):{' '}
+                    {new Date(subscription.endsAt).toLocaleDateString('ko-KR')}
+                  </div>
+                )}
+                <button
+                  onClick={() => setCancelModalOpen(true)}
+                  disabled={cancelling}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    fontWeight: '600',
+                    fontSize: '0.95rem',
+                    padding: '14px 24px',
+                    borderRadius: '50px',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  }}
+                >
+                  구독 해지하기 ⚠️
+                </button>
+              </div>
             ) : subscription?.plan === 'YEARLY' &&
               subscription.status === 'CANCELLED' ? (
               <div
@@ -1125,12 +1171,12 @@ export function PaymentModal({
                 <div>해지 예약 완료</div>
                 <div
                   style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.78rem',
                     marginTop: '4px',
-                    opacity: 0.8,
+                    color: 'var(--text-dim)',
                   }}
                 >
-                  만료 예정일:{' '}
+                  구독권 유효기간:{' '}
                   {subscription.endsAt
                     ? new Date(subscription.endsAt).toLocaleDateString('ko-KR')
                     : '-'}
@@ -1200,6 +1246,12 @@ export function PaymentModal({
             handlePayment(100000, '연간 무제한 구독', true);
           }}
           subscriptionEndsAt={subscription?.endsAt}
+        />
+        <SubscriptionCancelModal
+          isOpen={cancelModalOpen}
+          onClose={() => setCancelModalOpen(false)}
+          onConfirm={handleCancelSubscription}
+          loading={cancelling}
         />
       </div>
     </div>,
