@@ -19,7 +19,13 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     appendAuth,
     alert,
     setIsSystemAnalyzing,
+    handleAdminLogout,
   } = useApp();
+
+  const handleClose = () => {
+    handleAdminLogout();
+    onClose();
+  };
 
   const [activeTab, setActiveTab] = useState<
     'algo' | 'system' | 'notices' | 'inquiries' | 'visitors'
@@ -153,6 +159,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        handleAdminLogout();
         onClose();
       }
     };
@@ -160,7 +167,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, handleAdminLogout]);
 
   if (!isOpen) return null;
 
@@ -592,7 +599,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
             {isAuthSuccessLocal ? '관리자 제어판' : '관리자 키 인증'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               background: 'transparent',
               border: 'none',
@@ -615,8 +622,8 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                 className="access-desc"
                 style={{ fontSize: '0.85rem', marginBottom: '20px' }}
               >
-                이 화면은 인가된 관리자만 접근 가능합니다. 관리자 키를 입력하여
-                주십시오.
+                이 화면은 인가된 관리자만 접근 가능합니다. 구글 OTP
+                번호(6자리)를 입력하여 주십시오.
               </p>
 
               {adminError && (
@@ -638,13 +645,12 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
               <form onSubmit={handleAuthSubmit}>
                 <input
-                  type="password"
+                  type="text"
                   className="input-glow"
                   style={{ width: '100%', marginBottom: '16px' }}
-                  placeholder="Master Key 입력"
+                  placeholder="OTP 번호 6자리 입력"
                   value={adminKey}
                   onChange={(e) => setAdminKey(e.target.value)}
-                  autoComplete="current-password"
                   autoFocus
                 />
 
@@ -660,7 +666,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     type="button"
                     className="btn-neon btn-outline"
                     style={{ flex: 1, padding: 0, height: '42px' }}
-                    onClick={onClose}
+                    onClick={handleClose}
                   >
                     닫기
                   </button>
@@ -2285,7 +2291,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                                   border: 'none',
                                 }}
                               >
-                                패스 지급
+                                인증 확인
                               </button>
                             </div>
                           </form>
@@ -2350,7 +2356,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
             <button
               className="btn-neon btn-outline"
               style={{ height: '38px', padding: '0 20px', fontSize: '0.82rem' }}
-              onClick={onClose}
+              onClick={handleClose}
             >
               닫기
             </button>

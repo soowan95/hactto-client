@@ -68,7 +68,10 @@ export function Layout() {
 
   const isYearlySubscribed =
     subscription &&
-    subscription.status === 'ACTIVE' &&
+    (subscription.status === 'ACTIVE' ||
+      (subscription.status === 'CANCELLED' &&
+        subscription.endsAt &&
+        new Date(subscription.endsAt) > new Date())) &&
     subscription.plan === 'YEARLY';
 
   return (
@@ -105,7 +108,11 @@ export function Layout() {
               {/* 남은 혼(Hon) 충전 정보 위젯 */}
               {(() => {
                 const isSubscribed =
-                  subscription && subscription.status === 'ACTIVE';
+                  subscription &&
+                  (subscription.status === 'ACTIVE' ||
+                    (subscription.status === 'CANCELLED' &&
+                      subscription.endsAt &&
+                      new Date(subscription.endsAt) > new Date()));
                 const isMonthly =
                   isSubscribed && subscription.plan === 'MONTHLY';
                 const isYearly = isSubscribed && subscription.plan === 'YEARLY';
