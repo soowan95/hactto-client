@@ -84,6 +84,7 @@ export function Layout() {
       )}
 
       <div className="access-container dashboard-main-container">
+        <NoticeBanner />
         <div className="glass-card dashboard-container">
           <div
             className="admin-header"
@@ -141,6 +142,7 @@ export function Layout() {
 
                 return (
                   <div
+                    className="hon-widget"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -156,10 +158,12 @@ export function Layout() {
                     {isSubscribed ? (
                       <>
                         <span
+                          className="hon-widget-text"
                           style={{
                             fontSize: '0.8rem',
                             fontWeight: '600',
                             color: themeColor,
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           {widgetText}
@@ -188,7 +192,12 @@ export function Layout() {
                               fontSize: '0.75rem',
                             }}
                           >
-                            <span style={{ color: 'var(--text-dim)' }}>
+                            <span
+                              style={{
+                                color: 'var(--text-dim)',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
                               보유 HON:
                             </span>
                             <span
@@ -208,6 +217,7 @@ export function Layout() {
                               style={{
                                 color: 'var(--primary-cyan)',
                                 opacity: 0.9,
+                                whiteSpace: 'nowrap',
                               }}
                             >
                               이벤트 {freeHon}
@@ -220,7 +230,13 @@ export function Layout() {
                             >
                               |
                             </span>
-                            <span style={{ color: '#eab308', opacity: 0.9 }}>
+                            <span
+                              style={{
+                                color: '#eab308',
+                                opacity: 0.9,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
                               충전 {paidHon}
                             </span>
                           </div>
@@ -231,6 +247,7 @@ export function Layout() {
                               alignItems: 'center',
                               gap: '4px',
                               fontSize: '0.75rem',
+                              whiteSpace: 'nowrap',
                             }}
                           >
                             <span
@@ -436,8 +453,6 @@ export function Layout() {
               />
             </div>
           )}
-
-          <NoticeBanner />
 
           <div
             className="scroll-y-container"
