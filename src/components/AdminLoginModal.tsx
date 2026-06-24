@@ -622,8 +622,9 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                 className="access-desc"
                 style={{ fontSize: '0.85rem', marginBottom: '20px' }}
               >
-                이 화면은 인가된 관리자만 접근 가능합니다. 구글 OTP
-                번호(6자리)를 입력하여 주십시오.
+                이 화면은 인가된 관리자만 접근 가능합니다.
+                <br />
+                구글 OTP 번호(6자리)를 입력하여 주십시오.
               </p>
 
               {adminError && (

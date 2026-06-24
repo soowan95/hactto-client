@@ -8,7 +8,13 @@ interface Notice {
   endsAt: string;
 }
 
-function NoticeText({ currentNotice }: { currentNotice: Notice }) {
+function NoticeText({
+  currentNotice,
+  onClick,
+}: {
+  currentNotice: Notice;
+  onClick: () => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
@@ -30,12 +36,14 @@ function NoticeText({ currentNotice }: { currentNotice: Notice }) {
 
   return (
     <div
+      onClick={onClick}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
         flex: 1,
         overflow: 'hidden',
+        cursor: 'pointer',
       }}
     >
       <span
@@ -134,7 +142,7 @@ function NoticeText({ currentNotice }: { currentNotice: Notice }) {
 export function NoticeBanner() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isDismissed, setIsDismissed] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
     const fetchNotices = async () => {
@@ -157,104 +165,237 @@ export function NoticeBanner() {
     fetchNotices();
   }, []);
 
-  // Check if this notice was dismissed during this session
+  // Disable/Enable page scroll when detail modal is active
   useEffect(() => {
-    if (notices.length > 0) {
-      const dismissedNotices = JSON.parse(
-        sessionStorage.getItem('dismissed_notices') || '[]',
-      );
-      const currentNoticeId = notices[currentIndex]?.id;
-      if (dismissedNotices.includes(currentNoticeId)) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setIsDismissed(true);
-      } else {
-        setIsDismissed(false);
-      }
+    if (showDetail) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
-  }, [notices, currentIndex]);
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showDetail]);
 
-  if (notices.length === 0 || isDismissed) return null;
+  if (notices.length === 0) return null;
 
   const currentNotice = notices[currentIndex];
-
-  const handleDismiss = () => {
-    const dismissedNotices = JSON.parse(
-      sessionStorage.getItem('dismissed_notices') || '[]',
-    );
-    dismissedNotices.push(currentNotice.id);
-    sessionStorage.setItem(
-      'dismissed_notices',
-      JSON.stringify(dismissedNotices),
-    );
-    setIsDismissed(true);
-  };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % notices.length);
   };
 
   return (
-    <div
-      style={{
-        width: '100%',
-        background:
-          'linear-gradient(90deg, rgba(0, 240, 255, 0.15) 0%, rgba(157, 0, 255, 0.15) 100%)',
-        border: '1px solid rgba(0, 240, 255, 0.25)',
-        backdropFilter: 'blur(8px)',
-        borderRadius: '8px',
-        padding: '10px 16px',
-        marginBottom: '16px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '12px',
-        boxShadow: '0 0 15px rgba(0, 240, 255, 0.1)',
-        animation: 'pulse 3s infinite alternate',
-        flexShrink: 0,
-      }}
-    >
-      <NoticeText currentNotice={currentNotice} />
-
+    <>
       <div
         style={{
+          width: '100%',
+          background:
+            'linear-gradient(90deg, rgba(0, 240, 255, 0.15) 0%, rgba(157, 0, 255, 0.15) 100%)',
+          border: '1px solid rgba(0, 240, 255, 0.25)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: '8px',
+          padding: '10px 16px',
+          marginBottom: '16px',
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '10px',
+          gap: '12px',
+          boxShadow: '0 0 15px rgba(0, 240, 255, 0.1)',
+          animation: 'pulse 3s infinite alternate',
           flexShrink: 0,
         }}
       >
-        {notices.length > 1 && (
-          <button
-            onClick={handleNext}
+        <NoticeText
+          currentNotice={currentNotice}
+          onClick={() => setShowDetail(true)}
+        />
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexShrink: 0,
+          }}
+        >
+          {notices.length > 1 && (
+            <button
+              onClick={handleNext}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: 'var(--text-dim)',
+                fontSize: '0.7rem',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              다음 공지 ({currentIndex + 1}/{notices.length})
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showDetail && (
+        <div
+          onClick={() => setShowDetail(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 4, 8, 0.8)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: 'var(--text-dim)',
-              fontSize: '0.7rem',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              cursor: 'pointer',
+              width: '100%',
+              maxWidth: '540px',
+              background: 'var(--bg-card)',
+              border: 'var(--border-glass)',
+              boxShadow:
+                '0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '100%',
+              overflow: 'hidden',
             }}
           >
-            다음 공지 ({currentIndex + 1}/{notices.length})
-          </button>
-        )}
-        <button
-          onClick={handleDismiss}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-dim)',
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            padding: '2px',
-            lineHeight: 1,
-          }}
-          title="오늘 하루 닫기"
-        >
-          ✕
-        </button>
-      </div>
-    </div>
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px 20px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <span
+                  style={{
+                    background: 'var(--primary-cyan)',
+                    color: '#0a0b10',
+                    fontSize: '0.65rem',
+                    fontWeight: 'bold',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  NOTICE
+                </span>
+                <span
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    color: '#ffffff',
+                  }}
+                >
+                  공지사항
+                </span>
+              </div>
+              <button
+                onClick={() => setShowDetail(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-dim)',
+                  fontSize: '1.2rem',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content (No bottom spacing issues & cleanly scrollable internal content if too long) */}
+            <div
+              style={{
+                padding: '20px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                flex: 1,
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    fontSize: '1.15rem',
+                    fontWeight: 'bold',
+                    color: 'var(--primary-cyan)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  {currentNotice.title}
+                </h3>
+                {currentNotice.endsAt && (
+                  <span
+                    style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
+                  >
+                    게시 종료일:{' '}
+                    {new Date(currentNotice.endsAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              <div
+                style={{
+                  fontSize: '0.92rem',
+                  lineHeight: '1.6',
+                  color: 'var(--text-main)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {currentNotice.content}
+              </div>
+            </div>
+
+            {/* Footer with Close Button (Compact, removing extra margins) */}
+            <div
+              style={{
+                padding: '12px 20px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                background: 'rgba(255, 255, 255, 0.01)',
+              }}
+            >
+              <button
+                onClick={() => setShowDetail(false)}
+                className="btn-submit"
+                style={{
+                  padding: '8px 20px',
+                  fontSize: '0.85rem',
+                  borderRadius: '8px',
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
