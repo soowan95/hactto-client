@@ -7,14 +7,19 @@ hactto 분석 시스템의 대시보드 및 IP 기반 접근 통제를 제어하
 - **Build Tool**: Vite
 - **Styling**: Vanilla CSS (Premium Glassmorphism & Neon Space Dark 테마)
 - **HTTP Client**: Native Fetch API (Credentials include)
+- **Payments**: PortOne V2 Browser SDK
 
 ## 🔑 Core Features
 1. **IP 접근 권한 탐색 및 분기**:
    - 페이지 진입 시 자동으로 현재 IP 권한 유무를 `/check-ip`로 판별하여 스크린을 동적으로 렌더링합니다.
-2. **관리자 자동 등록 요청**:
-   - 대한민국 IP 사용자일 경우 원클릭 요청으로 화이트리스트 등록 및 세션 발급을 자동으로 수행합니다.
-3. **Master Key 수동 인증**:
+2. **공지사항(Notice Banner) 및 상세 보기**:
+   - 이용자가 메인 카드 밖의 최상단에서 공지사항을 편리하게 인지할 수 있도록 배너를 배치하였습니다.
+   - 공지사항 클릭 시 팝업을 통해 전체 내용을 한눈에 확인할 수 있는 상세 페이지(이동) UI를 제공합니다.
+3. **Master Key 및 관리자 모드**:
    - 마스터 키 입력 시 백엔드 인증 절차를 거쳐 수동으로 자신의 IP를 화이트리스트에 추가할 수 있습니다.
+   - 단축키(`Cmd+Shift+H` 또는 `Ctrl+Shift+H`)를 통해 관리자 로그인 모달을 활성화하여 어드민 대시보드 권한을 얻을 수 있습니다.
+4. **포트원 결제 모듈 연동**:
+   - 꿀(HON) 충전(단건 결제) 및 월간/연간 무제한 패스 구독(정기 결제)을 지원합니다.
 
 ## 🚀 Getting Started
 
