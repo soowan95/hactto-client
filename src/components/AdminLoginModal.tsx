@@ -82,6 +82,12 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [manageHonAmount, setManageHonAmount] = useState('');
   const [freePassEndsAt, setFreePassEndsAt] = useState('');
 
+  // Dashboard & Bulk States
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [bulkHonAmount, setBulkHonAmount] = useState('');
+  const [processingBulkHon, setProcessingBulkHon] = useState(false);
+
   // Local authentication state so that it always asks for key on open
   const [isAuthSuccessLocal, setIsAuthSuccessLocal] = useState(false);
 
@@ -151,6 +157,8 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         fetchAdminNotices();
       } else if (activeTab === 'inquiries') {
         fetchAdminInquiries();
+      } else if (activeTab === 'visitors') {
+        fetchStats();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -446,18 +454,66 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
   };
 
-  const handleSearchVisitor = async (e: React.FormEvent) => {
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/manager/stats`);
+      if (res.ok) {
+        const data = await res.json();
+        const result = data.data || data;
+        setTotalUsers(result.totalUsers);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const handleBulkHonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchVisitorId.trim()) {
-      showAlert('error', '조회할 visitorId를 입력해 주세요.');
+    const amount = parseInt(bulkHonAmount, 10);
+    if (isNaN(amount) || amount === 0) {
+      showAlert('error', '올바른 HON 수량을 입력하세요. (양수/음수)');
       return;
     }
+
+    const confirmMsg = `${amount > 0 ? `${amount} HON을 추가` : `${Math.abs(amount)} HON을 차감`}하시겠습니까? 이 작업은 모든 가입자에게 일괄 적용됩니다.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setProcessingBulkHon(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/manager/visitors/bulk-hon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+      if (res.ok) {
+        showAlert('success', '성공적으로 일괄 처리가 완료되었습니다.');
+        setBulkHonAmount('');
+        // Refresh stats
+        await fetchStats();
+        // Refresh search details if a visitor is currently displayed
+        if (searchVisitorId.trim() && visitorDetails) {
+          fetchVisitorDetails(searchVisitorId);
+        }
+      } else {
+        const data = await res.json();
+        showAlert('error', data.message || '일괄 처리 중 오류가 발생했습니다.');
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '서버와의 통신에 실패했습니다.');
+    } finally {
+      setProcessingBulkHon(false);
+    }
+  };
+
+  const fetchVisitorDetails = async (id: string) => {
     setLoadingVisitorDetails(true);
     setVisitorDetails(null);
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/manager/visitors/${searchVisitorId.trim()}`,
-      );
+      const res = await fetch(`${API_BASE_URL}/manager/visitors/${id.trim()}`);
       if (res.ok) {
         const data = await res.json();
         setVisitorDetails(data.data || data);
@@ -469,6 +525,15 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     } finally {
       setLoadingVisitorDetails(false);
     }
+  };
+
+  const handleSearchVisitor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchVisitorId.trim()) {
+      showAlert('error', '조회할 visitorId를 입력해 주세요.');
+      return;
+    }
+    await fetchVisitorDetails(searchVisitorId);
   };
 
   const handleToggleBlock = async (e?: React.MouseEvent) => {
@@ -2030,6 +2095,132 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                       paddingRight: '4px',
                     }}
                   >
+                    {/* 통계 요약 카드 */}
+                    <div
+                      style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        padding: '16px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255,255,255,0.04)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div>
+                        <h4
+                          style={{
+                            fontSize: '0.82rem',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '0 0 4px 0',
+                          }}
+                        >
+                          총 이용자 수
+                        </h4>
+                        <div
+                          style={{
+                            fontSize: '1.4rem',
+                            fontWeight: '700',
+                            color: '#ffffff',
+                          }}
+                        >
+                          {loadingStats ? (
+                            <span
+                              style={{
+                                fontSize: '0.9rem',
+                                color: 'var(--text-dim)',
+                              }}
+                            >
+                              불러오는 중...
+                            </span>
+                          ) : totalUsers !== null ? (
+                            `${totalUsers.toLocaleString()} 명`
+                          ) : (
+                            '정보 없음'
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={fetchStats}
+                        className="btn-submit"
+                        style={{
+                          height: '28px',
+                          padding: '0 10px',
+                          fontSize: '0.75rem',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: 'var(--text-main)',
+                        }}
+                      >
+                        새로고침
+                      </button>
+                    </div>
+
+                    {/* 일괄 HON 관리 카드 */}
+                    <div
+                      style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        padding: '16px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255,255,255,0.04)',
+                      }}
+                    >
+                      <h4
+                        style={{
+                          fontSize: '0.9rem',
+                          color: 'var(--primary-purple)',
+                          margin: '0 0 12px 0',
+                        }}
+                      >
+                        일괄 HON 추가 / 삭제
+                      </h4>
+                      <p
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'rgba(255, 255, 255, 0.4)',
+                          margin: '0 0 12px 0',
+                          lineHeight: '1.4',
+                          textAlign: 'left',
+                        }}
+                      >
+                        모든 가입자에게 일괄적으로 HON을 지급하거나 차감합니다.
+                        <br />
+                        지급할 경우 양수(예: 50), 차감할 경우 음수(예: -20)를
+                        입력하세요.
+                      </p>
+                      <form
+                        onSubmit={handleBulkHonSubmit}
+                        style={{ display: 'flex', gap: '8px' }}
+                      >
+                        <input
+                          type="number"
+                          className="input-glow"
+                          placeholder="수량 입력 (예: 50 또는 -20)"
+                          value={bulkHonAmount}
+                          onChange={(e) => setBulkHonAmount(e.target.value)}
+                          style={{
+                            flex: 1,
+                            height: '36px',
+                            fontSize: '0.82rem',
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          className="btn-submit"
+                          disabled={processingBulkHon}
+                          style={{
+                            height: '36px',
+                            padding: '0 14px',
+                            fontSize: '0.82rem',
+                            backgroundImage:
+                              'linear-gradient(135deg, #a855f7 0%, #00f0ff 100%)',
+                          }}
+                        >
+                          {processingBulkHon ? '처리 중...' : '일괄 적용'}
+                        </button>
+                      </form>
+                    </div>
+
                     <div
                       style={{
                         background: 'rgba(255,255,255,0.02)',
@@ -2054,7 +2245,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         <input
                           type="text"
                           className="input-glow"
-                          placeholder="visitorId 입력"
+                          placeholder="visitorId 또는 IP 입력"
                           value={searchVisitorId}
                           onChange={(e) => setSearchVisitorId(e.target.value)}
                           style={{
