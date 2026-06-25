@@ -273,65 +273,68 @@ export function Layout() {
             </div>
 
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              {/* 독립된 결제/충전 버튼 */}
-              <button
-                onClick={() => setShowPaymentModal(true)}
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  border: '1px solid transparent',
-                  backgroundImage:
-                    'linear-gradient(rgba(10, 11, 16, 0.85), rgba(10, 11, 16, 0.85)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)',
-                  backgroundOrigin: 'border-box',
-                  backgroundClip: 'padding-box, border-box',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 0 8px rgba(0, 240, 255, 0.1)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform =
-                    'translateY(-1px) scale(1.04)';
-                  e.currentTarget.style.backgroundImage =
-                    'linear-gradient(rgba(0, 240, 255, 0.1), rgba(168, 85, 247, 0.1)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)';
-                  e.currentTarget.style.boxShadow =
-                    '0 0 15px rgba(0, 240, 255, 0.35), 0 0 5px rgba(168, 85, 247, 0.35)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.backgroundImage =
-                    'linear-gradient(rgba(10, 11, 16, 0.85), rgba(10, 11, 16, 0.85)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)';
-                  e.currentTarget.style.boxShadow =
-                    '0 0 8px rgba(0, 240, 255, 0.1)';
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.85rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  🪙
-                </span>
-                <span
-                  style={{
-                    background:
-                      'linear-gradient(135deg, #00f0ff 0%, #e9d5ff 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  충전 / 구독
-                </span>
-              </button>
+              {/* 독립된 결제/충전 버튼 - 포트원 환경변수 설정 시에만 노출 */}
+              {import.meta.env.VITE_PORTONE_STORE_ID &&
+                import.meta.env.VITE_PORTONE_CHANNEL_KEY && (
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      border: '1px solid transparent',
+                      backgroundImage:
+                        'linear-gradient(rgba(10, 11, 16, 0.85), rgba(10, 11, 16, 0.85)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)',
+                      backgroundOrigin: 'border-box',
+                      backgroundClip: 'padding-box, border-box',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 0 8px rgba(0, 240, 255, 0.1)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform =
+                        'translateY(-1px) scale(1.04)';
+                      e.currentTarget.style.backgroundImage =
+                        'linear-gradient(rgba(0, 240, 255, 0.1), rgba(168, 85, 247, 0.1)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)';
+                      e.currentTarget.style.boxShadow =
+                        '0 0 15px rgba(0, 240, 255, 0.35), 0 0 5px rgba(168, 85, 247, 0.35)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.backgroundImage =
+                        'linear-gradient(rgba(10, 11, 16, 0.85), rgba(10, 11, 16, 0.85)), linear-gradient(135deg, #00f0ff 0%, #a855f7 100%)';
+                      e.currentTarget.style.boxShadow =
+                        '0 0 8px rgba(0, 240, 255, 0.1)';
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.85rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      🪙
+                    </span>
+                    <span
+                      style={{
+                        background:
+                          'linear-gradient(135deg, #00f0ff 0%, #e9d5ff 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      충전 / 구독
+                    </span>
+                  </button>
+                )}
 
               <button
                 onClick={() => setShowHelpModal(true)}

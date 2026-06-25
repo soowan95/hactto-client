@@ -18,6 +18,24 @@ function NoticeText({
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
+  const [fade, setFade] = useState(true);
+  const [displayNotice, setDisplayNotice] = useState(currentNotice);
+
+  useEffect(() => {
+    const fadeOutTimeout = setTimeout(() => {
+      setFade(false);
+    }, 0);
+    
+    const swapTimeout = setTimeout(() => {
+      setDisplayNotice(currentNotice);
+      setFade(true);
+    }, 250);
+    
+    return () => {
+      clearTimeout(fadeOutTimeout);
+      clearTimeout(swapTimeout);
+    };
+  }, [currentNotice]);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -32,7 +50,7 @@ function NoticeText({
     // Re-check on window resize
     window.addEventListener('resize', checkOverflow);
     return () => window.removeEventListener('resize', checkOverflow);
-  }, [currentNotice]);
+  }, [displayNotice]);
 
   return (
     <div
@@ -44,6 +62,8 @@ function NoticeText({
         flex: 1,
         overflow: 'hidden',
         cursor: 'pointer',
+        transition: 'opacity 0.25s ease-in-out',
+        opacity: fade ? 1 : 0,
       }}
     >
       <span
@@ -72,7 +92,7 @@ function NoticeText({
           flexShrink: 0,
         }}
       >
-        {currentNotice.title}
+        {displayNotice.title}
       </span>
 
       {/* Vertical divider or dash */}
@@ -119,7 +139,7 @@ function NoticeText({
               fontWeight: '500',
             }}
           >
-            {currentNotice.content}
+            {displayNotice.content}
           </span>
           {shouldScroll && (
             <span
@@ -130,7 +150,7 @@ function NoticeText({
               }}
               aria-hidden="true"
             >
-              {currentNotice.content}
+              {displayNotice.content}
             </span>
           )}
         </div>
@@ -164,6 +184,17 @@ export function NoticeBanner() {
 
     fetchNotices();
   }, []);
+
+  // Automatic notice rotation interval
+  useEffect(() => {
+    if (notices.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % notices.length);
+    }, 5000); // rotate every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [notices.length]);
 
   // Disable/Enable page scroll when detail modal is active
   useEffect(() => {
