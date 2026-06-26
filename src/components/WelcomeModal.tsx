@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../utils';
+import { useApp } from '../context/AppContext';
 
 interface WelcomeModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface WelcomeModalProps {
 export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
   const [step, setStep] = useState(1);
   const [showHonTooltip, setShowHonTooltip] = useState(false);
+  const { checkIpStatus } = useApp();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,14 +43,22 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
       const res = await fetch(`${API_BASE_URL}/visitor/register`, {
         method: 'POST',
       });
-      if (res.ok) {
-        localStorage.setItem('hactto_welcome_consented', 'true');
-        onClose();
-      } else {
-        console.error('Failed to register visitor');
+      // 중복 등록 등으로 API가 에러를 반환하더라도 클라이언트 단에서는 동의 상태를 로컬 저장소에 저장하여 모달 루프를 방지합니다.
+      localStorage.setItem('hactto_welcome_consented', 'true');
+      onClose();
+
+      // 첫 방문 HON 충전이 반영되도록 IP/HON 상태를 즉시 갱신합니다.
+      await checkIpStatus(true);
+
+      if (!res.ok) {
+        console.warn('Visitor registration status warning:', res.status);
       }
     } catch (err) {
       console.error('Error registering visitor:', err);
+      // 에러 발생 시에도 유저가 서비스를 이용할 수 있도록 동의 처리 후 닫습니다.
+      localStorage.setItem('hactto_welcome_consented', 'true');
+      onClose();
+      await checkIpStatus(true);
     }
   };
 

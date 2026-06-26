@@ -18,6 +18,7 @@ import { Generate } from './pages/Dashboard/Generate';
 import { History } from './pages/Dashboard/History';
 import { Support } from './pages/Dashboard/Support';
 import { AdminLoginModal } from './components/AdminLoginModal';
+import { InteractiveBackground } from './components/InteractiveBackground';
 
 function AppContent() {
   const {
@@ -110,6 +111,7 @@ function AppContent() {
       <div className="bg-ambient">
         <div className="orb orb-cyan"></div>
         <div className="orb orb-purple"></div>
+        <InteractiveBackground />
       </div>
 
       <Routes>
