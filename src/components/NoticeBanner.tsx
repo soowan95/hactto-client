@@ -25,12 +25,12 @@ function NoticeText({
     const fadeOutTimeout = setTimeout(() => {
       setFade(false);
     }, 0);
-    
+
     const swapTimeout = setTimeout(() => {
       setDisplayNotice(currentNotice);
       setFade(true);
     }, 250);
-    
+
     return () => {
       clearTimeout(fadeOutTimeout);
       clearTimeout(swapTimeout);
