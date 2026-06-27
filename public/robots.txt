@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hactto.com/sitemap.xml
