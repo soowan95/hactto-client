@@ -1,4 +1,28 @@
+import { useApp } from '../context/AppContext';
+
 export function SystemAnalyzing() {
+  const { systemAnalysisProgress } = useApp();
+
+  const formatEstimatedTime = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      const hours = d.getHours();
+      const minutes = d.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? '오후' : '오전';
+      const displayHour = hours % 12 || 12;
+      return `예상 완료 시간: ${ampm} ${displayHour}시 ${minutes}분`;
+    } catch {
+      return '';
+    }
+  };
+
+  const progress = systemAnalysisProgress?.progress ?? 0;
+  const statusMessage = systemAnalysisProgress?.message || '분석 준비 중...';
+  const etaText = formatEstimatedTime(
+    systemAnalysisProgress?.estimatedCompletionTime,
+  );
+
   return (
     <div
       className="access-container"
@@ -69,16 +93,109 @@ export function SystemAnalyzing() {
             className="access-desc"
             style={{
               maxWidth: '480px',
-              margin: '20px auto 30px',
+              margin: '20px auto 24px',
               lineHeight: '1.6',
               color: 'var(--text-muted)',
             }}
           >
-            매주 토요일 오후 8시 30분부터 서비스 정합성을 위해
+            매주 토요일 오후 9시부터 서비스 정합성을 위해
             <br />
             당첨번호 수집 및 알고리즘 신뢰도 측정 작업을 수행합니다.
             <br />이 시간 동안은 서비스 이용이 제한됩니다.
           </p>
+
+          {/* Progress Section */}
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '14px',
+              padding: '24px',
+              marginBottom: '20px',
+              textAlign: 'left',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: 'var(--text-main)',
+                }}
+              >
+                {statusMessage}
+              </span>
+              <span
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  color: 'var(--primary-cyan)',
+                  textShadow: '0 0 8px rgba(0, 240, 255, 0.4)',
+                }}
+              >
+                {progress}%
+              </span>
+            </div>
+
+            {/* Progress Bar */}
+            <div
+              style={{
+                width: '100%',
+                height: '8px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                marginBottom: etaText ? '12px' : '0',
+              }}
+            >
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: '100%',
+                  background:
+                    'linear-gradient(90deg, var(--primary-cyan) 0%, #00e5ff 100%)',
+                  boxShadow: '0 0 10px var(--primary-cyan)',
+                  borderRadius: '4px',
+                  transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              />
+            </div>
+
+            {etaText && (
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--text-dim)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                {etaText}
+              </div>
+            )}
+          </div>
 
           <div
             className="feature-item"

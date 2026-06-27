@@ -51,6 +51,11 @@ interface AppContextType {
   setUnsavedActionTarget: (val: (() => void) | null) => void;
   isSystemAnalyzing: boolean;
   setIsSystemAnalyzing: (val: boolean) => void;
+  systemAnalysisProgress: {
+    progress: number;
+    message: string;
+    estimatedCompletionTime?: string;
+  } | null;
   showWelcomeModal: boolean;
   setShowWelcomeModal: (val: boolean) => void;
   freeHon: number;
@@ -65,6 +70,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [isSystemAnalyzing, setIsSystemAnalyzing] = useState<boolean>(false);
+  const [systemAnalysisProgress, setSystemAnalysisProgress] = useState<{
+    progress: number;
+    message: string;
+    estimatedCompletionTime?: string;
+  } | null>(null);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [pending, setPending] = useState<boolean>(false);
   const [clientIp, setClientIp] = useState<string>('');
@@ -425,6 +435,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const data = await res.json();
           const result = data.data || data;
           setIsSystemAnalyzing(!!result.inProgress);
+          if (result.inProgress) {
+            setSystemAnalysisProgress({
+              progress: result.progress || 0,
+              message: result.message || '',
+              estimatedCompletionTime: result.estimatedCompletionTime,
+            });
+          } else {
+            setSystemAnalysisProgress(null);
+          }
         }
       } catch (err) {
         console.error('시스템 상태 조회 실패:', err);
@@ -442,6 +461,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         try {
           const data = JSON.parse(event.data);
           setIsSystemAnalyzing(!!data.inProgress);
+          if (data.inProgress) {
+            setSystemAnalysisProgress({
+              progress: data.progress || 0,
+              message: data.message || '',
+              estimatedCompletionTime: data.estimatedCompletionTime,
+            });
+          } else {
+            setSystemAnalysisProgress(null);
+          }
         } catch (err) {
           console.error('시스템 상태 SSE 파싱 실패:', err);
         }
@@ -507,6 +535,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setUnsavedActionTarget,
         isSystemAnalyzing,
         setIsSystemAnalyzing,
+        systemAnalysisProgress,
         showWelcomeModal,
         setShowWelcomeModal,
         freeHon,
