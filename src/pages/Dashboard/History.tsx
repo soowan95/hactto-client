@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { API_BASE_URL, parseAlgorithmName } from '../../utils';
@@ -6,11 +7,17 @@ import { LottoBalls } from '../../components/LottoBall';
 import { LottoAnalysisCard } from '../../components/LottoAnalysisCard';
 import { PersonalAnalysisCard } from '../../components/PersonalAnalysisCard';
 import { HonHistoryModal } from '../../components/HonHistoryModal';
+import type { PersonalAnalysis } from '../../types';
 
 export function History() {
   const location = useLocation();
   const { visitorId, appendAuth, showAlert } = useApp();
   const [showHonHistoryModal, setShowHonHistoryModal] = useState(false);
+  const [selectedPersonalAnalysis, setSelectedPersonalAnalysis] = useState<{
+    numbers: number[];
+    analysis: PersonalAnalysis;
+    episode: number;
+  } | null>(null);
 
   const defaultTab =
     location.state?.defaultTab === 'personal' ? 'personal' : 'algorithm';
@@ -23,6 +30,26 @@ export function History() {
   const [expandedItems, setExpandedItems] = useState<
     Record<string | number, boolean>
   >({});
+
+  // Prevent body scroll when modal is open and add ESC key support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedPersonalAnalysis(null);
+      }
+    };
+
+    if (selectedPersonalAnalysis) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedPersonalAnalysis]);
 
   const toggleExpand = (id: string | number) => {
     setExpandedItems((prev) => ({
@@ -255,7 +282,17 @@ export function History() {
                   />
                   <div style={{ marginTop: '8px', textAlign: 'right' }}>
                     <button
-                      onClick={() => toggleExpand(hist.id)}
+                      onClick={() => {
+                        if (activeSubTab === 'personal') {
+                          setSelectedPersonalAnalysis({
+                            numbers: hist.numbers,
+                            analysis: hist.analysis,
+                            episode: hist.episode,
+                          });
+                        } else {
+                          toggleExpand(hist.id);
+                        }
+                      }}
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -266,24 +303,23 @@ export function History() {
                         fontWeight: 600,
                       }}
                     >
-                      {isExpanded ? '상세 분석 접기 ▲' : '상세 분석 보기 ▼'}
+                      {activeSubTab === 'personal'
+                        ? '상세 분석 보기 →'
+                        : isExpanded
+                          ? '상세 분석 접기 ▲'
+                          : '상세 분석 보기 ▼'}
                     </button>
                   </div>
                 </div>
 
                 {isExpanded &&
                   hist.analysis &&
-                  (activeSubTab === 'algorithm' ? (
+                  activeSubTab === 'algorithm' && (
                     <LottoAnalysisCard
                       numbers={hist.numbers}
                       analysis={hist.analysis}
                     />
-                  ) : (
-                    <PersonalAnalysisCard
-                      numbers={hist.numbers}
-                      analysis={hist.analysis}
-                    />
-                  ))}
+                  )}
 
                 {hasResult && hist.matchResult && (
                   <div
@@ -324,6 +360,92 @@ export function History() {
         isOpen={showHonHistoryModal}
         onClose={() => setShowHonHistoryModal(false)}
       />
+
+      {selectedPersonalAnalysis &&
+        createPortal(
+          <div
+            className="admin-modal-overlay"
+            style={{
+              overflowY: 'auto',
+              padding: '40px 20px',
+              alignItems: 'flex-start',
+              zIndex: 1000,
+            }}
+            onClick={() => setSelectedPersonalAnalysis(null)}
+          >
+            <div
+              style={{
+                maxWidth: '680px',
+                width: '90%',
+                maxHeight: '90vh',
+                position: 'relative',
+                margin: '0 auto',
+                zIndex: 1005,
+                paddingTop: '24px',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header Row: Contains Close Button (Right) */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  position: 'relative',
+                  marginBottom: '16px',
+                  width: '100%',
+                }}
+              >
+                <button
+                  onClick={() => setSelectedPersonalAnalysis(null)}
+                  style={{
+                    position: 'absolute',
+                    right: '0px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'color 0.2s ease',
+                    zIndex: 110,
+                    fontSize: '0.9rem',
+                    fontWeight: 'bold',
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = 'var(--text-main)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)')
+                  }
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                  <span>닫기</span>
+                </button>
+              </div>
+
+              <PersonalAnalysisCard
+                numbers={selectedPersonalAnalysis.numbers}
+                analysis={selectedPersonalAnalysis.analysis}
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
