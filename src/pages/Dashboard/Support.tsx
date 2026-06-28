@@ -34,6 +34,16 @@ export function Support() {
   // Accordion expanded state
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchInquiries = async () => {
     setLoading(true);
     try {
@@ -172,6 +182,74 @@ export function Support() {
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
+
+  if (isMobile) {
+    return (
+      <div>
+        <h3
+          className="section-title"
+          style={{ color: 'var(--primary-cyan)', marginBottom: '16px' }}
+        >
+          1:1 관리자 문의하기
+        </h3>
+        <div
+          style={{
+            background: 'rgba(3, 7, 18, 0.4)',
+            border: '1px solid rgba(0, 240, 255, 0.15)',
+            boxShadow: '0 8px 32px 0 rgba(0, 240, 255, 0.05)',
+            borderRadius: '16px',
+            padding: '40px 24px',
+            textAlign: 'center',
+            marginTop: '20px',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '2.5rem',
+              marginBottom: '8px',
+              animation: 'pulse 2s infinite',
+            }}
+          >
+            📱
+          </div>
+          <h3
+            style={{
+              fontSize: '1.15rem',
+              fontWeight: 'bold',
+              color: 'var(--text-main)',
+            }}
+          >
+            모바일 동기화 준비 중
+          </h3>
+          <p
+            style={{
+              fontSize: '0.85rem',
+              color: 'var(--text-dim)',
+              lineHeight: '1.6',
+              maxWidth: '360px',
+              margin: '0 auto',
+            }}
+          >
+            현재 hactto는 <strong>IP 기반 식별자</strong>를 사용하여 로그인 없이
+            간편하게 이용할 수 있도록 구축되어 있습니다.
+            <br />
+            <br />
+            모바일 네트워크 환경(LTE/5G/유동 IP) 특성상 모바일 1:1 문의
+            기능은 현재 <strong>준비 중</strong>에 있습니다.
+            <br />
+            <br />
+            PC 브라우저로 접속하시면 모든 1:1 문의 기능을 즉시
+            정상 이용하실 수 있습니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
