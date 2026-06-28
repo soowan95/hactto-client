@@ -105,7 +105,9 @@ export function Layout() {
               >
                 hactto
               </span>
+            </div>
 
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               {/* 남은 혼(Hon) 충전 정보 위젯 */}
               {(() => {
                 const isSubscribed =
@@ -151,7 +153,6 @@ export function Layout() {
                       border: `1px solid ${borderGlow}`,
                       padding: '6px 12px',
                       borderRadius: '6px',
-                      marginLeft: '18px',
                     }}
                     title={tooltipText}
                   >
@@ -270,9 +271,7 @@ export function Layout() {
                   </div>
                 );
               })()}
-            </div>
 
-            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
               {/* 독립된 결제/충전 버튼 - 포트원 환경변수 설정 시에만 노출 */}
               {import.meta.env.VITE_PORTONE_STORE_ID &&
                 import.meta.env.VITE_PORTONE_CHANNEL_KEY && (
@@ -477,8 +476,8 @@ export function Layout() {
           {/* Footer containing Privacy Policy and Terms of Service (Essential for AdSense Approval) */}
           <footer
             style={{
-              marginTop: '30px',
-              paddingTop: '20px',
+              marginTop: '15px',
+              paddingTop: '15px',
               borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               justifyContent: 'center',
