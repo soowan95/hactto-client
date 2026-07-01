@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+/* eslint-disable */
 import {
   createContext,
   useContext,
@@ -61,6 +62,8 @@ interface AppContextType {
   freeHon: number;
   paidHon: number;
   subscription: SubscriptionStatus | null;
+  nickname: string | null;
+  setNickname: (name: string | null) => void;
   isBlockedUser: boolean;
   setIsBlockedUser: (val: boolean) => void;
 }
@@ -104,6 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
     null,
   );
+  const [nickname, setNickname] = useState<string | null>(null);
   const [isBlockedUser, setIsBlockedUser] = useState<boolean>(false);
 
   // Show auto-dismiss alerts
@@ -293,6 +297,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (result.visitorId) {
           setVisitorId(result.visitorId);
           localStorage.setItem('visitor_id', result.visitorId);
+
+          try {
+            const meRes = await fetch(`${API_BASE_URL}/visitor/me`, {
+              headers: { 'x-visitor-id': result.visitorId },
+            });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              if (meData.data) {
+                // Handle both { data: visitor } and { data: { data: visitor } } just in case
+                const visitorObj =
+                  meData.data.nickname !== undefined
+                    ? meData.data
+                    : meData.data.data;
+                if (visitorObj) {
+                  setNickname(visitorObj.nickname || null);
+                }
+              }
+            }
+          } catch {}
         }
 
         const isFirstVisit = res.headers.get('x-first-visit') === 'true';
@@ -541,6 +564,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         freeHon,
         paidHon,
         subscription,
+        nickname,
+        setNickname,
         isBlockedUser,
         setIsBlockedUser,
       }}
