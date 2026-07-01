@@ -12,6 +12,7 @@ import { AdSenseBanner } from './AdSenseBanner';
 import { PrivacyModal } from './PrivacyModal';
 import { TermsModal } from './TermsModal';
 import { RefundPolicyModal } from './RefundPolicyModal';
+import { NicknameModal } from './NicknameModal';
 
 export function Layout() {
   const {
@@ -27,6 +28,8 @@ export function Layout() {
     paidHon,
     subscription,
     checkIpStatus,
+    nickname,
+    visitorId,
   } = useApp();
 
   const navigate = useNavigate();
@@ -35,6 +38,7 @@ export function Layout() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
   useEffect(() => {
@@ -100,11 +104,68 @@ export function Layout() {
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <span
                 className="logo-glow"
-                style={{ fontSize: '1.8rem', cursor: 'pointer' }}
+                style={{
+                  fontSize: '1.8rem',
+                  cursor: 'pointer',
+                  marginRight: '12px',
+                }}
                 onClick={() => navigate('/home')}
               >
                 hactto
               </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.85rem',
+                  color: 'var(--text-main)',
+                  background: 'rgba(255,255,255,0.05)',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  cursor: nickname ? 'default' : 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onClick={() => {
+                  if (!nickname) setShowNicknameModal(true);
+                }}
+                onMouseEnter={(e) => {
+                  if (!nickname) {
+                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
+                    e.currentTarget.style.borderColor =
+                      'rgba(0, 240, 255, 0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!nickname) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  }
+                }}
+                title={!nickname ? '닉네임 설정하기' : undefined}
+              >
+                <span style={{ fontWeight: 'bold' }}>
+                  {nickname || visitorId?.substring(0, 8)}
+                </span>
+                님
+                {!nickname && (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--text-dim)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ marginLeft: '2px' }}
+                  >
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                  </svg>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -430,6 +491,15 @@ export function Layout() {
               내 당첨이력
             </NavLink>
             <NavLink
+              to="/board"
+              onClick={(e) => handleTabClick(e, '/board')}
+              className={({ isActive }) =>
+                `tab-btn ${isActive ? 'active-tab' : ''}`
+              }
+            >
+              게시판
+            </NavLink>
+            <NavLink
               to="/support"
               onClick={(e) => handleTabClick(e, '/support')}
               className={({ isActive }) =>
@@ -465,7 +535,8 @@ export function Layout() {
               paddingRight: '8px',
               marginRight: '-8px',
               minHeight: 0,
-              marginBottom: '12px',
+              maxHeight: 'calc(100% - 10px)',
+              marginBottom: 0,
             }}
           >
             <Outlet />
@@ -601,6 +672,10 @@ export function Layout() {
         <RefundPolicyModal
           isOpen={showRefundModal}
           onClose={() => setShowRefundModal(false)}
+        />
+        <NicknameModal
+          isOpen={showNicknameModal}
+          onClose={() => setShowNicknameModal(false)}
         />
       </div>
 

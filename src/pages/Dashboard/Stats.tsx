@@ -497,7 +497,22 @@ export function Stats() {
                 gap: '8px',
               }}
             >
-              📊 금주 알고리즘 생성 횟수 분포
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ color: 'var(--primary-cyan)' }}
+              >
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+              금주 알고리즘 생성 횟수 분포
             </h3>
             <span
               style={{
