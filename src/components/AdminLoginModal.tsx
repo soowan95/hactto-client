@@ -35,8 +35,10 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     | 'notices'
     | 'inquiries'
     | 'visitors'
+    | 'visitors'
     | 'NICKNAME_REPORTS'
     | 'BANNED_WORDS'
+    | 'HON_EVENTS'
   >('algo');
   const [algorithms, setAlgorithms] = useState<
     { type: string; name?: string; complexity: number; description?: string }[]
@@ -56,6 +58,18 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [fetchEpisodeInput, setFetchEpisodeInput] = useState('');
   const [syncingAlgos, setSyncingAlgos] = useState(false);
 
+  // HON_EVENTS Tab States
+   
+  const [honEvents, setHonEvents] = useState<any[]>([]);
+  const [loadingHonEvents, setLoadingHonEvents] = useState(false);
+  const [newHonEventType, setNewHonEventType] = useState<'RESET' | 'ADD'>(
+    'RESET',
+  );
+  const [newHonEventAmount, setNewHonEventAmount] = useState(50);
+  const [newHonEventStartsAt, setNewHonEventStartsAt] = useState('');
+  const [newHonEventEndsAt, setNewHonEventEndsAt] = useState('');
+  const [newHonEventIsPermanent, setNewHonEventIsPermanent] = useState(true);
+
   // --- New Admin States ---
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
@@ -64,7 +78,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   } | null>(null);
 
   // Notice management states
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [nicknameReports, setNicknameReports] = useState<any[]>([]);
   const [bannedWords, setBannedWords] = useState<string[]>([]);
   const [newBannedWord, setNewBannedWord] = useState('');
@@ -75,7 +89,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [newNoticeEndsAt, setNewNoticeEndsAt] = useState('');
 
   // Inquiry answering states
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [adminInquiries, setAdminInquiries] = useState<any[]>([]);
   const [loadingAdminInquiries, setLoadingAdminInquiries] = useState(false);
   const [inquiryFilter, setInquiryFilter] = useState<
@@ -93,7 +107,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
   // Visitor management states
   const [searchVisitorId, setSearchVisitorId] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [visitorDetails, setVisitorDetails] = useState<any>(null);
   const [loadingVisitorDetails, setLoadingVisitorDetails] = useState(false);
   const [manageHonAmount, setManageHonAmount] = useState('');
@@ -111,7 +125,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   // Reset local auth state and key whenever the modal opens
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setIsAuthSuccessLocal(false);
       setAdminKey('');
       setAdminError('');
@@ -184,12 +198,101 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
   };
 
+  const fetchHonEvents = async () => {
+    setLoadingHonEvents(true);
+    try {
+      const res = await fetch(appendAuth(`${API_BASE_URL}/manager/hon-events`));
+      const data = await res.json();
+      if (res.ok) setHonEvents(data.data || []);
+    } catch (e) {
+      console.error(e);
+      showAlert('error', 'HON 이벤트 목록을 불러오지 못했습니다.');
+    } finally {
+      setLoadingHonEvents(false);
+    }
+  };
+
+  const handleCreateHonEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHonEventStartsAt) {
+      showAlert('error', '이벤트 시작 일시를 입력해주세요.');
+      return;
+    }
+    if (!newHonEventIsPermanent && !newHonEventEndsAt) {
+      showAlert('error', '이벤트 종료 일시를 입력해주세요.');
+      return;
+    }
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/hon-events`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: newHonEventType,
+            amount: Number(newHonEventAmount),
+            startsAt: new Date(newHonEventStartsAt).toISOString(),
+            endsAt: newHonEventIsPermanent
+              ? undefined
+              : new Date(newHonEventEndsAt).toISOString(),
+            isActive: true,
+          }),
+        },
+      );
+      if (!res.ok) throw new Error('이벤트 생성 실패');
+      showAlert('success', '새로운 HON 이벤트가 생성되었습니다.');
+      setNewHonEventType('RESET');
+      setNewHonEventAmount(50);
+      setNewHonEventStartsAt('');
+      setNewHonEventEndsAt('');
+      setNewHonEventIsPermanent(true);
+      fetchHonEvents();
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '이벤트 생성에 실패했습니다.');
+    }
+  };
+
+  const handleTerminateHonEvent = async (id: string) => {
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/hon-events/${id}/terminate`),
+        {
+          method: 'PATCH',
+        },
+      );
+      if (!res.ok) throw new Error('이벤트 종료 실패');
+      showAlert('success', '이벤트가 수동 종료되었습니다.');
+      fetchHonEvents();
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '이벤트 종료 처리에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteHonEvent = async (id: string) => {
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/hon-events/${id}`),
+        {
+          method: 'DELETE',
+        },
+      );
+      if (!res.ok) throw new Error('이벤트 삭제 실패');
+      showAlert('success', '이벤트가 삭제되었습니다.');
+      fetchHonEvents();
+    } catch (err) {
+      console.error(err);
+      showAlert('error', '이벤트 삭제 처리에 실패했습니다.');
+    }
+  };
+
   useEffect(() => {
     if (isOpen && isAuthSuccessLocal && activeTab === 'algo') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       fetchAlgorithms();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [isOpen, isAuthSuccessLocal, activeTab]);
 
   useEffect(() => {
@@ -204,9 +307,11 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         fetchNicknameReports();
       } else if (activeTab === 'BANNED_WORDS') {
         fetchBannedWords();
+      } else if (activeTab === 'HON_EVENTS') {
+        fetchHonEvents();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [isOpen, isAuthSuccessLocal, activeTab]);
 
   useEffect(() => {
@@ -383,10 +488,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         method: 'POST',
       });
       if (!res.ok) throw new Error('알고리즘 배치 분석에 실패했습니다.');
-      showAlert(
-        'success',
-        '알고리즘 배치 분석이 성공적으로 실행되었습니다.',
-      );
+      showAlert('success', '알고리즘 배치 분석이 성공적으로 실행되었습니다.');
       setIsSystemAnalyzing(true);
     } catch (err) {
       console.error(err);
@@ -902,6 +1004,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
             >
               {/* Tabs */}
               <div
+                className="hide-scrollbar"
                 style={{
                   display: 'flex',
                   gap: '10px',
@@ -909,9 +1012,18 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                   paddingBottom: '10px',
                   marginBottom: '20px',
                   flexShrink: 0,
-                  flexWrap: 'wrap',
+                  flexWrap: 'nowrap',
+                  overflowX: 'auto',
+                  whiteSpace: 'nowrap',
+                  msOverflowStyle: 'none',
+                  scrollbarWidth: 'none',
                 }}
               >
+                <style>{`
+                  .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}</style>
                 <button
                   className={`tab-btn ${activeTab === 'algo' ? 'active-tab' : ''}`}
                   onClick={() => setActiveTab('algo')}
@@ -925,6 +1037,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         ? 'var(--primary-cyan)'
                         : 'var(--text-dim)',
                     cursor: 'pointer',
+                    flexShrink: 0,
                   }}
                 >
                   알고리즘
@@ -942,6 +1055,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         ? 'var(--primary-purple)'
                         : 'var(--text-dim)',
                     cursor: 'pointer',
+                    flexShrink: 0,
                   }}
                 >
                   시스템
@@ -959,6 +1073,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         ? 'var(--primary-cyan)'
                         : 'var(--text-dim)',
                     cursor: 'pointer',
+                    flexShrink: 0,
                   }}
                 >
                   공지
@@ -976,6 +1091,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         ? 'var(--primary-purple)'
                         : 'var(--text-dim)',
                     cursor: 'pointer',
+                    flexShrink: 0,
                   }}
                 >
                   문의
@@ -993,6 +1109,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         ? 'var(--primary-cyan)'
                         : 'var(--text-dim)',
                     cursor: 'pointer',
+                    flexShrink: 0,
                   }}
                 >
                   사용자
@@ -1030,6 +1147,23 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                   }}
                 >
                   금지어
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'HON_EVENTS' ? 'active-tab' : ''}`}
+                  onClick={() => setActiveTab('HON_EVENTS')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    color:
+                      activeTab === 'HON_EVENTS'
+                        ? 'var(--primary-purple)'
+                        : 'var(--text-dim)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  이벤트
                 </button>
               </div>
 
@@ -2881,6 +3015,387 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                         >
                           등록된 금지어가 없습니다.
                         </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'HON_EVENTS' && (
+                  <div
+                    style={{
+                      padding: '0 8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '24px',
+                    }}
+                  >
+                    {/* Event Creation Form */}
+                    <div
+                      style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <h3
+                        style={{
+                          marginTop: 0,
+                          fontSize: '0.95rem',
+                          color: 'var(--primary-purple)',
+                        }}
+                      >
+                        새 이벤트 생성
+                      </h3>
+                      <form
+                        onSubmit={handleCreateHonEvent}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="eventType"
+                              checked={newHonEventType === 'RESET'}
+                              onChange={() => setNewHonEventType('RESET')}
+                            />
+                            수량 맞춤 (RESET)
+                          </label>
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="eventType"
+                              checked={newHonEventType === 'ADD'}
+                              onChange={() => setNewHonEventType('ADD')}
+                            />
+                            수량 추가 (ADD)
+                          </label>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label
+                              style={{
+                                display: 'block',
+                                fontSize: '0.8rem',
+                                color: 'var(--text-dim)',
+                                marginBottom: '4px',
+                              }}
+                            >
+                              지급/초기화 개수 (HON)
+                            </label>
+                            <input
+                              type="number"
+                              className="input-glow"
+                              value={newHonEventAmount}
+                              onChange={(e) =>
+                                setNewHonEventAmount(Number(e.target.value))
+                              }
+                              min={1}
+                              style={{
+                                width: '100%',
+                                height: '36px',
+                                fontSize: '0.85rem',
+                              }}
+                            />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label
+                              style={{
+                                display: 'block',
+                                fontSize: '0.8rem',
+                                color: 'var(--text-dim)',
+                                marginBottom: '4px',
+                              }}
+                            >
+                              시작 일시 (KST)
+                            </label>
+                            <input
+                              type="datetime-local"
+                              className="input-glow"
+                              value={newHonEventStartsAt}
+                              onChange={(e) =>
+                                setNewHonEventStartsAt(e.target.value)
+                              }
+                              style={{
+                                width: '100%',
+                                height: '36px',
+                                fontSize: '0.85rem',
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '12px',
+                            alignItems: 'flex-end',
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <label
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                fontSize: '0.8rem',
+                                color: 'var(--text-dim)',
+                                marginBottom: '4px',
+                              }}
+                            >
+                              <span>종료 일시 (KST)</span>
+                              <label
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={newHonEventIsPermanent}
+                                  onChange={(e) =>
+                                    setNewHonEventIsPermanent(e.target.checked)
+                                  }
+                                />
+                                영구 이벤트
+                              </label>
+                            </label>
+                            <input
+                              type="datetime-local"
+                              className="input-glow"
+                              value={newHonEventEndsAt}
+                              onChange={(e) =>
+                                setNewHonEventEndsAt(e.target.value)
+                              }
+                              disabled={newHonEventIsPermanent}
+                              style={{
+                                width: '100%',
+                                height: '36px',
+                                fontSize: '0.85rem',
+                                opacity: newHonEventIsPermanent ? 0.5 : 1,
+                              }}
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            className="btn-submit"
+                            style={{
+                              height: '36px',
+                              padding: '0 24px',
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            이벤트 생성
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+
+                    {/* Event List */}
+                    <div>
+                      <h3
+                        style={{
+                          marginTop: 0,
+                          fontSize: '0.95rem',
+                          color: 'var(--primary-cyan)',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        등록된 이벤트 목록
+                      </h3>
+                      {loadingHonEvents ? (
+                        <p
+                          style={{
+                            fontSize: '0.85rem',
+                            color: 'var(--text-dim)',
+                          }}
+                        >
+                          로딩 중...
+                        </p>
+                      ) : honEvents.length === 0 ? (
+                        <p
+                          style={{
+                            fontSize: '0.85rem',
+                            color: 'var(--text-dim)',
+                          }}
+                        >
+                          등록된 이벤트가 없습니다.
+                        </p>
+                      ) : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                          }}
+                        >
+                          {honEvents.map((ev) => {
+                            const isExpired =
+                              ev.endsAt && new Date(ev.endsAt) <= new Date();
+                            const isPending =
+                              new Date(ev.startsAt) > new Date();
+
+                            let statusText = '진행 중';
+                            let statusColor = '#4caf50';
+                            if (!ev.isActive) {
+                              statusText = '수동 종료됨';
+                              statusColor = '#ef5350';
+                            } else if (isExpired) {
+                              statusText = '기간 만료됨';
+                              statusColor = 'var(--text-dim)';
+                            } else if (isPending) {
+                              statusText = '대기 중';
+                              statusColor = 'var(--primary-cyan)';
+                            }
+
+                            return (
+                              <div
+                                key={ev.id}
+                                style={{
+                                  background: 'rgba(255,255,255,0.03)',
+                                  border: `1px solid ${ev.isActive ? 'rgba(255,255,255,0.1)' : 'rgba(239, 83, 80, 0.2)'}`,
+                                  borderRadius: '8px',
+                                  padding: '12px 16px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        background:
+                                          ev.type === 'RESET'
+                                            ? 'rgba(0,255,255,0.1)'
+                                            : 'rgba(255,0,255,0.1)',
+                                        color:
+                                          ev.type === 'RESET'
+                                            ? 'var(--primary-cyan)'
+                                            : 'var(--primary-purple)',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 'bold',
+                                      }}
+                                    >
+                                      {ev.type === 'RESET'
+                                        ? '맞춤(RESET)'
+                                        : '추가(ADD)'}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontWeight: 'bold',
+                                        fontSize: '0.9rem',
+                                      }}
+                                    >
+                                      {ev.amount} HON
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: '0.75rem',
+                                        color: statusColor,
+                                        fontWeight: 'bold',
+                                      }}
+                                    >
+                                      • {statusText}
+                                    </span>
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: '0.8rem',
+                                      color: 'var(--text-dim)',
+                                    }}
+                                  >
+                                    시작:{' '}
+                                    {new Date(ev.startsAt).toLocaleString(
+                                      'ko-KR',
+                                    )}
+                                    {ev.endsAt
+                                      ? ` ~ 종료: ${new Date(ev.endsAt).toLocaleString('ko-KR')}`
+                                      : ' ~ (영구)'}
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {ev.isActive && (
+                                    <button
+                                      className="btn-submit"
+                                      onClick={() =>
+                                        setConfirmConfig({
+                                          isOpen: true,
+                                          message:
+                                            '이 이벤트를 즉시 종료하시겠습니까? (더 이상 적용되지 않습니다)',
+                                          onConfirm: () =>
+                                            handleTerminateHonEvent(ev.id),
+                                        })
+                                      }
+                                      style={{
+                                        height: '30px',
+                                        fontSize: '0.8rem',
+                                        background: '#ef5350',
+                                        borderColor: '#ef5350',
+                                      }}
+                                    >
+                                      종료
+                                    </button>
+                                  )}
+                                  <button
+                                    className="btn-submit"
+                                    onClick={() =>
+                                      setConfirmConfig({
+                                        isOpen: true,
+                                        message:
+                                          '이 이벤트를 완전히 삭제하시겠습니까? (내역에서 사라집니다)',
+                                        onConfirm: () =>
+                                          handleDeleteHonEvent(ev.id),
+                                      })
+                                    }
+                                    style={{
+                                      height: '30px',
+                                      fontSize: '0.8rem',
+                                      background: 'transparent',
+                                      border: '1px solid var(--text-dim)',
+                                    }}
+                                  >
+                                    삭제
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                   </div>

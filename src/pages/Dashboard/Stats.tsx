@@ -706,8 +706,8 @@ export function Stats() {
                   marginTop: '8px',
                 }}
               >
-                {winningNumber?.episode ?? prediction?.episode}회차 최고 분석 점수
-                예측
+                {winningNumber?.episode ?? prediction?.episode}회차 최고 분석
+                점수 예측
               </h3>
             </div>
             <div style={{ textAlign: 'right' }}>

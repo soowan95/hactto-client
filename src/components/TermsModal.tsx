@@ -241,7 +241,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
               opacity: 0.6,
             }}
           >
-            시행일자: 2026년 6월 17일
+            시행일자: 2026년 6월 30일
           </p>
         </div>
       </div>

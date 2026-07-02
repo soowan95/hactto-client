@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+ 
 /* eslint-disable */
 import {
   createContext,
@@ -434,7 +434,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [checkIpStatus]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     checkIpStatus();
     fetchAndCacheAlgorithms();
 

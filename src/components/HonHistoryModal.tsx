@@ -7,6 +7,8 @@ interface HonEvent {
   visitorId: string;
   type: string;
   amount: number;
+  freeAmount: number;
+  paidAmount: number;
   balance: number;
   description: string | null;
   createdAt: string;
@@ -21,9 +23,10 @@ export const HonHistoryModal: React.FC<HonHistoryModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { visitorId, showAlert } = useApp();
+  const { visitorId, showAlert, freeHon, paidHon } = useApp();
   const [events, setEvents] = useState<HonEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'ALL' | 'FREE' | 'PAID'>('ALL');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -148,6 +151,136 @@ export const HonHistoryModal: React.FC<HonHistoryModalProps> = ({
           </button>
         </div>
 
+        {/* Current Balance Summary */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px',
+            background: 'rgba(0, 240, 255, 0.03)',
+            border: '1px solid rgba(0, 240, 255, 0.1)',
+            borderRadius: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '24px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
+              <span
+                style={{
+                  color: 'var(--text-dim)',
+                  fontSize: '0.75rem',
+                  fontWeight: '500',
+                }}
+              >
+                이벤트 HON
+              </span>
+              <span
+                style={{
+                  color: 'var(--primary-cyan)',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                }}
+              >
+                {freeHon}
+              </span>
+            </div>
+            <div
+              style={{ width: '1px', background: 'rgba(255, 255, 255, 0.1)' }}
+            />
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
+              <span
+                style={{
+                  color: 'var(--text-dim)',
+                  fontSize: '0.75rem',
+                  fontWeight: '500',
+                }}
+              >
+                충전 HON
+              </span>
+              <span
+                style={{
+                  color: '#ffb86c',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                }}
+              >
+                {paidHon}
+              </span>
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              alignItems: 'flex-end',
+            }}
+          >
+            <span
+              style={{
+                color: 'var(--text-dim)',
+                fontSize: '0.75rem',
+                fontWeight: '500',
+              }}
+            >
+              총 잔액
+            </span>
+            <span
+              style={{
+                color: 'var(--text-main)',
+                fontSize: '1.3rem',
+                fontWeight: 'bold',
+              }}
+            >
+              {freeHon + paidHon}
+            </span>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            paddingBottom: '8px',
+          }}
+        >
+          {[
+            { id: 'ALL', label: '전체' },
+            { id: 'FREE', label: '이벤트 HON' },
+            { id: 'PAID', label: '충전 HON' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as 'ALL' | 'FREE' | 'PAID')}
+              style={{
+                background:
+                  activeTab === tab.id
+                    ? 'rgba(0, 240, 255, 0.1)'
+                    : 'transparent',
+                color:
+                  activeTab === tab.id
+                    ? 'var(--primary-cyan)'
+                    : 'var(--text-dim)',
+                border: `1px solid ${activeTab === tab.id ? 'rgba(0, 240, 255, 0.3)' : 'transparent'}`,
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Modal Content */}
         <div
           className="scroll-y-container"
@@ -170,95 +303,188 @@ export const HonHistoryModal: React.FC<HonHistoryModalProps> = ({
             >
               내역을 가져오는 중...
             </p>
-          ) : events.length === 0 ? (
-            <div
-              style={{
-                color: 'var(--text-dim)',
-                textAlign: 'center',
-                padding: '60px 0',
-                fontSize: '0.85rem',
-              }}
-            >
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📜</div>
-              HON 사용 내역이 존재하지 않습니다.
-            </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-              }}
-            >
-              {events.map((evt) => {
-                const isDeduct = evt.amount < 0;
-                return (
+            (() => {
+              const getEffectiveAmounts = (evt: HonEvent) => {
+                if (
+                  evt.freeAmount === 0 &&
+                  evt.paidAmount === 0 &&
+                  evt.amount !== 0
+                ) {
+                  if (evt.type === 'CHARGE') {
+                    const desc = evt.description || '';
+                    if (
+                      desc.includes('첫 방문') ||
+                      desc.includes('무료') ||
+                      desc.includes('이벤트') ||
+                      desc.includes('보상')
+                    ) {
+                      return { fAmt: evt.amount, pAmt: 0 };
+                    }
+                    return { fAmt: 0, pAmt: evt.amount };
+                  }
+                  if (evt.type === 'ADMIN_PROVISION')
+                    return { fAmt: evt.amount, pAmt: 0 };
+                  // For legacy DEDUCT, display in both tabs using the total amount
+                  return { fAmt: evt.amount, pAmt: evt.amount };
+                }
+                return { fAmt: evt.freeAmount, pAmt: evt.paidAmount };
+              };
+
+              const filteredEvents = events.filter((evt) => {
+                const { fAmt, pAmt } = getEffectiveAmounts(evt);
+                if (activeTab === 'ALL') return true;
+                if (activeTab === 'FREE') return fAmt !== 0;
+                if (activeTab === 'PAID') return pAmt !== 0;
+                return true;
+              });
+
+              return filteredEvents.length === 0 ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '50px 20px',
+                    margin: '10px 0',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px dashed rgba(255, 255, 255, 0.1)',
+                    borderRadius: '16px',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                >
                   <div
-                    key={evt.id}
                     style={{
-                      padding: '10px 14px',
-                      background: 'rgba(255, 255, 255, 0.01)',
-                      border: '1px solid rgba(255, 255, 255, 0.04)',
-                      borderRadius: '8px',
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '50%',
+                      background:
+                        'radial-gradient(circle at center, rgba(0, 240, 255, 0.15) 0%, rgba(0, 240, 255, 0) 70%)',
                       display: 'flex',
-                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      fontSize: '0.82rem',
+                      justifyContent: 'center',
+                      fontSize: '1.8rem',
+                      marginBottom: '16px',
+                      boxShadow: '0 0 20px rgba(0, 240, 255, 0.05)',
+                      border: '1px solid rgba(0, 240, 255, 0.15)',
+                      animation: 'pulse-cyan 2s infinite ease-in-out',
                     }}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '3px',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <span
-                        style={{ color: 'var(--text-main)', fontWeight: '600' }}
-                      >
-                        {evt.description || (isDeduct ? '혼 사용' : '혼 충전')}
-                      </span>
-                      <span
-                        style={{
-                          color: 'var(--text-dim)',
-                          fontSize: '0.68rem',
-                        }}
-                      >
-                        {new Date(evt.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-end',
-                        gap: '3px',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontWeight: 'bold',
-                          color: isDeduct ? '#ff4b4b' : 'var(--primary-cyan)',
-                        }}
-                      >
-                        {isDeduct ? '' : '+'}
-                        {evt.amount} HON
-                      </span>
-                      <span
-                        style={{
-                          color: 'var(--text-dim)',
-                          fontSize: '0.68rem',
-                        }}
-                      >
-                        잔액: {evt.balance} HON
-                      </span>
-                    </div>
+                    📭
                   </div>
-                );
-              })}
-            </div>
+                  <span
+                    style={{
+                      color: 'var(--text-main)',
+                      fontSize: '0.95rem',
+                      fontWeight: 'bold',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    내역이 없습니다
+                  </span>
+                  <span
+                    style={{
+                      color: 'var(--text-dim)',
+                      fontSize: '0.8rem',
+                      textAlign: 'center',
+                      maxWidth: '220px',
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    해당 탭에 표시할 HON 사용 또는 충전 내역이 존재하지
+                    않습니다.
+                  </span>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  {filteredEvents.map((evt) => {
+                    const { fAmt, pAmt } = getEffectiveAmounts(evt);
+                    let displayAmount = evt.amount;
+                    if (activeTab === 'FREE') displayAmount = fAmt;
+                    if (activeTab === 'PAID') displayAmount = pAmt;
+                    const isDisplayDeduct = displayAmount < 0;
+                    return (
+                      <div
+                        key={evt.id}
+                        style={{
+                          padding: '10px 14px',
+                          background: 'rgba(255, 255, 255, 0.01)',
+                          border: '1px solid rgba(255, 255, 255, 0.04)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.82rem',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '3px',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: 'var(--text-main)',
+                              fontWeight: '600',
+                            }}
+                          >
+                            {evt.description ||
+                              (isDisplayDeduct ? '혼 사용' : '혼 충전')}
+                          </span>
+                          <span
+                            style={{
+                              color: 'var(--text-dim)',
+                              fontSize: '0.68rem',
+                            }}
+                          >
+                            {new Date(evt.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
+                            gap: '3px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontWeight: 'bold',
+                              color: isDisplayDeduct
+                                ? '#ff4b4b'
+                                : 'var(--primary-cyan)',
+                            }}
+                          >
+                            {isDisplayDeduct ? '' : '+'}
+                            {displayAmount} HON
+                          </span>
+                          <span
+                            style={{
+                              color: 'var(--text-dim)',
+                              fontSize: '0.68rem',
+                            }}
+                          >
+                            잔액: {evt.balance} HON
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
         </div>
 
