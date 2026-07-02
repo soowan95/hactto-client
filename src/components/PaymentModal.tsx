@@ -154,6 +154,7 @@ export function PaymentModal({
       if (isSubscription) {
         const channelKey =
           import.meta.env.VITE_PORTONE_BILLING_CHANNEL_KEY ||
+          import.meta.env.VITE_PORTONE_TEST_BILLING_CHANNEL_KEY ||
           'channel-key-toss-billing-test';
 
         const billingKeyRes = await PortOne.requestIssueBillingKey({
@@ -194,7 +195,9 @@ export function PaymentModal({
         paymentKey = billingKeyRes.billingKey;
       } else {
         const channelKey =
-          import.meta.env.VITE_PORTONE_CHANNEL_KEY || 'channel-key-toss-test';
+          import.meta.env.VITE_PORTONE_CHANNEL_KEY ||
+          import.meta.env.VITE_PORTONE_TEST_CHANNEL_KEY ||
+          'channel-key-toss-test';
 
         const payment = await PortOne.requestPayment({
           storeId,
@@ -246,20 +249,26 @@ export function PaymentModal({
       });
 
       if (confirmRes.ok) {
-        const paymentComplete = await confirmRes.json();
+        const responseData = await confirmRes.json();
+        const paymentComplete = responseData.data || responseData;
+        
         setPaymentStatus({
           status: paymentComplete.status as PaymentStatus,
         });
+
+        if (paymentComplete.isTest) {
+          showAlert('success', '[테스트 환경] 결제가 처리되었습니다. 실제 요금은 청구되지 않으며, HON 및 구독도 지급되지 않습니다.');
+        } else {
+          showAlert('success', `${orderName} 상품의 결제가 정상 완료되었습니다!`);
+        }
+        onSuccess();
+        onClose();
       } else {
         setPaymentStatus({
           status: 'FAILED',
           message: await confirmRes.text(),
         });
       }
-
-      showAlert('success', `${orderName} 상품의 결제가 정상 완료되었습니다!`);
-      onSuccess();
-      onClose();
     } catch (err: unknown) {
       const error = err as Error;
       showAlert('error', error.message || '결제 도중 오류가 발생했습니다.');
@@ -519,6 +528,9 @@ export function PaymentModal({
             >
               혼(Hon) 단건 충전
             </h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '0 0 14px 0' }}>
+              정가 50원/HON 기준, 현재 파격적인 할인 이벤트가 적용된 금액입니다.
+            </p>
 
             <div
               style={{
@@ -569,7 +581,7 @@ export function PaymentModal({
                     'rgba(255, 255, 255, 0.03)';
                 }}
               >
-                <div style={{ textAlign: 'left' }}>
+                <div style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
                   <div
                     style={{
                       fontSize: '0.95rem',
@@ -581,22 +593,29 @@ export function PaymentModal({
                   </div>
                   <div
                     style={{
-                      fontSize: '0.7rem',
+                      fontSize: '0.65rem',
                       color: 'var(--text-dim)',
                       marginTop: '2px',
+                      letterSpacing: '-0.2px',
                     }}
                   >
                     1HON당 약 33.3원
                   </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: '0.95rem',
-                    fontWeight: 'bold',
-                    color: 'var(--primary-cyan)',
-                  }}
-                >
-                  1,000원
+                <div style={{ textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginBottom: '2px' }}>
+                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold' }}>33%</span>
+                    <span style={{ textDecoration: 'line-through', color: 'var(--text-dim)', fontSize: '0.75rem' }}>1,500원</span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 'bold',
+                      color: 'var(--primary-cyan)',
+                    }}
+                  >
+                    1,000원
+                  </div>
                 </div>
               </div>
 
@@ -641,7 +660,7 @@ export function PaymentModal({
                     'rgba(255, 255, 255, 0.03)';
                 }}
               >
-                <div style={{ textAlign: 'left' }}>
+                <div style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
                   <div
                     style={{
                       fontSize: '0.95rem',
@@ -653,22 +672,29 @@ export function PaymentModal({
                   </div>
                   <div
                     style={{
-                      fontSize: '0.7rem',
+                      fontSize: '0.65rem',
                       color: 'var(--text-dim)',
                       marginTop: '2px',
+                      letterSpacing: '-0.2px',
                     }}
                   >
                     1HON당 30원 (추천)
                   </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: '0.95rem',
-                    fontWeight: 'bold',
-                    color: 'var(--primary-cyan)',
-                  }}
-                >
-                  3,000원
+                <div style={{ textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginBottom: '2px' }}>
+                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold' }}>40%</span>
+                    <span style={{ textDecoration: 'line-through', color: 'var(--text-dim)', fontSize: '0.75rem' }}>5,000원</span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 'bold',
+                      color: 'var(--primary-cyan)',
+                    }}
+                  >
+                    3,000원
+                  </div>
                 </div>
               </div>
 
@@ -713,7 +739,7 @@ export function PaymentModal({
                     'rgba(255, 255, 255, 0.03)';
                 }}
               >
-                <div style={{ textAlign: 'left' }}>
+                <div style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
                   <div
                     style={{
                       fontSize: '0.95rem',
@@ -725,23 +751,30 @@ export function PaymentModal({
                   </div>
                   <div
                     style={{
-                      fontSize: '0.7rem',
+                      fontSize: '0.65rem',
                       color: 'var(--text-dim)',
                       marginTop: '2px',
                       fontWeight: '600',
+                      letterSpacing: '-0.3px',
                     }}
                   >
                     1HON당 25원 (최대 할인! 🔥)
                   </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: '0.95rem',
-                    fontWeight: 'bold',
-                    color: 'var(--primary-cyan)',
-                  }}
-                >
-                  5,000원
+                <div style={{ textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginBottom: '2px' }}>
+                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold' }}>50%</span>
+                    <span style={{ textDecoration: 'line-through', color: 'var(--text-dim)', fontSize: '0.75rem' }}>10,000원</span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 'bold',
+                      color: 'var(--primary-cyan)',
+                    }}
+                  >
+                    5,000원
+                  </div>
                 </div>
               </div>
             </div>

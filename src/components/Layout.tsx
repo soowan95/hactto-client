@@ -12,6 +12,7 @@ import { AdSenseBanner } from './AdSenseBanner';
 import { PrivacyModal } from './PrivacyModal';
 import { TermsModal } from './TermsModal';
 import { RefundPolicyModal } from './RefundPolicyModal';
+import { NicknameModal } from './NicknameModal';
 
 export function Layout() {
   const {
@@ -27,6 +28,8 @@ export function Layout() {
     paidHon,
     subscription,
     checkIpStatus,
+    nickname,
+    visitorId,
   } = useApp();
 
   const navigate = useNavigate();
@@ -35,6 +38,7 @@ export function Layout() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
   useEffect(() => {
@@ -100,11 +104,68 @@ export function Layout() {
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <span
                 className="logo-glow"
-                style={{ fontSize: '1.8rem', cursor: 'pointer' }}
+                style={{
+                  fontSize: '1.8rem',
+                  cursor: 'pointer',
+                  marginRight: '12px',
+                }}
                 onClick={() => navigate('/home')}
               >
                 hactto
               </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.85rem',
+                  color: 'var(--text-main)',
+                  background: 'rgba(255,255,255,0.05)',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  cursor: nickname ? 'default' : 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onClick={() => {
+                  if (!nickname) setShowNicknameModal(true);
+                }}
+                onMouseEnter={(e) => {
+                  if (!nickname) {
+                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
+                    e.currentTarget.style.borderColor =
+                      'rgba(0, 240, 255, 0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!nickname) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  }
+                }}
+                title={!nickname ? '닉네임 설정하기' : undefined}
+              >
+                <span style={{ fontWeight: 'bold' }}>
+                  {nickname || visitorId?.substring(0, 8)}
+                </span>
+                님
+                {!nickname && (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--text-dim)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ marginLeft: '2px' }}
+                  >
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                  </svg>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -274,7 +335,7 @@ export function Layout() {
 
               {/* 독립된 결제/충전 버튼 - 포트원 환경변수 설정 시에만 노출 */}
               {import.meta.env.VITE_PORTONE_STORE_ID &&
-                import.meta.env.VITE_PORTONE_CHANNEL_KEY && (
+                (import.meta.env.VITE_PORTONE_CHANNEL_KEY || import.meta.env.VITE_PORTONE_TEST_CHANNEL_KEY) && (
                   <button
                     onClick={() => setShowPaymentModal(true)}
                     style={{
@@ -430,6 +491,15 @@ export function Layout() {
               내 당첨이력
             </NavLink>
             <NavLink
+              to="/board"
+              onClick={(e) => handleTabClick(e, '/board')}
+              className={({ isActive }) =>
+                `tab-btn ${isActive ? 'active-tab' : ''}`
+              }
+            >
+              게시판
+            </NavLink>
+            <NavLink
               to="/support"
               onClick={(e) => handleTabClick(e, '/support')}
               className={({ isActive }) =>
@@ -465,7 +535,8 @@ export function Layout() {
               paddingRight: '8px',
               marginRight: '-8px',
               minHeight: 0,
-              marginBottom: '12px',
+              maxHeight: 'calc(100% - 10px)',
+              marginBottom: 0,
             }}
           >
             <Outlet />
@@ -480,96 +551,99 @@ export function Layout() {
               paddingTop: '15px',
               borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
-              justifyContent: 'center',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '16px',
+              gap: '8px',
               fontSize: '0.75rem',
               color: 'var(--text-dim)',
-              flexWrap: 'wrap',
               flexShrink: 0,
             }}
           >
-            <button
-              onClick={() => setShowPrivacyModal(true)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                color: showPrivacyModal
-                  ? 'var(--primary-cyan)'
-                  : 'var(--text-dim)',
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease',
-                outline: 'none',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--primary-cyan)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = showPrivacyModal
-                  ? 'var(--primary-cyan)'
-                  : 'var(--text-dim)';
-              }}
-            >
-              개인정보처리방침
-            </button>
-            <span style={{ opacity: 0.2 }}>|</span>
-            <button
-              onClick={() => setShowTermsModal(true)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                color: showTermsModal
-                  ? 'var(--primary-cyan)'
-                  : 'var(--text-dim)',
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease',
-                outline: 'none',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--primary-cyan)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = showTermsModal
-                  ? 'var(--primary-cyan)'
-                  : 'var(--text-dim)';
-              }}
-            >
-              이용약관
-            </button>
-            <span style={{ opacity: 0.2 }}>|</span>
-            <button
-              onClick={() => setShowRefundModal(true)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                color: showRefundModal
-                  ? 'var(--primary-cyan)'
-                  : 'var(--text-dim)',
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease',
-                outline: 'none',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--primary-cyan)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = showRefundModal
-                  ? 'var(--primary-cyan)'
-                  : 'var(--text-dim)';
-              }}
-            >
-              환불 규정
-            </button>
-            <span style={{ opacity: 0.2 }}>|</span>
-            <span style={{ opacity: 0.5 }}>
-              © {new Date().getFullYear()} hactto. All rights reserved.
-            </span>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowPrivacyModal(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  color: showPrivacyModal
+                    ? 'var(--primary-cyan)'
+                    : 'var(--text-dim)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'color 0.2s ease',
+                  outline: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--primary-cyan)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = showPrivacyModal
+                    ? 'var(--primary-cyan)'
+                    : 'var(--text-dim)';
+                }}
+              >
+                개인정보처리방침
+              </button>
+              <span style={{ opacity: 0.2 }}>|</span>
+              <button
+                onClick={() => setShowTermsModal(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  color: showTermsModal
+                    ? 'var(--primary-cyan)'
+                    : 'var(--text-dim)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'color 0.2s ease',
+                  outline: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--primary-cyan)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = showTermsModal
+                    ? 'var(--primary-cyan)'
+                    : 'var(--text-dim)';
+                }}
+              >
+                이용약관
+              </button>
+              <span style={{ opacity: 0.2 }}>|</span>
+              <button
+                onClick={() => setShowRefundModal(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  color: showRefundModal
+                    ? 'var(--primary-cyan)'
+                    : 'var(--text-dim)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'color 0.2s ease',
+                  outline: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--primary-cyan)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = showRefundModal
+                    ? 'var(--primary-cyan)'
+                    : 'var(--text-dim)';
+                }}
+              >
+                환불 규정
+              </button>
+            </div>
+            <div style={{ textAlign: 'center', lineHeight: '1.6', opacity: 0.7, marginTop: '4px' }}>
+              <span>상호명: 핵또</span> <span style={{ margin: '0 4px' }}>|</span> <span>대표자명: 김수완</span> <span style={{ margin: '0 4px' }}>|</span> <span>사업자등록번호: 519-18-02415</span> <span style={{ margin: '0 4px' }}>|</span> <span>통신판매업신고번호: 없음</span><br />
+              <span>사업장 소재지: 서울특별시 마포구 와우산로 105, 5층 261A호(서교동)</span><br />
+              <span>고객센터 전화번호: 070-8110-8128</span> <span style={{ margin: '0 4px' }}>|</span> <span>이메일 주소: hactto95@gmail.com</span><br />
+              <span style={{ display: 'block', marginTop: '6px' }}>© {new Date().getFullYear()} hactto. All rights reserved.</span>
+            </div>
           </footer>
         </div>
 
@@ -601,6 +675,10 @@ export function Layout() {
         <RefundPolicyModal
           isOpen={showRefundModal}
           onClose={() => setShowRefundModal(false)}
+        />
+        <NicknameModal
+          isOpen={showNicknameModal}
+          onClose={() => setShowNicknameModal(false)}
         />
       </div>
 

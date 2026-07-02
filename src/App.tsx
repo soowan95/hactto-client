@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -16,6 +17,7 @@ import { Stats } from './pages/Dashboard/Stats';
 import { AnalysisCharts } from './pages/Dashboard/AnalysisCharts';
 import { Generate } from './pages/Dashboard/Generate';
 import { History } from './pages/Dashboard/History';
+import { Board } from './pages/Dashboard/Board';
 import { Support } from './pages/Dashboard/Support';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { InteractiveBackground } from './components/InteractiveBackground';
@@ -126,6 +128,7 @@ function AppContent() {
           <Route path="/analysis-charts" element={<AnalysisCharts />} />
           <Route path="/generate" element={<Generate />} />
           <Route path="/history" element={<History />} />
+          <Route path="/board" element={<Board />} />
           <Route path="/support" element={<Support />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Route>

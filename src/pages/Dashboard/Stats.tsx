@@ -99,7 +99,7 @@ export function Stats() {
       console.error('Failed to fetch clicked episode best prediction', err);
       showAlert(
         'error',
-        '해당 회차 최고 신뢰도 조합 정보를 불러오지 못했습니다.',
+        '해당 회차 최고 분석 점수 조합 정보를 불러오지 못했습니다.',
       );
     } finally {
       setClickedPointLoading(false);
@@ -173,7 +173,7 @@ export function Stats() {
         }
       } catch (err) {
         console.error('Champion data fetch failed', err);
-        showAlert('error', '최고 신뢰도 데이터를 불러오지 못했습니다.');
+        showAlert('error', '최고 분석 점수 데이터를 불러오지 못했습니다.');
       } finally {
         setChampionLoading(false);
       }
@@ -241,9 +241,9 @@ export function Stats() {
   // Render sub-tabs navigation
   const renderSubTabs = () => {
     const tabs = [
-      { id: 'leaderboard', label: '평균 신뢰도 순위' },
+      { id: 'leaderboard', label: '평균 분석 점수 순위' },
       { id: 'weekly', label: '금주 생성 분포' },
-      { id: 'champion', label: '최고 신뢰도 조합' },
+      { id: 'champion', label: '최고 분석 점수 조합' },
       { id: 'detail', label: '상세 분석' },
     ] as const;
 
@@ -297,7 +297,7 @@ export function Stats() {
     );
   };
 
-  // Render Leaderboard (평균 신뢰도 순위)
+  // Render Leaderboard (평균 분석 점수 순위)
   const renderLeaderboard = () => {
     if (overviewLoading) {
       return (
@@ -497,7 +497,22 @@ export function Stats() {
                 gap: '8px',
               }}
             >
-              📊 금주 알고리즘 생성 횟수 분포
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ color: 'var(--primary-cyan)' }}
+              >
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+              금주 알고리즘 생성 횟수 분포
             </h3>
             <span
               style={{
@@ -545,7 +560,7 @@ export function Stats() {
                       >
                         {parseAlgorithmName(
                           algorithmTypes.find((a) => a.type === c.algorithm) ||
-                            c.algorithm,
+                          c.algorithm,
                         )}
                       </span>
                       <span
@@ -592,12 +607,12 @@ export function Stats() {
     );
   };
 
-  // Tab 2: Render Champion Prediction Combo (최고 신뢰도)
+  // Tab 2: Render Champion Prediction Combo (최고 분석 점수)
   const renderChampion = () => {
     if (championLoading) {
       return (
         <p style={{ color: 'var(--text-dim)', padding: '20px 0' }}>
-          최고 신뢰도 번호 분석을 불러오는 중...
+          최고 분석 점수 번호 분석을 불러오는 중...
         </p>
       );
     }
@@ -612,7 +627,7 @@ export function Stats() {
           }}
         >
           <p style={{ marginBottom: '12px' }}>
-            최근 회차의 신뢰도 분석 결과가 조회되지 않습니다.
+            최근 회차의 데이터 분석 결과가 조회되지 않습니다.
           </p>
           <button
             className="btn-neon btn-outline"
@@ -691,7 +706,7 @@ export function Stats() {
                   marginTop: '8px',
                 }}
               >
-                {winningNumber?.episode ?? prediction?.episode}회차 최고 신뢰도
+                {winningNumber?.episode ?? prediction?.episode}회차 최고 분석 점수
                 예측
               </h3>
             </div>
@@ -708,7 +723,7 @@ export function Stats() {
                 {prediction.reliabilityScore.toFixed(2)}%
               </div>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                신뢰도 스코어
+                분석 스코어
               </span>
             </div>
           </div>
@@ -730,7 +745,7 @@ export function Stats() {
             <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
               {parseAlgorithmName(
                 algorithmTypes.find((a) => a.type === prediction.algorithm) ||
-                  prediction.algorithm,
+                prediction.algorithm,
               )}
             </span>
           </div>
@@ -988,7 +1003,7 @@ export function Stats() {
     );
   };
 
-  // Tab 3: Render Detailed Trend (에피소드별 신뢰도)
+  // Tab 3: Render Detailed Trend (에피소드별 분석 점수)
   const renderDetail = () => {
     if (detailLoading) {
       return (
@@ -1137,17 +1152,17 @@ export function Stats() {
                 key={groupName}
                 label={
                   groupName === 'WEIGHTS'
-                    ? '가중치 분석형 (WEIGHTS)'
+                    ? '가중치 분석형'
                     : groupName === 'FREQUENCY'
-                      ? '빈도 분석형 (FREQUENCY)'
-                      : groupName
+                      ? '빈도 분석형'
+                      : '균형 분석형'
                 }
               >
                 {items.map((item) => (
                   <option key={item.algorithm} value={item.algorithm}>
                     {parseAlgorithmName(
                       algorithmTypes.find((a) => a.type === item.algorithm) ||
-                        item.algorithm,
+                      item.algorithm,
                     )}
                   </option>
                 ))}
@@ -1185,7 +1200,7 @@ export function Stats() {
                 color: 'var(--text-main)',
               }}
             >
-              회차별 신뢰도 점수 변동 추이
+              회차별 분석 점수 변동 추이
             </h4>
           </div>
 
@@ -1398,7 +1413,7 @@ export function Stats() {
                   <div
                     style={{ fontWeight: 'bold', color: 'var(--text-main)' }}
                   >
-                    신뢰도:{' '}
+                    분석 점수:{' '}
                     <span
                       style={{
                         color: getReliabilityColor(hoveredPoint.score),
@@ -1441,7 +1456,7 @@ export function Stats() {
                 marginBottom: '4px',
               }}
             >
-              최고 신뢰도 (PEAK)
+              최고 분석 점수 (PEAK)
             </div>
             <div
               className="kpi-value"
@@ -1471,7 +1486,7 @@ export function Stats() {
                 marginBottom: '4px',
               }}
             >
-              평균 신뢰도 (AVG)
+              평균 분석 점수 (AVG)
             </div>
             <div
               className="kpi-value"
@@ -1501,7 +1516,7 @@ export function Stats() {
                 marginBottom: '4px',
               }}
             >
-              최저 신뢰도 (LOW)
+              최저 분석 점수 (LOW)
             </div>
             <div
               className="kpi-value"
@@ -1529,7 +1544,7 @@ export function Stats() {
             textAlign: 'left',
           }}
         >
-          💡 <strong>신뢰도 점수(Reliability Score)란?</strong>
+          💡 <strong>분석 점수(Analysis Score)란?</strong>
           <div style={{ marginTop: '4px' }}>
             각 회차별로 실제 발표된 당첨 번호 분포와 해당 알고리즘의 예측 번호가
             수학적으로 얼마나 근사했는지를 나타내는 점수입니다. 100%에
@@ -1695,7 +1710,7 @@ export function Stats() {
                     }}
                   />
                   <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
-                    최고 신뢰도 데이터를 불러오는 중...
+                    최고 분석 점수 데이터를 불러오는 중...
                   </p>
                 </div>
               )}
@@ -1802,7 +1817,7 @@ export function Stats() {
                               marginTop: '8px',
                             }}
                           >
-                            {prediction.episode}회차 최고 신뢰도 예측
+                            {prediction.episode}회차 최고 분석 점수 예측
                           </h3>
                         </div>
                         <div style={{ textAlign: 'right' }}>
@@ -1826,7 +1841,7 @@ export function Stats() {
                               color: 'rgba(255,255,255,0.5)',
                             }}
                           >
-                            신뢰도 스코어
+                            분석 스코어
                           </span>
                         </div>
                       </div>

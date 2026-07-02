@@ -336,8 +336,8 @@ export function Generate() {
           body: JSON.stringify(
             isWeightsAlgo
               ? {
-                  weights: weights,
-                }
+                weights: weights,
+              }
               : {},
           ),
         },
@@ -653,7 +653,6 @@ export function Generate() {
               key={gameIndex}
               style={{
                 width: '180px',
-                height: '400px',
                 background: '#faf8f2',
                 border: '1px solid #e0d9c3',
                 borderTop: '6px solid #c62828',
@@ -827,6 +826,7 @@ export function Generate() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '6px',
+                  marginTop: '8px',
                 }}
               >
                 {/* Auto / Semi-Auto Section */}
@@ -1623,10 +1623,10 @@ export function Generate() {
                             }}
                           >
                             {groupName === 'WEIGHTS'
-                              ? '가중치 분석형 (WEIGHTS)'
+                              ? '가중치 분석형'
                               : groupName === 'FREQUENCY'
-                                ? '빈도 분석형 (FREQUENCY)'
-                                : groupName}
+                                ? '빈도 분석형'
+                                : '균형 분석형'}
                           </div>
                           {/* 그룹 내 아이템 */}
                           {types.map((algo) => {
@@ -1846,7 +1846,7 @@ export function Generate() {
                           >
                             <polyline points="9 18 15 12 9 6" />
                           </svg>
-                          개인 신뢰도 가중치 설정 (합계 100%)
+                          개인 분석 가중치 설정 (합계 100%)
                         </span>
                         <div
                           style={{
@@ -2229,7 +2229,7 @@ export function Generate() {
                     marginBottom: '8px',
                   }}
                 >
-                  예측 조합 번호 생성 완료
+                  [{algorithmTypes.find(a => a.key === generatingAlgo)?.name || parseAlgorithmName(generatingAlgo)}] 예측 조합 번호 생성 완료
                 </h2>
 
                 <p
@@ -2240,7 +2240,7 @@ export function Generate() {
                     marginBottom: '8px',
                   }}
                 >
-                  [{parseAlgorithmName(generatingAlgo)}] 알고리즘을 통해 최적의
+                  알고리즘을 통해 최적의
                   번호 조합을 추출했습니다.
                 </p>
 

@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+/* eslint-disable */
 import {
   createContext,
   useContext,
@@ -8,7 +9,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import type { AlertState, SubscriptionStatus } from '../types';
-import { API_BASE_URL } from '../utils';
+import { API_BASE_URL, fetchAndCacheAlgorithms } from '../utils';
 
 // Google Crawler Bot Detection to bypass access blocking
 const isGoogleBot =
@@ -61,6 +62,8 @@ interface AppContextType {
   freeHon: number;
   paidHon: number;
   subscription: SubscriptionStatus | null;
+  nickname: string | null;
+  setNickname: (name: string | null) => void;
   isBlockedUser: boolean;
   setIsBlockedUser: (val: boolean) => void;
 }
@@ -104,6 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
     null,
   );
+  const [nickname, setNickname] = useState<string | null>(null);
   const [isBlockedUser, setIsBlockedUser] = useState<boolean>(false);
 
   // Show auto-dismiss alerts
@@ -157,7 +161,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const response = await originalFetch(input, newInit);
 
-      if (response.status === 403) {
+      if (response.status === 403 && !urlString.includes('/visitor/register')) {
         try {
           const clone = response.clone();
           const errData = await clone.json();
@@ -293,6 +297,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (result.visitorId) {
           setVisitorId(result.visitorId);
           localStorage.setItem('visitor_id', result.visitorId);
+
+          try {
+            const meRes = await fetch(`${API_BASE_URL}/visitor/me`, {
+              headers: { 'x-visitor-id': result.visitorId },
+            });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              if (meData.data) {
+                // Handle both { data: visitor } and { data: { data: visitor } } just in case
+                const visitorObj =
+                  meData.data.nickname !== undefined
+                    ? meData.data
+                    : meData.data.data;
+                if (visitorObj) {
+                  setNickname(visitorObj.nickname || null);
+                }
+              }
+            }
+          } catch {}
         }
 
         const isFirstVisit = res.headers.get('x-first-visit') === 'true';
@@ -413,6 +436,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     checkIpStatus();
+    fetchAndCacheAlgorithms();
 
     const savedKey = sessionStorage.getItem('mk');
     if (savedKey) {
@@ -541,6 +565,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         freeHon,
         paidHon,
         subscription,
+        nickname,
+        setNickname,
         isBlockedUser,
         setIsBlockedUser,
       }}

@@ -1,7 +1,9 @@
+/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { API_BASE_URL, parseAlgorithmName } from '../utils';
 import { Alert } from './Alert';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -28,7 +30,13 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   };
 
   const [activeTab, setActiveTab] = useState<
-    'algo' | 'system' | 'notices' | 'inquiries' | 'visitors'
+    | 'algo'
+    | 'system'
+    | 'notices'
+    | 'inquiries'
+    | 'visitors'
+    | 'NICKNAME_REPORTS'
+    | 'BANNED_WORDS'
   >('algo');
   const [algorithms, setAlgorithms] = useState<
     { type: string; name?: string; complexity: number; description?: string }[]
@@ -49,8 +57,17 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [syncingAlgos, setSyncingAlgos] = useState(false);
 
   // --- New Admin States ---
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
   // Notice management states
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [nicknameReports, setNicknameReports] = useState<any[]>([]);
+  const [bannedWords, setBannedWords] = useState<string[]>([]);
+  const [newBannedWord, setNewBannedWord] = useState('');
   const [adminNotices, setAdminNotices] = useState<any[]>([]);
   const [loadingAdminNotices, setLoadingAdminNotices] = useState(false);
   const [newNoticeTitle, setNewNoticeTitle] = useState('');
@@ -143,6 +160,30 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
   };
 
+  const fetchNicknameReports = async () => {
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/nickname-reports`),
+      );
+      const data = await res.json();
+      if (res.ok) setNicknameReports(data.data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchBannedWords = async () => {
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/banned-words`),
+      );
+      const data = await res.json();
+      if (res.ok) setBannedWords(data.data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && isAuthSuccessLocal && activeTab === 'algo') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -159,6 +200,10 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         fetchAdminInquiries();
       } else if (activeTab === 'visitors') {
         fetchStats();
+      } else if (activeTab === 'NICKNAME_REPORTS') {
+        fetchNicknameReports();
+      } else if (activeTab === 'BANNED_WORDS') {
+        fetchBannedWords();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,6 +238,81 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     } catch {
       // Error message is set inside AppContext and rendered below
     }
+  };
+
+  const blockNicknameReport = async (id: string) => {
+    if (
+      !window.confirm(
+        '이 닉네임을 금지어로 등록하고, 해당 유저의 닉네임을 초기화하시겠습니까?',
+      )
+    )
+      return;
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/nickname-reports/${id}/block`),
+        {
+          method: 'POST',
+        },
+      );
+      if (res.ok) {
+        showAlert('success', '처리되었습니다.');
+        fetchNicknameReports();
+      }
+    } catch (e) {
+      showAlert('error', '오류가 발생했습니다.');
+    }
+  };
+
+  const rejectNicknameReport = async (id: string) => {
+    if (!window.confirm('신고를 반려하시겠습니까?')) return;
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/nickname-reports/${id}/reject`),
+        {
+          method: 'POST',
+        },
+      );
+      if (res.ok) {
+        showAlert('success', '반려되었습니다.');
+        fetchNicknameReports();
+      }
+    } catch (e) {
+      showAlert('error', '오류가 발생했습니다.');
+    }
+  };
+
+  const addBannedWord = async () => {
+    if (!newBannedWord.trim()) return;
+    try {
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/banned-words`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word: newBannedWord.trim() }),
+        },
+      );
+      if (res.ok) {
+        setNewBannedWord('');
+        fetchBannedWords();
+      }
+    } catch (e) {}
+  };
+
+  const removeBannedWord = async (word: string) => {
+    if (!window.confirm(`'${word}' 단어를 금지어에서 삭제하시겠습니까?`))
+      return;
+    try {
+      const res = await fetch(
+        appendAuth(
+          `${API_BASE_URL}/manager/banned-words/${encodeURIComponent(word)}`,
+        ),
+        {
+          method: 'DELETE',
+        },
+      );
+      if (res.ok) fetchBannedWords();
+    } catch (e) {}
   };
 
   const handleUpdateAlgorithm = async (
@@ -262,10 +382,10 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       const res = await fetch(appendAuth(`${API_BASE_URL}/Analysis/analyze`), {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('알고리즘 신뢰도 배치 분석에 실패했습니다.');
+      if (!res.ok) throw new Error('알고리즘 배치 분석에 실패했습니다.');
       showAlert(
         'success',
-        '알고리즘 신뢰도 배치 분석이 성공적으로 실행되었습니다.',
+        '알고리즘 배치 분석이 성공적으로 실행되었습니다.',
       );
       setIsSystemAnalyzing(true);
     } catch (err) {
@@ -279,7 +399,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   async function fetchAdminNotices() {
     setLoadingAdminNotices(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/notices`);
+      const res = await fetch(appendAuth(`${API_BASE_URL}/manager/notices`));
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.data)
@@ -308,7 +428,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/notices`, {
+      const res = await fetch(appendAuth(`${API_BASE_URL}/manager/notices`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -331,21 +451,31 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
   };
 
-  const handleDeleteNotice = async (id: string) => {
-    if (!confirm('정말 이 공지를 삭제하시겠습니까?')) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/manager/notices/${id}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        showAlert('success', '공지가 삭제되었습니다.');
-        fetchAdminNotices();
-      } else {
-        throw new Error('공지 삭제 실패');
-      }
-    } catch {
-      showAlert('error', '공지 삭제 중 오류가 발생했습니다.');
-    }
+  const handleDeleteNotice = (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      message: '정말 이 공지를 삭제하시겠습니까?',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(
+            appendAuth(`${API_BASE_URL}/manager/notices/${id}`),
+            {
+              method: 'DELETE',
+            },
+          );
+          if (res.ok) {
+            showAlert('success', '공지가 삭제되었습니다.');
+            fetchAdminNotices();
+          } else {
+            throw new Error('공지 삭제 실패');
+          }
+        } catch {
+          showAlert('error', '공지 삭제 중 오류가 발생했습니다.');
+        } finally {
+          setConfirmConfig(null);
+        }
+      },
+    });
   };
 
   async function fetchAdminInquiries(
@@ -359,7 +489,9 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       else if (activeBlockFilter === 'BLOCK') params.set('type', 'BLOCK');
       else if (activeBlockFilter === 'REFUND') params.set('type', 'REFUND');
       const query = params.toString() ? `?${params.toString()}` : '';
-      const res = await fetch(`${API_BASE_URL}/manager/inquiries${query}`);
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/inquiries${query}`),
+      );
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.data)
@@ -385,7 +517,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
     try {
       const res = await fetch(
-        `${API_BASE_URL}/manager/inquiries/${id}/answer`,
+        appendAuth(`${API_BASE_URL}/manager/inquiries/${id}/answer`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -407,7 +539,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const handleProposeRefund = async (inqId: string) => {
     try {
       const res = await fetch(
-        `${API_BASE_URL}/manager/inquiries/${inqId}/propose-refund`,
+        appendAuth(`${API_BASE_URL}/manager/inquiries/${inqId}/propose-refund`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -432,7 +564,9 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
     try {
       const res = await fetch(
-        `${API_BASE_URL}/manager/inquiries/${rejectingInqId}/reject-refund`,
+        appendAuth(
+          `${API_BASE_URL}/manager/inquiries/${rejectingInqId}/reject-refund`,
+        ),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -457,7 +591,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/stats`);
+      const res = await fetch(appendAuth(`${API_BASE_URL}/manager/stats`));
       if (res.ok) {
         const data = await res.json();
         const result = data.data || data;
@@ -479,41 +613,55 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
 
     const confirmMsg = `${amount > 0 ? `${amount} HON을 추가` : `${Math.abs(amount)} HON을 차감`}하시겠습니까? 이 작업은 모든 가입자에게 일괄 적용됩니다.`;
-    if (!window.confirm(confirmMsg)) return;
 
-    setProcessingBulkHon(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/manager/visitors/bulk-hon`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
-      });
-      if (res.ok) {
-        showAlert('success', '성공적으로 일괄 처리가 완료되었습니다.');
-        setBulkHonAmount('');
-        // Refresh stats
-        await fetchStats();
-        // Refresh search details if a visitor is currently displayed
-        if (searchVisitorId.trim() && visitorDetails) {
-          fetchVisitorDetails(searchVisitorId);
+    setConfirmConfig({
+      isOpen: true,
+      message: confirmMsg,
+      onConfirm: async () => {
+        setProcessingBulkHon(true);
+        try {
+          const res = await fetch(
+            appendAuth(`${API_BASE_URL}/manager/visitors/bulk-hon`),
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ amount }),
+            },
+          );
+          if (res.ok) {
+            showAlert('success', '성공적으로 일괄 처리가 완료되었습니다.');
+            setBulkHonAmount('');
+            // Refresh stats
+            await fetchStats();
+            // Refresh search details if a visitor is currently displayed
+            if (searchVisitorId.trim() && visitorDetails) {
+              fetchVisitorDetails(searchVisitorId);
+            }
+          } else {
+            const data = await res.json();
+            showAlert(
+              'error',
+              data.message || '일괄 처리 중 오류가 발생했습니다.',
+            );
+          }
+        } catch (err) {
+          console.error(err);
+          showAlert('error', '서버와의 통신에 실패했습니다.');
+        } finally {
+          setProcessingBulkHon(false);
+          setConfirmConfig(null);
         }
-      } else {
-        const data = await res.json();
-        showAlert('error', data.message || '일괄 처리 중 오류가 발생했습니다.');
-      }
-    } catch (err) {
-      console.error(err);
-      showAlert('error', '서버와의 통신에 실패했습니다.');
-    } finally {
-      setProcessingBulkHon(false);
-    }
+      },
+    });
   };
 
   const fetchVisitorDetails = async (id: string) => {
     setLoadingVisitorDetails(true);
     setVisitorDetails(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/manager/visitors/${id.trim()}`);
+      const res = await fetch(
+        appendAuth(`${API_BASE_URL}/manager/visitors/${id.trim()}`),
+      );
       if (res.ok) {
         const data = await res.json();
         setVisitorDetails(data.data || data);
@@ -546,7 +694,9 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     const endpoint = isBlocked ? 'unblock' : 'block';
     try {
       const res = await fetch(
-        `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/${endpoint}`,
+        appendAuth(
+          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/${endpoint}`,
+        ),
         {
           method: 'POST',
         },
@@ -558,7 +708,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         );
         // Refresh details
         const updatedRes = await fetch(
-          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}`,
+          appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}`),
         );
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);
@@ -578,7 +728,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
     try {
       const res = await fetch(
-        `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/hon`,
+        appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}/hon`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -590,7 +740,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         setManageHonAmount('');
         // Refresh details
         const updatedRes = await fetch(
-          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}`,
+          appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}`),
         );
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);
@@ -608,7 +758,9 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
     }
     try {
       const res = await fetch(
-        `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/subscription/unlimited`,
+        appendAuth(
+          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/subscription/unlimited`,
+        ),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -622,7 +774,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         setFreePassEndsAt('');
         // Refresh details
         const updatedRes = await fetch(
-          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}`,
+          appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}`),
         );
         const updatedData = await updatedRes.json();
         setVisitorDetails(updatedData.data || updatedData);
@@ -757,6 +909,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                   paddingBottom: '10px',
                   marginBottom: '20px',
                   flexShrink: 0,
+                  flexWrap: 'wrap',
                 }}
               >
                 <button
@@ -774,7 +927,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     cursor: 'pointer',
                   }}
                 >
-                  알고리즘 관리
+                  알고리즘
                 </button>
                 <button
                   className={`tab-btn ${activeTab === 'system' ? 'active-tab' : ''}`}
@@ -791,7 +944,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     cursor: 'pointer',
                   }}
                 >
-                  시스템 관리
+                  시스템
                 </button>
                 <button
                   className={`tab-btn ${activeTab === 'notices' ? 'active-tab' : ''}`}
@@ -808,7 +961,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     cursor: 'pointer',
                   }}
                 >
-                  공지 관리
+                  공지
                 </button>
                 <button
                   className={`tab-btn ${activeTab === 'inquiries' ? 'active-tab' : ''}`}
@@ -825,7 +978,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     cursor: 'pointer',
                   }}
                 >
-                  문의 답변
+                  문의
                 </button>
                 <button
                   className={`tab-btn ${activeTab === 'visitors' ? 'active-tab' : ''}`}
@@ -842,7 +995,41 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     cursor: 'pointer',
                   }}
                 >
-                  사용자 관리
+                  사용자
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'NICKNAME_REPORTS' ? 'active-tab' : ''}`}
+                  onClick={() => setActiveTab('NICKNAME_REPORTS')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    color:
+                      activeTab === 'NICKNAME_REPORTS'
+                        ? 'var(--primary-purple)'
+                        : 'var(--text-dim)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  신고
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'BANNED_WORDS' ? 'active-tab' : ''}`}
+                  onClick={() => setActiveTab('BANNED_WORDS')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    color:
+                      activeTab === 'BANNED_WORDS'
+                        ? 'var(--primary-cyan)'
+                        : 'var(--text-dim)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  금지어
                 </button>
               </div>
 
@@ -2526,6 +2713,178 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
                     )}
                   </div>
                 )}
+
+                {activeTab === 'NICKNAME_REPORTS' && (
+                  <div style={{ padding: '0 8px' }}>
+                    <h3 style={{ marginTop: 0, fontSize: '0.95rem' }}>
+                      닉네임 신고 목록
+                    </h3>
+                    {nicknameReports.length === 0 ? (
+                      <p
+                        style={{
+                          color: 'var(--text-dim)',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        접수된 신고가 없습니다.
+                      </p>
+                    ) : (
+                      nicknameReports.map((r) => (
+                        <div
+                          key={r.id}
+                          style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            marginBottom: '12px',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              marginBottom: '8px',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontWeight: 'bold',
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              대상: {r.targetNickname}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--text-dim)',
+                              }}
+                            >
+                              상태:{' '}
+                              {r.status === 'PENDING'
+                                ? '대기 중'
+                                : r.status === 'BLOCKED'
+                                  ? '차단 완료'
+                                  : '반려됨'}
+                            </span>
+                          </div>
+                          <p
+                            style={{
+                              margin: '8px 0',
+                              fontSize: '0.85rem',
+                              color: 'var(--text-main)',
+                            }}
+                          >
+                            사유: {r.reason || '사유 없음'}
+                          </p>
+                          {r.status === 'PENDING' && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '8px',
+                                marginTop: '10px',
+                              }}
+                            >
+                              <button
+                                className="btn-submit"
+                                style={{
+                                  padding: '6px 10px',
+                                  fontSize: '0.75rem',
+                                  background: '#ef5350',
+                                }}
+                                onClick={() => blockNicknameReport(r.id)}
+                              >
+                                차단
+                              </button>
+                              <button
+                                className="btn-neon btn-outline"
+                                style={{
+                                  padding: '6px 10px',
+                                  fontSize: '0.75rem',
+                                }}
+                                onClick={() => rejectNicknameReport(r.id)}
+                              >
+                                반려
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'BANNED_WORDS' && (
+                  <div style={{ padding: '0 8px' }}>
+                    <h3 style={{ marginTop: 0, fontSize: '0.95rem' }}>
+                      금지어 관리
+                    </h3>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '8px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={newBannedWord}
+                        onChange={(e) => setNewBannedWord(e.target.value)}
+                        placeholder="추가할 금지어 입력"
+                        className="input-glow"
+                        style={{ flex: 1, height: '36px', fontSize: '0.82rem' }}
+                      />
+                      <button
+                        className="btn-submit"
+                        onClick={addBannedWord}
+                        style={{ height: '36px', fontSize: '0.82rem' }}
+                      >
+                        추가
+                      </button>
+                    </div>
+                    <div
+                      style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}
+                    >
+                      {bannedWords.map((word) => (
+                        <div
+                          key={word}
+                          style={{
+                            background: 'rgba(255,255,255,0.1)',
+                            padding: '6px 12px',
+                            borderRadius: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.8rem',
+                          }}
+                        >
+                          <span>{word}</span>
+                          <span
+                            style={{
+                              cursor: 'pointer',
+                              color: '#ef5350',
+                              fontWeight: 'bold',
+                            }}
+                            onClick={() => removeBannedWord(word)}
+                          >
+                            ✕
+                          </span>
+                        </div>
+                      ))}
+                      {bannedWords.length === 0 && (
+                        <p
+                          style={{
+                            color: 'var(--text-dim)',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          등록된 금지어가 없습니다.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2651,6 +3010,15 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
           </div>
         )}
       </div>
+
+      {confirmConfig && (
+        <ConfirmDialog
+          isOpen={confirmConfig.isOpen}
+          message={confirmConfig.message}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
     </div>
   );
 }

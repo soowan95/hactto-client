@@ -197,9 +197,7 @@ export const RefundPolicyModal: React.FC<RefundPolicyModalProps> = ({
             2. 무제한 구독권 환불 규정 (월간 및 연간)
           </h3>
           <p style={{ marginBottom: '10px' }}>
-            정기 구독 상품(월간 무제한 구독, 연간 무제한 구독)은 구매 즉시
-            무제한 분석 권한이 부여되고 시스템 자원이 할당되므로 중도 환불이
-            불가능합니다.
+            정기 구독 상품(월간 무제한 구독, 연간 무제한 구독)의 환불 규정은 아래와 같습니다. (결제 후 사용된 서비스 가치는 '예측 생성 시 알고리즘 복잡도 당 50원'과 '당첨 번호 분석 1건당 250원'을 합산하여 계산합니다.)
           </p>
           <ul
             style={{
@@ -209,8 +207,18 @@ export const RefundPolicyModal: React.FC<RefundPolicyModalProps> = ({
             }}
           >
             <li>
-              <strong>환불 불가 원칙</strong>: 구독권 결제 완료 후에는 환불
-              서비스가 제공되지 않습니다.
+              <strong>결제일로부터 7일 이내</strong>:
+              <ul style={{ paddingLeft: '15px', marginTop: '4px', marginBottom: '8px', listStyleType: 'circle' }}>
+                <li>서비스 미사용: <strong>100% 전액 환불</strong></li>
+                <li>서비스 사용 시: <strong>결제 금액 - (결제 금액 × 10% 위약금) - 서비스 사용 금액</strong></li>
+              </ul>
+            </li>
+            <li>
+              <strong>결제일로부터 7일 경과 후</strong>:
+              <ul style={{ paddingLeft: '15px', marginTop: '4px', marginBottom: '8px', listStyleType: 'circle' }}>
+                <li>서비스 미사용: <strong>결제 금액 - (결제 금액 × 10% 위약금)</strong></li>
+                <li>서비스 사용 시: <strong>결제 금액 - (결제 금액 × 10% 위약금) - 서비스 사용 금액</strong></li>
+              </ul>
             </li>
             <li>
               <strong>구독 취소(자동 결제 해지 예약)</strong>: 구독을 계속하고
