@@ -379,7 +379,6 @@ export function NoticeBanner() {
                 >
                   {currentNotice.title}
                 </h3>
-
               </div>
 
               <div

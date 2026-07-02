@@ -185,8 +185,22 @@ export function Board() {
   };
 
   useEffect(() => {
-    fetchPosts(category, sort, rankFilter, roundFilter, activeSearchQuery, activeSearchTarget);
-  }, [category, sort, rankFilter, roundFilter, activeSearchQuery, activeSearchTarget]);
+    fetchPosts(
+      category,
+      sort,
+      rankFilter,
+      roundFilter,
+      activeSearchQuery,
+      activeSearchTarget,
+    );
+  }, [
+    category,
+    sort,
+    rankFilter,
+    roundFilter,
+    activeSearchQuery,
+    activeSearchTarget,
+  ]);
 
   const handleImageUpload = async (file: File): Promise<string> => {
     const vid = visitorId || localStorage.getItem('visitor_id') || '';
@@ -247,7 +261,8 @@ export function Board() {
         const data = await res.json();
         setLottoRank(data.data.rank);
         if (data.data.episode) setLottoRound(parseInt(data.data.episode, 10));
-        if (data.data.lottoIdentifier) setLottoIdentifier(data.data.lottoIdentifier);
+        if (data.data.lottoIdentifier)
+          setLottoIdentifier(data.data.lottoIdentifier);
         setWinningImageUrl(`${uploadedUrl}?t=${Date.now()}`); // Bypass cache to show blurred image
       } else {
         const errData = await res.json();
@@ -668,7 +683,19 @@ export function Board() {
                   userSelect: 'none',
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
                 내가 쓴 글
               </button>
             )}
@@ -687,8 +714,16 @@ export function Board() {
                     userSelect: 'none',
                     padding: '4px 8px',
                     borderRadius: '16px',
-                    background: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.05)',
-                    border: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? '1px solid var(--primary-cyan)' : '1px solid rgba(255,255,255,0.1)',
+                    background:
+                      filteredPosts.length > 0 &&
+                      selectedPostIds.length === filteredPosts.length
+                        ? 'rgba(0, 240, 255, 0.15)'
+                        : 'rgba(255,255,255,0.05)',
+                    border:
+                      filteredPosts.length > 0 &&
+                      selectedPostIds.length === filteredPosts.length
+                        ? '1px solid var(--primary-cyan)'
+                        : '1px solid rgba(255,255,255,0.1)',
                     transition: 'all 0.2s ease',
                   }}
                 >
@@ -697,23 +732,44 @@ export function Board() {
                       width: '14px',
                       height: '14px',
                       borderRadius: '4px',
-                      border: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? 'none' : '1px solid rgba(255,255,255,0.3)',
-                      background: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? 'var(--primary-cyan)' : 'transparent',
+                      border:
+                        filteredPosts.length > 0 &&
+                        selectedPostIds.length === filteredPosts.length
+                          ? 'none'
+                          : '1px solid rgba(255,255,255,0.3)',
+                      background:
+                        filteredPosts.length > 0 &&
+                        selectedPostIds.length === filteredPosts.length
+                          ? 'var(--primary-cyan)'
+                          : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    {(filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) && (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                    )}
+                    {filteredPosts.length > 0 &&
+                      selectedPostIds.length === filteredPosts.length && (
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#000"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      )}
                   </div>
                   <input
                     type="checkbox"
-                    checked={filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length}
+                    checked={
+                      filteredPosts.length > 0 &&
+                      selectedPostIds.length === filteredPosts.length
+                    }
                     onChange={(e) => {
                       if (e.target.checked) {
                         setSelectedPostIds(filteredPosts.map((p) => p.id));
@@ -726,29 +782,54 @@ export function Board() {
                   전체 선택
                 </label>
                 <button
-                onClick={handleBulkDelete}
-                disabled={selectedPostIds.length === 0}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.72rem',
-                  background: selectedPostIds.length > 0 ? 'rgba(255, 60, 60, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                  border: selectedPostIds.length > 0 ? '1px solid rgba(255, 60, 60, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
-                  color: selectedPostIds.length > 0 ? '#ff4d4d' : 'var(--text-dim)',
-                  padding: '4px 8px',
-                  borderRadius: '16px',
-                  cursor: selectedPostIds.length > 0 ? 'pointer' : 'not-allowed',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease',
-                  marginLeft: '6px',
-                  userSelect: 'none',
-                  opacity: selectedPostIds.length > 0 ? 1 : 0.5,
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                선택 삭제 ({selectedPostIds.length})
-              </button>
+                  onClick={handleBulkDelete}
+                  disabled={selectedPostIds.length === 0}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.72rem',
+                    background:
+                      selectedPostIds.length > 0
+                        ? 'rgba(255, 60, 60, 0.15)'
+                        : 'rgba(255, 255, 255, 0.04)',
+                    border:
+                      selectedPostIds.length > 0
+                        ? '1px solid rgba(255, 60, 60, 0.5)'
+                        : '1px solid rgba(255, 255, 255, 0.08)',
+                    color:
+                      selectedPostIds.length > 0
+                        ? '#ff4d4d'
+                        : 'var(--text-dim)',
+                    padding: '4px 8px',
+                    borderRadius: '16px',
+                    cursor:
+                      selectedPostIds.length > 0 ? 'pointer' : 'not-allowed',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                    marginLeft: '6px',
+                    userSelect: 'none',
+                    opacity: selectedPostIds.length > 0 ? 1 : 0.5,
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ marginRight: '4px' }}
+                  >
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                  선택 삭제 ({selectedPostIds.length})
+                </button>
               </>
             )}
           </div>
@@ -905,16 +986,52 @@ export function Board() {
                   fontWeight: 'bold',
                 }}
               >
-                <option value="all" style={{ background: '#0f111a', color: '#fff' }}>전체</option>
-                <option value="title" style={{ background: '#0f111a', color: '#fff' }}>제목</option>
-                <option value="content" style={{ background: '#0f111a', color: '#fff' }}>내용</option>
-                <option value="author" style={{ background: '#0f111a', color: '#fff' }}>작성자</option>
+                <option
+                  value="all"
+                  style={{ background: '#0f111a', color: '#fff' }}
+                >
+                  전체
+                </option>
+                <option
+                  value="title"
+                  style={{ background: '#0f111a', color: '#fff' }}
+                >
+                  제목
+                </option>
+                <option
+                  value="content"
+                  style={{ background: '#0f111a', color: '#fff' }}
+                >
+                  내용
+                </option>
+                <option
+                  value="author"
+                  style={{ background: '#0f111a', color: '#fff' }}
+                >
+                  작성자
+                </option>
               </select>
-              <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--primary-cyan)', fontSize: '0.6rem' }}>▼</div>
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                  color: 'var(--primary-cyan)',
+                  fontSize: '0.6rem',
+                }}
+              >
+                ▼
+              </div>
             </div>
             <input
               type="text"
-              placeholder={searchTarget === 'all' ? "검색어를 입력하세요 (제목, 내용, 작성자)" : `${searchTarget === 'title' ? '제목' : searchTarget === 'content' ? '내용' : '작성자'} 검색`}
+              placeholder={
+                searchTarget === 'all'
+                  ? '검색어를 입력하세요 (제목, 내용, 작성자)'
+                  : `${searchTarget === 'title' ? '제목' : searchTarget === 'content' ? '내용' : '작성자'} 검색`
+              }
               className="input-glow"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -940,8 +1057,12 @@ export function Board() {
                 cursor: 'pointer',
                 transition: 'background 0.2s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--primary-cyan-hover)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--primary-cyan)')}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = 'var(--primary-cyan-hover)')
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = 'var(--primary-cyan)')
+              }
             >
               검색
             </button>
@@ -1131,13 +1252,24 @@ export function Board() {
                       }
                     `}</style>
                     {previewImageUrl && (
-                      <div style={{ position: 'relative', width: '100%', maxWidth: '150px', marginBottom: '20px' }}>
-                        <img 
-                          src={previewImageUrl} 
-                          alt="scanning preview" 
-                          style={{ width: '100%', borderRadius: '8px', opacity: 0.6 }} 
+                      <div
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          maxWidth: '150px',
+                          marginBottom: '20px',
+                        }}
+                      >
+                        <img
+                          src={previewImageUrl}
+                          alt="scanning preview"
+                          style={{
+                            width: '100%',
+                            borderRadius: '8px',
+                            opacity: 0.6,
+                          }}
                         />
-                        <div 
+                        <div
                           style={{
                             position: 'absolute',
                             left: 0,
@@ -1145,8 +1277,8 @@ export function Board() {
                             height: '3px',
                             background: 'var(--primary-cyan)',
                             boxShadow: '0 0 12px var(--primary-cyan)',
-                            animation: 'scanline 1.5s linear infinite'
-                          }} 
+                            animation: 'scanline 1.5s linear infinite',
+                          }}
                         />
                       </div>
                     )}
@@ -1171,13 +1303,31 @@ export function Board() {
                         marginBottom: '4px',
                       }}
                     >
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-cyan)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 4px var(--primary-cyan))' }}>
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="var(--primary-cyan)"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          filter: 'drop-shadow(0 0 4px var(--primary-cyan))',
+                        }}
+                      >
                         <path d="M4 7V4h3" />
                         <path d="M17 4h3v3" />
                         <path d="M20 17v3h-3" />
                         <path d="M7 20H4v-3" />
                         <rect x="7" y="7" width="10" height="10" rx="2" />
-                        <line x1="2" y1="12" x2="22" y2="12" style={{ animation: 'scanline 1.5s linear infinite' }} />
+                        <line
+                          x1="2"
+                          y1="12"
+                          x2="22"
+                          y2="12"
+                          style={{ animation: 'scanline 1.5s linear infinite' }}
+                        />
                       </svg>
                       <span
                         style={{
@@ -1366,7 +1516,25 @@ export function Board() {
                       fontSize: '0.9rem',
                     }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle', marginTop: '-2px' }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{
+                        marginRight: '6px',
+                        verticalAlign: 'middle',
+                        marginTop: '-2px',
+                      }}
+                    >
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                      <line x1="12" y1="9" x2="12" y2="13"></line>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
                     {lottoError}
                   </div>
                 ) : lottoRank !== null ? (
@@ -1383,9 +1551,46 @@ export function Board() {
                       }}
                     >
                       {lottoRank === 1 ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px', verticalAlign: 'middle', marginTop: '-2px' }}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            marginRight: '4px',
+                            verticalAlign: 'middle',
+                            marginTop: '-2px',
+                          }}
+                        >
+                          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                          <path d="M4 22h16"></path>
+                          <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                          <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                          <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path>
+                        </svg>
                       ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px', verticalAlign: 'middle', marginTop: '-2px' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            marginRight: '4px',
+                            verticalAlign: 'middle',
+                            marginTop: '-2px',
+                          }}
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
                       )}
                       {lottoRank}등 당첨! 축하합니다!
                     </div>
@@ -1401,7 +1606,26 @@ export function Board() {
                         fontWeight: 'bold',
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px', verticalAlign: 'middle', marginTop: '-2px' }}><circle cx="12" cy="12" r="10"></circle><path d="M16 16s-1.5-2-4-2-4 2-4 2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          marginRight: '4px',
+                          verticalAlign: 'middle',
+                          marginTop: '-2px',
+                        }}
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M16 16s-1.5-2-4-2-4 2-4 2"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                      </svg>
                       아쉽게도 낙첨입니다.
                     </div>
                   )
@@ -1413,33 +1637,33 @@ export function Board() {
               category === 'WINNING' &&
               (lottoRank === null || lottoRank > 5 || lottoError)
             ) && (
-                <>
-                  <input
-                    type="text"
-                    className="input-glow"
-                    placeholder="제목을 입력하세요 (최대 100자)"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    maxLength={100}
-                    style={{ height: '36px', textAlign: 'left' }}
-                  />
-                  <textarea
-                    className="input-glow"
-                    placeholder={
-                      category === 'WINNING'
-                        ? '당첨 소감을 입력해주세요.'
-                        : '내용을 작성해주세요.'
-                    }
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    style={{
-                      minHeight: '150px',
-                      padding: '10px',
-                      textAlign: 'left',
-                    }}
-                  />
-                </>
-              )}
+              <>
+                <input
+                  type="text"
+                  className="input-glow"
+                  placeholder="제목을 입력하세요 (최대 100자)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={100}
+                  style={{ height: '36px', textAlign: 'left' }}
+                />
+                <textarea
+                  className="input-glow"
+                  placeholder={
+                    category === 'WINNING'
+                      ? '당첨 소감을 입력해주세요.'
+                      : '내용을 작성해주세요.'
+                  }
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  style={{
+                    minHeight: '150px',
+                    padding: '10px',
+                    textAlign: 'left',
+                  }}
+                />
+              </>
+            )}
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
               <button
@@ -1482,20 +1706,20 @@ export function Board() {
                   height: '36px',
                   background:
                     category === 'WINNING' &&
-                      (lottoRank === null || lottoRank > 5 || lottoError !== null)
+                    (lottoRank === null || lottoRank > 5 || lottoError !== null)
                       ? 'rgba(255,255,255,0.1)'
                       : 'var(--primary-cyan)',
                   border: 'none',
                   color:
                     category === 'WINNING' &&
-                      (lottoRank === null || lottoRank > 5 || lottoError !== null)
+                    (lottoRank === null || lottoRank > 5 || lottoError !== null)
                       ? 'var(--text-dim)'
                       : '#0f111a',
                   fontWeight: 'bold',
                   borderRadius: '6px',
                   cursor:
                     category === 'WINNING' &&
-                      (lottoRank === null || lottoRank > 5 || lottoError !== null)
+                    (lottoRank === null || lottoRank > 5 || lottoError !== null)
                       ? 'not-allowed'
                       : 'pointer',
                 }}
@@ -1722,21 +1946,21 @@ export function Board() {
             </button>
             {(activePost.visitorId === visitorId ||
               localStorage.getItem('mk')) && (
-                <button
-                  onClick={() => handleDelete(activePost.id)}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'var(--text-dim)',
-                    borderRadius: '4px',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  삭제
-                </button>
-              )}
+              <button
+                onClick={() => handleDelete(activePost.id)}
+                style={{
+                  padding: '6px 12px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'var(--text-dim)',
+                  borderRadius: '4px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                }}
+              >
+                삭제
+              </button>
+            )}
           </div>
 
           <div
@@ -1908,25 +2132,25 @@ export function Board() {
                       </button>
                       {(comment.visitorId === visitorId ||
                         localStorage.getItem('mk')) && (
-                          <>
-                            <span style={{ color: 'rgba(255,255,255,0.1)' }}>
-                              |
-                            </span>
-                            <button
-                              onClick={() => handleCommentDelete(comment.id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--text-dim)',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                padding: 0,
-                              }}
-                            >
-                              삭제
-                            </button>
-                          </>
-                        )}
+                        <>
+                          <span style={{ color: 'rgba(255,255,255,0.1)' }}>
+                            |
+                          </span>
+                          <button
+                            onClick={() => handleCommentDelete(comment.id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-dim)',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              padding: 0,
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <p
@@ -1942,7 +2166,11 @@ export function Board() {
 
                   <div style={{ marginTop: '8px' }}>
                     <button
-                      onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                      onClick={() =>
+                        setReplyingTo(
+                          replyingTo === comment.id ? null : comment.id,
+                        )
+                      }
                       style={{
                         background: 'none',
                         border: 'none',
@@ -1974,12 +2202,18 @@ export function Board() {
                         disabled={!replyContent.trim()}
                         style={{
                           padding: '0 16px',
-                          background: replyContent.trim() ? 'var(--primary-cyan)' : 'rgba(255,255,255,0.1)',
-                          color: replyContent.trim() ? '#0f111a' : 'var(--text-dim)',
+                          background: replyContent.trim()
+                            ? 'var(--primary-cyan)'
+                            : 'rgba(255,255,255,0.1)',
+                          color: replyContent.trim()
+                            ? '#0f111a'
+                            : 'var(--text-dim)',
                           border: 'none',
                           borderRadius: '4px',
                           fontWeight: 'bold',
-                          cursor: replyContent.trim() ? 'pointer' : 'not-allowed',
+                          cursor: replyContent.trim()
+                            ? 'pointer'
+                            : 'not-allowed',
                           fontSize: '0.85rem',
                         }}
                       >
@@ -1988,39 +2222,109 @@ export function Board() {
                     </form>
                   )}
                   {comment.replies && comment.replies.length > 0 && (
-                    <div style={{ marginTop: '12px', paddingLeft: '16px', borderLeft: '2px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {comment.replies.map(reply => (
-                        <div key={reply.id} style={{ padding: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '6px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        paddingLeft: '16px',
+                        borderLeft: '2px solid rgba(255,255,255,0.1)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      {comment.replies.map((reply) => (
+                        <div
+                          key={reply.id}
+                          style={{
+                            padding: '8px',
+                            background: 'rgba(255,255,255,0.01)',
+                            borderRadius: '6px',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              marginBottom: '4px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '8px',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: 'bold',
+                                  fontSize: '0.8rem',
+                                  color: 'var(--text-main)',
+                                }}
+                              >
                                 <span
-                                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                  style={{
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                  }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     const name = reply.visitor?.nickname;
-                                    if (name) setNicknameToReport({ nickname: name, id: reply.id, isComment: true });
+                                    if (name)
+                                      setNicknameToReport({
+                                        nickname: name,
+                                        id: reply.id,
+                                        isComment: true,
+                                      });
                                   }}
                                 >
-                                  {reply.visitor?.nickname || reply.visitorId.substring(0, 8)}
+                                  {reply.visitor?.nickname ||
+                                    reply.visitorId.substring(0, 8)}
                                 </span>
                               </span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  color: 'var(--text-dim)',
+                                }}
+                              >
                                 {new Date(reply.createdAt).toLocaleDateString()}
                               </span>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              {(reply.visitorId === visitorId || localStorage.getItem('mk')) && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '8px',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {(reply.visitorId === visitorId ||
+                                localStorage.getItem('mk')) && (
                                 <button
                                   onClick={() => handleCommentDelete(reply.id)}
-                                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.7rem', cursor: 'pointer', padding: 0 }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-dim)',
+                                    fontSize: '0.7rem',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                  }}
                                 >
                                   삭제
                                 </button>
                               )}
                             </div>
                           </div>
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-main)' }}>{reply.content}</p>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: '0.85rem',
+                              color: 'var(--text-main)',
+                            }}
+                          >
+                            {reply.content}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -2066,14 +2370,25 @@ export function Board() {
                   }}
                 >
                   {myPostsOnly && (
-                    <label style={{ marginRight: '16px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <label
+                      style={{
+                        marginRight: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
                       <div
                         style={{
                           width: '18px',
                           height: '18px',
                           borderRadius: '6px',
-                          border: selectedPostIds.includes(post.id) ? 'none' : '1px solid rgba(255,255,255,0.3)',
-                          background: selectedPostIds.includes(post.id) ? 'var(--primary-cyan)' : 'rgba(255,255,255,0.05)',
+                          border: selectedPostIds.includes(post.id)
+                            ? 'none'
+                            : '1px solid rgba(255,255,255,0.3)',
+                          background: selectedPostIds.includes(post.id)
+                            ? 'var(--primary-cyan)'
+                            : 'rgba(255,255,255,0.05)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -2081,7 +2396,16 @@ export function Board() {
                         }}
                       >
                         {selectedPostIds.includes(post.id) && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#000"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <polyline points="20 6 9 17 4 12"></polyline>
                           </svg>
                         )}
@@ -2093,7 +2417,9 @@ export function Board() {
                           if (e.target.checked) {
                             setSelectedPostIds((prev) => [...prev, post.id]);
                           } else {
-                            setSelectedPostIds((prev) => prev.filter((id) => id !== post.id));
+                            setSelectedPostIds((prev) =>
+                              prev.filter((id) => id !== post.id),
+                            );
                           }
                         }}
                         style={{ display: 'none' }}
@@ -2111,134 +2437,134 @@ export function Board() {
                     }}
                   >
                     <div style={{ textAlign: 'left', flex: 1 }}>
-                    <span
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: 'var(--text-main)',
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        textAlign: 'left',
-                      }}
-                    >
-                      {post.category === 'WINNING' &&
-                        post.lottoRank &&
-                        post.lottoRank <= 5 && (
-                          <span
-                            className={`badge badge-rank-${post.lottoRank}`}
-                            style={{
-                              padding: '2px 6px',
-                              fontSize: '0.7rem',
-                              marginRight: '4px',
-                            }}
-                          >
-                            {post.lottoRound ? `${post.lottoRound}회 ` : ''}
-                            {post.lottoRank}등
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: 'var(--text-main)',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          textAlign: 'left',
+                        }}
+                      >
+                        {post.category === 'WINNING' &&
+                          post.lottoRank &&
+                          post.lottoRank <= 5 && (
+                            <span
+                              className={`badge badge-rank-${post.lottoRank}`}
+                              style={{
+                                padding: '2px 6px',
+                                fontSize: '0.7rem',
+                                marginRight: '4px',
+                              }}
+                            >
+                              {post.lottoRound ? `${post.lottoRound}회 ` : ''}
+                              {post.lottoRank}등
+                            </span>
+                          )}
+                        {post.title}
+                        {post.imageUrl && (
+                          <span className="list-attachment-icon">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <rect
+                                x="3"
+                                y="3"
+                                width="18"
+                                height="18"
+                                rx="2"
+                                ry="2"
+                              ></rect>
+                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                              <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
                           </span>
                         )}
-                      {post.title}
-                      {post.imageUrl && (
-                        <span className="list-attachment-icon">
+                      </span>
+                      <div
+                        style={{
+                          fontSize: '0.72rem',
+                          color: 'var(--text-dim)',
+                          marginTop: '4px',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <span>
+                          {post.visitor?.nickname ||
+                            post.visitorId.substring(0, 8)}
+                        </span>
+                        <span>|</span>
+                        <span>
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </span>
+                        <span
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            marginLeft: 'auto',
+                            color: 'var(--primary-cyan)',
+                          }}
+                        >
                           <svg
-                            width="14"
-                            height="14"
+                            width="12"
+                            height="12"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
-                            strokeWidth="2.5"
+                            strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           >
-                            <rect
-                              x="3"
-                              y="3"
-                              width="18"
-                              height="18"
-                              rx="2"
-                              ry="2"
-                            ></rect>
-                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                            <polyline points="21 15 16 10 5 21"></polyline>
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                           </svg>
+                          {post._count?.likes || 0}
                         </span>
-                      )}
-                    </span>
-                    <div
+                        <span
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            color: 'var(--text-main)',
+                          }}
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                          </svg>
+                          {post._count?.comments || 0}
+                        </span>
+                      </div>
+                    </div>
+                    <span
                       style={{
-                        fontSize: '0.72rem',
+                        fontSize: '0.8rem',
                         color: 'var(--text-dim)',
-                        marginTop: '4px',
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
+                        paddingLeft: '12px',
                       }}
                     >
-                      <span>
-                        {post.visitor?.nickname ||
-                          post.visitorId.substring(0, 8)}
-                      </span>
-                      <span>|</span>
-                      <span>
-                        {new Date(post.createdAt).toLocaleDateString()}
-                      </span>
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '2px',
-                          marginLeft: 'auto',
-                          color: 'var(--primary-cyan)',
-                        }}
-                      >
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                        </svg>
-                        {post._count?.likes || 0}
-                      </span>
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '2px',
-                          color: 'var(--text-main)',
-                        }}
-                      >
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        {post._count?.comments || 0}
-                      </span>
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-dim)',
-                      paddingLeft: '12px',
-                    }}
-                  >
-                    ➔
-                  </span>
+                      ➔
+                    </span>
                   </div>
                 </div>
               ))}

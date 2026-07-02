@@ -560,7 +560,7 @@ export function Stats() {
                       >
                         {parseAlgorithmName(
                           algorithmTypes.find((a) => a.type === c.algorithm) ||
-                          c.algorithm,
+                            c.algorithm,
                         )}
                       </span>
                       <span
@@ -706,8 +706,8 @@ export function Stats() {
                   marginTop: '8px',
                 }}
               >
-                {winningNumber?.episode ?? prediction?.episode}회차 최고 분석 점수
-                예측
+                {winningNumber?.episode ?? prediction?.episode}회차 최고 분석
+                점수 예측
               </h3>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -745,7 +745,7 @@ export function Stats() {
             <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
               {parseAlgorithmName(
                 algorithmTypes.find((a) => a.type === prediction.algorithm) ||
-                prediction.algorithm,
+                  prediction.algorithm,
               )}
             </span>
           </div>
@@ -1162,7 +1162,7 @@ export function Stats() {
                   <option key={item.algorithm} value={item.algorithm}>
                     {parseAlgorithmName(
                       algorithmTypes.find((a) => a.type === item.algorithm) ||
-                      item.algorithm,
+                        item.algorithm,
                     )}
                   </option>
                 ))}
