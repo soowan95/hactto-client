@@ -8,7 +8,7 @@ export const ALGORITHM_NAMES: Record<string, string> = {
   TOTAL_MAX_COUNT: '전체 열번호',
 };
 
-export const parseAlgorithmName = (type: any): string => {
+export const parseAlgorithmName = (type: string | { type: string; name?: string }): string => {
   if (!type) return '';
   if (typeof type === 'object') {
     return type.name || ALGORITHM_NAMES[type.type] || type.type;
@@ -23,7 +23,7 @@ export const fetchAndCacheAlgorithms = async () => {
     if (res.ok) {
       const data = await res.json();
       const algorithms = data.data || data;
-      algorithms.forEach((algo: any) => {
+      algorithms.forEach((algo: { type: string; name?: string }) => {
         if (algo.type && algo.name) {
           ALGORITHM_NAMES[algo.type] = algo.name;
         }

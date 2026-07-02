@@ -251,15 +251,21 @@ export function PaymentModal({
       if (confirmRes.ok) {
         const responseData = await confirmRes.json();
         const paymentComplete = responseData.data || responseData;
-        
+
         setPaymentStatus({
           status: paymentComplete.status as PaymentStatus,
         });
 
         if (paymentComplete.isTest) {
-          showAlert('success', '[테스트 환경] 결제가 처리되었습니다. 실제 요금은 청구되지 않으며, HON 및 구독도 지급되지 않습니다.');
+          showAlert(
+            'success',
+            '[테스트 환경] 결제가 처리되었습니다. 실제 요금은 청구되지 않으며, HON 및 구독도 지급되지 않습니다.',
+          );
         } else {
-          showAlert('success', `${orderName} 상품의 결제가 정상 완료되었습니다!`);
+          showAlert(
+            'success',
+            `${orderName} 상품의 결제가 정상 완료되었습니다!`,
+          );
         }
         onSuccess();
         onClose();
@@ -528,7 +534,13 @@ export function PaymentModal({
             >
               혼(Hon) 단건 충전
             </h4>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '0 0 14px 0' }}>
+            <p
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-dim)',
+                margin: '0 0 14px 0',
+              }}
+            >
               정가 50원/HON 기준, 현재 파격적인 할인 이벤트가 적용된 금액입니다.
             </p>
 
@@ -602,10 +614,41 @@ export function PaymentModal({
                     1HON당 약 33.3원
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginBottom: '2px' }}>
-                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold' }}>33%</span>
-                    <span style={{ textDecoration: 'line-through', color: 'var(--text-dim)', fontSize: '0.75rem' }}>1,500원</span>
+                <div
+                  style={{
+                    textAlign: 'right',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    marginLeft: '8px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: '6px',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: '#ef4444',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      33%
+                    </span>
+                    <span
+                      style={{
+                        textDecoration: 'line-through',
+                        color: 'var(--text-dim)',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      1,500원
+                    </span>
                   </div>
                   <div
                     style={{
@@ -681,10 +724,41 @@ export function PaymentModal({
                     1HON당 30원 (추천)
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginBottom: '2px' }}>
-                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold' }}>40%</span>
-                    <span style={{ textDecoration: 'line-through', color: 'var(--text-dim)', fontSize: '0.75rem' }}>5,000원</span>
+                <div
+                  style={{
+                    textAlign: 'right',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    marginLeft: '8px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: '6px',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: '#ef4444',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      40%
+                    </span>
+                    <span
+                      style={{
+                        textDecoration: 'line-through',
+                        color: 'var(--text-dim)',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      5,000원
+                    </span>
                   </div>
                   <div
                     style={{
@@ -761,10 +835,41 @@ export function PaymentModal({
                     1HON당 25원 (최대 할인! 🔥)
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginBottom: '2px' }}>
-                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold' }}>50%</span>
-                    <span style={{ textDecoration: 'line-through', color: 'var(--text-dim)', fontSize: '0.75rem' }}>10,000원</span>
+                <div
+                  style={{
+                    textAlign: 'right',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    marginLeft: '8px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: '6px',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: '#ef4444',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      50%
+                    </span>
+                    <span
+                      style={{
+                        textDecoration: 'line-through',
+                        color: 'var(--text-dim)',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      10,000원
+                    </span>
                   </div>
                   <div
                     style={{

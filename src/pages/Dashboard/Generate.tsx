@@ -336,8 +336,8 @@ export function Generate() {
           body: JSON.stringify(
             isWeightsAlgo
               ? {
-                weights: weights,
-              }
+                  weights: weights,
+                }
               : {},
           ),
         },
@@ -2229,7 +2229,10 @@ export function Generate() {
                     marginBottom: '8px',
                   }}
                 >
-                  [{algorithmTypes.find(a => a.key === generatingAlgo)?.name || parseAlgorithmName(generatingAlgo)}] 예측 조합 번호 생성 완료
+                  [
+                  {algorithmTypes.find((a) => a.key === generatingAlgo)?.name ||
+                    parseAlgorithmName(generatingAlgo)}
+                  ] 예측 조합 번호 생성 완료
                 </h2>
 
                 <p
@@ -2240,8 +2243,7 @@ export function Generate() {
                     marginBottom: '8px',
                   }}
                 >
-                  알고리즘을 통해 최적의
-                  번호 조합을 추출했습니다.
+                  알고리즘을 통해 최적의 번호 조합을 추출했습니다.
                 </p>
 
                 <div style={{ width: '100%', textAlign: 'left' }}>
