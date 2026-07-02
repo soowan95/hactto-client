@@ -379,14 +379,7 @@ export function NoticeBanner() {
                 >
                   {currentNotice.title}
                 </h3>
-                {currentNotice.endsAt && (
-                  <span
-                    style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
-                  >
-                    게시 종료일:{' '}
-                    {new Date(currentNotice.endsAt).toLocaleDateString()}
-                  </span>
-                )}
+
               </div>
 
               <div

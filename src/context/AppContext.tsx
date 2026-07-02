@@ -9,7 +9,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import type { AlertState, SubscriptionStatus } from '../types';
-import { API_BASE_URL } from '../utils';
+import { API_BASE_URL, fetchAndCacheAlgorithms } from '../utils';
 
 // Google Crawler Bot Detection to bypass access blocking
 const isGoogleBot =
@@ -161,7 +161,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const response = await originalFetch(input, newInit);
 
-      if (response.status === 403) {
+      if (response.status === 403 && !urlString.includes('/visitor/register')) {
         try {
           const clone = response.clone();
           const errData = await clone.json();
@@ -436,6 +436,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     checkIpStatus();
+    fetchAndCacheAlgorithms();
 
     const savedKey = sessionStorage.getItem('mk');
     if (savedKey) {

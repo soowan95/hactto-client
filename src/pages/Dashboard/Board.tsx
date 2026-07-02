@@ -13,6 +13,8 @@ interface PostComment {
   visitor?: { nickname?: string | null };
   _count?: { likes: number };
   isLiked?: boolean;
+  replies?: PostComment[];
+  parentId?: number | null;
 }
 
 interface Post {
@@ -40,6 +42,10 @@ export function Board() {
   const [sort, setSort] = useState<'latest' | 'likes'>('latest');
   const [rankFilter, setRankFilter] = useState<string>('');
   const [roundFilter, setRoundFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [searchTarget, setSearchTarget] = useState('all');
+  const [activeSearchTarget, setActiveSearchTarget] = useState('all');
   const [loading, setLoading] = useState(false);
 
   // Form states
@@ -54,7 +60,9 @@ export function Board() {
   const [lottoAnalyzing, setLottoAnalyzing] = useState(false);
   const [lottoRank, setLottoRank] = useState<number | null>(null);
   const [lottoRound, setLottoRound] = useState<number | null>(null);
+  const [lottoIdentifier, setLottoIdentifier] = useState<string | null>(null);
   const [lottoError, setLottoError] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string>('');
 
   // Dialog State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -67,7 +75,9 @@ export function Board() {
   const [activePost, setActivePost] = useState<Post | null>(null);
 
   // My posts filter state
+  // My posts filter state
   const [myPostsOnly, setMyPostsOnly] = useState(false);
+  const [selectedPostIds, setSelectedPostIds] = useState<number[]>([]);
 
   // Report state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -75,6 +85,8 @@ export function Board() {
 
   // Comment state
   const [commentContent, setCommentContent] = useState('');
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState('');
 
   const [commentToReport, setCommentToReport] = useState<number | null>(null);
   const [commentReportReason, setCommentReportReason] = useState('');
@@ -119,6 +131,8 @@ export function Board() {
     s = sort,
     r = rankFilter,
     rd = roundFilter,
+    q = activeSearchQuery,
+    t = activeSearchTarget,
   ) => {
     setLoading(true);
     try {
@@ -127,6 +141,10 @@ export function Board() {
       if (cat === 'WINNING') {
         if (r) params.append('rank', r);
         if (rd) params.append('round', rd);
+      }
+      if (q) {
+        params.append('query', q);
+        params.append('target', t);
       }
 
       const res = await fetch(
@@ -141,8 +159,8 @@ export function Board() {
         const data = await res.json();
         setPosts(data.data || []);
       }
-    } catch {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
       showAlert('error', '게시글 목록을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
@@ -167,8 +185,8 @@ export function Board() {
   };
 
   useEffect(() => {
-    fetchPosts(category, sort, rankFilter, roundFilter);
-  }, [category, sort, rankFilter, roundFilter]);
+    fetchPosts(category, sort, rankFilter, roundFilter, activeSearchQuery, activeSearchTarget);
+  }, [category, sort, rankFilter, roundFilter, activeSearchQuery, activeSearchTarget]);
 
   const handleImageUpload = async (file: File): Promise<string> => {
     const vid = visitorId || localStorage.getItem('visitor_id') || '';
@@ -206,8 +224,11 @@ export function Board() {
     setLottoAnalyzing(true);
     setLottoRank(null);
     setLottoRound(null);
+    setLottoIdentifier(null);
     setLottoError(null);
     setWinningImageUrl('');
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewImageUrl(objectUrl);
     try {
       const uploadedUrl = await handleImageUpload(file);
       setWinningImageUrl(uploadedUrl);
@@ -226,13 +247,16 @@ export function Board() {
         const data = await res.json();
         setLottoRank(data.data.rank);
         if (data.data.episode) setLottoRound(parseInt(data.data.episode, 10));
+        if (data.data.lottoIdentifier) setLottoIdentifier(data.data.lottoIdentifier);
         setWinningImageUrl(`${uploadedUrl}?t=${Date.now()}`); // Bypass cache to show blurred image
       } else {
         const errData = await res.json();
         setLottoError(errData.message || '당첨 판독에 실패했습니다.');
+        setPreviewImageUrl('');
       }
     } catch (e) {
       setLottoError((e as Error).message || '오류가 발생했습니다.');
+      setPreviewImageUrl('');
     } finally {
       setLottoAnalyzing(false);
     }
@@ -277,6 +301,7 @@ export function Board() {
           imageUrl,
           lottoRank: category === 'WINNING' ? lottoRank : undefined,
           lottoRound: category === 'WINNING' ? lottoRound : undefined,
+          lottoIdentifier: category === 'WINNING' ? lottoIdentifier : undefined,
         }),
       });
 
@@ -287,15 +312,18 @@ export function Board() {
         setImageFiles([]);
         setWinningImageUrl('');
         setLottoRank(null);
+        setLottoRound(null);
+        setLottoIdentifier(null);
         setLottoError(null);
+        setPreviewImageUrl('');
         setIsWriting(false);
         fetchPosts();
       } else {
         const data = await res.json();
         throw new Error(data.message || '글 등록에 실패했습니다.');
       }
-    } catch {
-      showAlert('error', (err as Error).message || '오류가 발생했습니다.');
+    } catch (e) {
+      showAlert('error', (e as Error).message || '오류가 발생했습니다.');
     } finally {
       setSubmitting(false);
     }
@@ -408,6 +436,33 @@ export function Board() {
     }
   };
 
+  const handleReplySubmit = async (e: React.FormEvent, parentId: number) => {
+    e.preventDefault();
+    if (!activePost || !replyContent.trim()) return;
+    try {
+      const vid = visitorId || localStorage.getItem('visitor_id') || '';
+      const res = await fetch(
+        `${API_BASE_URL}/user/board/${activePost.id}/comments`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(vid ? { 'x-visitor-id': vid } : {}),
+          },
+          body: JSON.stringify({ content: replyContent, parentId }),
+        },
+      );
+      if (res.ok) {
+        setReplyContent('');
+        setReplyingTo(null);
+        fetchPostDetail(activePost.id);
+        fetchPosts(category, sort, rankFilter);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleCommentDelete = (commentId: number) => {
     if (!activePost) return;
     setConfirmConfig({
@@ -484,6 +539,39 @@ export function Board() {
     }
   };
 
+  const handleBulkDelete = () => {
+    if (selectedPostIds.length === 0) return;
+    setConfirmConfig({
+      isOpen: true,
+      message: `선택하신 ${selectedPostIds.length}개의 글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`,
+      onConfirm: async () => {
+        try {
+          const vid = visitorId || localStorage.getItem('visitor_id') || '';
+          const res = await fetch(`${API_BASE_URL}/user/board/bulk`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(vid ? { 'x-visitor-id': vid } : {}),
+            },
+            body: JSON.stringify({ postIds: selectedPostIds }),
+          });
+
+          if (res.ok) {
+            showAlert('success', '선택한 글이 삭제되었습니다.');
+            setSelectedPostIds([]);
+            fetchPosts();
+          } else {
+            showAlert('error', '삭제 권한이 없거나 실패했습니다.');
+          }
+        } catch {
+          showAlert('error', '오류가 발생했습니다.');
+        } finally {
+          setConfirmConfig(null);
+        }
+      },
+    });
+  };
+
   const filteredPosts = myPostsOnly
     ? posts.filter((p) => p.visitorId === visitorId)
     : posts;
@@ -522,7 +610,10 @@ export function Board() {
                   setActivePost(null);
                   setWinningImageUrl('');
                   setLottoRank(null);
+                  setLottoRound(null);
+                  setLottoIdentifier(null);
                   setLottoError(null);
+                  setPreviewImageUrl('');
                   setImageFiles([]);
                   setTitle('');
                   setContent('');
@@ -550,7 +641,10 @@ export function Board() {
 
             {!isWriting && !activePost && (
               <button
-                onClick={() => setMyPostsOnly(!myPostsOnly)}
+                onClick={() => {
+                  setMyPostsOnly(!myPostsOnly);
+                  setSelectedPostIds([]);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -574,15 +668,105 @@ export function Board() {
                   userSelect: 'none',
                 }}
               >
-                <span style={{ fontSize: '0.75rem' }}>👤</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 내가 쓴 글
               </button>
+            )}
+
+            {myPostsOnly && !isWriting && !activePost && (
+              <>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-main)',
+                    marginLeft: '8px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    padding: '4px 8px',
+                    borderRadius: '16px',
+                    background: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.05)',
+                    border: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? '1px solid var(--primary-cyan)' : '1px solid rgba(255,255,255,0.1)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '14px',
+                      height: '14px',
+                      borderRadius: '4px',
+                      border: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? 'none' : '1px solid rgba(255,255,255,0.3)',
+                      background: (filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) ? 'var(--primary-cyan)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {(filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length) && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    )}
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={filteredPosts.length > 0 && selectedPostIds.length === filteredPosts.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedPostIds(filteredPosts.map((p) => p.id));
+                      } else {
+                        setSelectedPostIds([]);
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                  전체 선택
+                </label>
+                <button
+                onClick={handleBulkDelete}
+                disabled={selectedPostIds.length === 0}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.72rem',
+                  background: selectedPostIds.length > 0 ? 'rgba(255, 60, 60, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                  border: selectedPostIds.length > 0 ? '1px solid rgba(255, 60, 60, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
+                  color: selectedPostIds.length > 0 ? '#ff4d4d' : 'var(--text-dim)',
+                  padding: '4px 8px',
+                  borderRadius: '16px',
+                  cursor: selectedPostIds.length > 0 ? 'pointer' : 'not-allowed',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  marginLeft: '6px',
+                  userSelect: 'none',
+                  opacity: selectedPostIds.length > 0 ? 1 : 0.5,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                선택 삭제 ({selectedPostIds.length})
+              </button>
+              </>
             )}
           </div>
 
           {!isWriting && !activePost && (
             <button
-              onClick={() => setIsWriting(true)}
+              onClick={() => {
+                setIsWriting(true);
+                setTitle('');
+                setContent('');
+                setImageFiles([]);
+                setWinningImageUrl('');
+                setLottoRank(null);
+                setLottoRound(null);
+                setLottoIdentifier(null);
+                setLottoError(null);
+                setPreviewImageUrl('');
+              }}
               style={{
                 padding: '6px 16px',
                 borderRadius: '6px',
@@ -688,6 +872,80 @@ export function Board() {
               </div>
             )}
           </div>
+        )}
+
+        {!isWriting && !activePost && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setActiveSearchQuery(searchQuery);
+              setActiveSearchTarget(searchTarget);
+            }}
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginTop: '12px',
+            }}
+          >
+            <div style={{ position: 'relative' }}>
+              <select
+                value={searchTarget}
+                onChange={(e) => setSearchTarget(e.target.value)}
+                style={{
+                  height: '100%',
+                  padding: '8px 32px 8px 12px',
+                  fontSize: '0.9rem',
+                  borderRadius: '6px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'var(--primary-cyan)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  fontWeight: 'bold',
+                }}
+              >
+                <option value="all" style={{ background: '#0f111a', color: '#fff' }}>전체</option>
+                <option value="title" style={{ background: '#0f111a', color: '#fff' }}>제목</option>
+                <option value="content" style={{ background: '#0f111a', color: '#fff' }}>내용</option>
+                <option value="author" style={{ background: '#0f111a', color: '#fff' }}>작성자</option>
+              </select>
+              <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--primary-cyan)', fontSize: '0.6rem' }}>▼</div>
+            </div>
+            <input
+              type="text"
+              placeholder={searchTarget === 'all' ? "검색어를 입력하세요 (제목, 내용, 작성자)" : `${searchTarget === 'title' ? '제목' : searchTarget === 'content' ? '내용' : '작성자'} 검색`}
+              className="input-glow"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                fontSize: '0.9rem',
+                borderRadius: '6px',
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--text-main)',
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                padding: '0 16px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'var(--primary-cyan)',
+                color: '#0f111a',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--primary-cyan-hover)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--primary-cyan)')}
+            >
+              검색
+            </button>
+          </form>
         )}
       </div>
 
@@ -854,30 +1112,57 @@ export function Board() {
                 {lottoAnalyzing ? (
                   <div
                     style={{
-                      textAlign: 'center',
                       padding: '30px',
+                      background: 'rgba(255,255,255,0.02)',
+                      borderRadius: '12px',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '100%',
-                      background: 'rgba(0, 240, 255, 0.03)',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(0, 240, 255, 0.15)',
+                      position: 'relative',
+                      overflow: 'hidden',
                     }}
                   >
-                    <div
-                      className="spinner"
-                      style={{
-                        margin: '0 auto 16px',
-                        width: '36px',
-                        height: '36px',
-                        border: '3px solid rgba(0,240,255,0.2)',
-                        borderTopColor: 'var(--primary-cyan)',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
-                      }}
-                    ></div>
+                    <style>{`
+                      @keyframes scanline {
+                        0% { top: 0%; opacity: 0; }
+                        10% { opacity: 1; }
+                        90% { opacity: 1; }
+                        100% { top: 100%; opacity: 0; }
+                      }
+                    `}</style>
+                    {previewImageUrl && (
+                      <div style={{ position: 'relative', width: '100%', maxWidth: '150px', marginBottom: '20px' }}>
+                        <img 
+                          src={previewImageUrl} 
+                          alt="scanning preview" 
+                          style={{ width: '100%', borderRadius: '8px', opacity: 0.6 }} 
+                        />
+                        <div 
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            background: 'var(--primary-cyan)',
+                            boxShadow: '0 0 12px var(--primary-cyan)',
+                            animation: 'scanline 1.5s linear infinite'
+                          }} 
+                        />
+                      </div>
+                    )}
+                    {!previewImageUrl && (
+                      <div
+                        style={{
+                          margin: '0 auto 16px',
+                          width: '36px',
+                          height: '36px',
+                          border: '3px solid rgba(0,240,255,0.2)',
+                          borderTopColor: 'var(--primary-cyan)',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite',
+                        }}
+                      ></div>
+                    )}
                     <div
                       style={{
                         display: 'flex',
@@ -886,7 +1171,14 @@ export function Board() {
                         marginBottom: '4px',
                       }}
                     >
-                      <span style={{ fontSize: '1.2rem' }}>🤖</span>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-cyan)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 4px var(--primary-cyan))' }}>
+                        <path d="M4 7V4h3" />
+                        <path d="M17 4h3v3" />
+                        <path d="M20 17v3h-3" />
+                        <path d="M7 20H4v-3" />
+                        <rect x="7" y="7" width="10" height="10" rx="2" />
+                        <line x1="2" y1="12" x2="22" y2="12" style={{ animation: 'scanline 1.5s linear infinite' }} />
+                      </svg>
                       <span
                         style={{
                           fontSize: '0.9rem',
@@ -895,13 +1187,13 @@ export function Board() {
                           letterSpacing: '0.5px',
                         }}
                       >
-                        AI가 당첨 여부와 위조를 판독 중입니다
+                        AI가 로또 이미지를 스캔하고 있습니다
                       </span>
                     </div>
                     <span
                       style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
                     >
-                      안전한 인증을 위해 이미지를 블러 처리하고 있습니다...
+                      안전한 인증을 위해 당첨 번호와 식별자를 분석 중입니다...
                     </span>
                   </div>
                 ) : category === 'WINNING' && winningImageUrl ? (
@@ -1074,7 +1366,8 @@ export function Board() {
                       fontSize: '0.9rem',
                     }}
                   >
-                    ⚠️ {lottoError}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle', marginTop: '-2px' }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    {lottoError}
                   </div>
                 ) : lottoRank !== null ? (
                   lottoRank <= 5 ? (
@@ -1089,13 +1382,11 @@ export function Board() {
                         fontWeight: 'bold',
                       }}
                     >
-                      {lottoRank === 1
-                        ? '🏆'
-                        : lottoRank === 2
-                          ? '🥈'
-                          : lottoRank === 3
-                            ? '🥉'
-                            : '🎊'}{' '}
+                      {lottoRank === 1 ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px', verticalAlign: 'middle', marginTop: '-2px' }}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px', verticalAlign: 'middle', marginTop: '-2px' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                      )}
                       {lottoRank}등 당첨! 축하합니다!
                     </div>
                   ) : (
@@ -1110,7 +1401,8 @@ export function Board() {
                         fontWeight: 'bold',
                       }}
                     >
-                      😢 아쉽게도 낙첨입니다.
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px', verticalAlign: 'middle', marginTop: '-2px' }}><circle cx="12" cy="12" r="10"></circle><path d="M16 16s-1.5-2-4-2-4 2-4 2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                      아쉽게도 낙첨입니다.
                     </div>
                   )
                 ) : null}
@@ -1121,38 +1413,49 @@ export function Board() {
               category === 'WINNING' &&
               (lottoRank === null || lottoRank > 5 || lottoError)
             ) && (
-              <>
-                <input
-                  type="text"
-                  className="input-glow"
-                  placeholder="제목을 입력하세요 (최대 100자)"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  maxLength={100}
-                  style={{ height: '36px', textAlign: 'left' }}
-                />
-                <textarea
-                  className="input-glow"
-                  placeholder={
-                    category === 'WINNING'
-                      ? '당첨 소감을 입력해주세요.'
-                      : '내용을 작성해주세요.'
-                  }
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  style={{
-                    minHeight: '150px',
-                    padding: '10px',
-                    textAlign: 'left',
-                  }}
-                />
-              </>
-            )}
+                <>
+                  <input
+                    type="text"
+                    className="input-glow"
+                    placeholder="제목을 입력하세요 (최대 100자)"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    maxLength={100}
+                    style={{ height: '36px', textAlign: 'left' }}
+                  />
+                  <textarea
+                    className="input-glow"
+                    placeholder={
+                      category === 'WINNING'
+                        ? '당첨 소감을 입력해주세요.'
+                        : '내용을 작성해주세요.'
+                    }
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    style={{
+                      minHeight: '150px',
+                      padding: '10px',
+                      textAlign: 'left',
+                    }}
+                  />
+                </>
+              )}
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
               <button
                 type="button"
-                onClick={() => setIsWriting(false)}
+                onClick={() => {
+                  setIsWriting(false);
+                  setTitle('');
+                  setContent('');
+                  setImageFiles([]);
+                  setWinningImageUrl('');
+                  setLottoRank(null);
+                  setLottoRound(null);
+                  setLottoIdentifier(null);
+                  setLottoError(null);
+                  setPreviewImageUrl('');
+                }}
                 style={{
                   flex: 1,
                   height: '36px',
@@ -1179,20 +1482,20 @@ export function Board() {
                   height: '36px',
                   background:
                     category === 'WINNING' &&
-                    (lottoRank === null || lottoRank > 5 || lottoError !== null)
+                      (lottoRank === null || lottoRank > 5 || lottoError !== null)
                       ? 'rgba(255,255,255,0.1)'
                       : 'var(--primary-cyan)',
                   border: 'none',
                   color:
                     category === 'WINNING' &&
-                    (lottoRank === null || lottoRank > 5 || lottoError !== null)
+                      (lottoRank === null || lottoRank > 5 || lottoError !== null)
                       ? 'var(--text-dim)'
                       : '#0f111a',
                   fontWeight: 'bold',
                   borderRadius: '6px',
                   cursor:
                     category === 'WINNING' &&
-                    (lottoRank === null || lottoRank > 5 || lottoError !== null)
+                      (lottoRank === null || lottoRank > 5 || lottoError !== null)
                       ? 'not-allowed'
                       : 'pointer',
                 }}
@@ -1419,21 +1722,21 @@ export function Board() {
             </button>
             {(activePost.visitorId === visitorId ||
               localStorage.getItem('mk')) && (
-              <button
-                onClick={() => handleDelete(activePost.id)}
-                style={{
-                  padding: '6px 12px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'var(--text-dim)',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                }}
-              >
-                삭제
-              </button>
-            )}
+                <button
+                  onClick={() => handleDelete(activePost.id)}
+                  style={{
+                    padding: '6px 12px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'var(--text-dim)',
+                    borderRadius: '4px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  삭제
+                </button>
+              )}
           </div>
 
           <div
@@ -1605,25 +1908,25 @@ export function Board() {
                       </button>
                       {(comment.visitorId === visitorId ||
                         localStorage.getItem('mk')) && (
-                        <>
-                          <span style={{ color: 'rgba(255,255,255,0.1)' }}>
-                            |
-                          </span>
-                          <button
-                            onClick={() => handleCommentDelete(comment.id)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--text-dim)',
-                              fontSize: '0.75rem',
-                              cursor: 'pointer',
-                              padding: 0,
-                            }}
-                          >
-                            삭제
-                          </button>
-                        </>
-                      )}
+                          <>
+                            <span style={{ color: 'rgba(255,255,255,0.1)' }}>
+                              |
+                            </span>
+                            <button
+                              onClick={() => handleCommentDelete(comment.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-dim)',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                padding: 0,
+                              }}
+                            >
+                              삭제
+                            </button>
+                          </>
+                        )}
                     </div>
                   </div>
                   <p
@@ -1636,6 +1939,92 @@ export function Board() {
                   >
                     {comment.content}
                   </p>
+
+                  <div style={{ marginTop: '8px' }}>
+                    <button
+                      onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary-cyan)',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      {replyingTo === comment.id ? '취소' : '답글 달기'}
+                    </button>
+                  </div>
+                  {replyingTo === comment.id && (
+                    <form
+                      onSubmit={(e) => handleReplySubmit(e, comment.id)}
+                      style={{ display: 'flex', gap: '8px', marginTop: '8px' }}
+                    >
+                      <input
+                        type="text"
+                        className="input-glow"
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder="답글을 입력하세요..."
+                        style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}
+                        maxLength={200}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!replyContent.trim()}
+                        style={{
+                          padding: '0 16px',
+                          background: replyContent.trim() ? 'var(--primary-cyan)' : 'rgba(255,255,255,0.1)',
+                          color: replyContent.trim() ? '#0f111a' : 'var(--text-dim)',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontWeight: 'bold',
+                          cursor: replyContent.trim() ? 'pointer' : 'not-allowed',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        등록
+                      </button>
+                    </form>
+                  )}
+                  {comment.replies && comment.replies.length > 0 && (
+                    <div style={{ marginTop: '12px', paddingLeft: '16px', borderLeft: '2px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {comment.replies.map(reply => (
+                        <div key={reply.id} style={{ padding: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '6px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <span style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                                <span
+                                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const name = reply.visitor?.nickname;
+                                    if (name) setNicknameToReport({ nickname: name, id: reply.id, isComment: true });
+                                  }}
+                                >
+                                  {reply.visitor?.nickname || reply.visitorId.substring(0, 8)}
+                                </span>
+                              </span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                                {new Date(reply.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {(reply.visitorId === visitorId || localStorage.getItem('mk')) && (
+                                <button
+                                  onClick={() => handleCommentDelete(reply.id)}
+                                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.7rem', cursor: 'pointer', padding: 0 }}
+                                >
+                                  삭제
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-main)' }}>{reply.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1669,17 +2058,59 @@ export function Board() {
               {filteredPosts.map((post) => (
                 <div
                   key={post.id}
-                  onClick={() => fetchPostDetail(post.id)}
                   style={{
                     display: 'flex',
-                    justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '12px 16px',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    cursor: 'pointer',
                   }}
                 >
-                  <div style={{ textAlign: 'left', flex: 1 }}>
+                  {myPostsOnly && (
+                    <label style={{ marginRight: '16px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                      <div
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '6px',
+                          border: selectedPostIds.includes(post.id) ? 'none' : '1px solid rgba(255,255,255,0.3)',
+                          background: selectedPostIds.includes(post.id) ? 'var(--primary-cyan)' : 'rgba(255,255,255,0.05)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {selectedPostIds.includes(post.id) && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        )}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={selectedPostIds.includes(post.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedPostIds((prev) => [...prev, post.id]);
+                          } else {
+                            setSelectedPostIds((prev) => prev.filter((id) => id !== post.id));
+                          }
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  )}
+                  <div
+                    onClick={() => fetchPostDetail(post.id)}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flex: 1,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ textAlign: 'left', flex: 1 }}>
                     <span
                       style={{
                         display: 'flex',
@@ -1808,6 +2239,7 @@ export function Board() {
                   >
                     ➔
                   </span>
+                  </div>
                 </div>
               ))}
             </div>
