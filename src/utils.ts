@@ -8,7 +8,6 @@ export const ALGORITHM_NAMES: Record<string, string> = {
   TOTAL_MAX_COUNT: '전체 열번호',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const parseAlgorithmName = (type: any): string => {
   if (!type) return '';
   if (typeof type === 'object') {
@@ -16,6 +15,23 @@ export const parseAlgorithmName = (type: any): string => {
   }
   const name = type;
   return ALGORITHM_NAMES[name] || name;
+};
+
+export const fetchAndCacheAlgorithms = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/algorithms`);
+    if (res.ok) {
+      const data = await res.json();
+      const algorithms = data.data || data;
+      algorithms.forEach((algo: any) => {
+        if (algo.type && algo.name) {
+          ALGORITHM_NAMES[algo.type] = algo.name;
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Failed to fetch algorithm names for caching', err);
+  }
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

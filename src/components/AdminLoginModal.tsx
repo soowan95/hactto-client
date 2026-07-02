@@ -382,10 +382,10 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       const res = await fetch(appendAuth(`${API_BASE_URL}/Analysis/analyze`), {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('알고리즘 신뢰도 배치 분석에 실패했습니다.');
+      if (!res.ok) throw new Error('알고리즘 배치 분석에 실패했습니다.');
       showAlert(
         'success',
-        '알고리즘 신뢰도 배치 분석이 성공적으로 실행되었습니다.',
+        '알고리즘 배치 분석이 성공적으로 실행되었습니다.',
       );
       setIsSystemAnalyzing(true);
     } catch (err) {
