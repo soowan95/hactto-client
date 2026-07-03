@@ -49,8 +49,6 @@ export function History() {
     };
   }, [selectedAnalysis]);
 
-
-
   useEffect(() => {
     const fetchHistoryList = async () => {
       if (!visitorId) return;

@@ -1,4 +1,3 @@
- 
 /* eslint-disable */
 import {
   createContext,
@@ -434,7 +433,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [checkIpStatus]);
 
   useEffect(() => {
-     
     checkIpStatus();
     fetchAndCacheAlgorithms();
 

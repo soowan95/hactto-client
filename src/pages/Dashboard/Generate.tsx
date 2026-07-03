@@ -336,8 +336,8 @@ export function Generate() {
           body: JSON.stringify(
             isWeightsAlgo
               ? {
-                weights: weights,
-              }
+                  weights: weights,
+                }
               : {},
           ),
         },
