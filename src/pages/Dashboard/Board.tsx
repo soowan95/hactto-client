@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useApp } from '../../context/AppContext';
 import { API_BASE_URL } from '../../utils';
@@ -13,6 +14,7 @@ interface PostComment {
   visitor?: { nickname?: string | null };
   _count?: { likes: number };
   isLiked?: boolean;
+  isAdmin?: boolean;
   replies?: PostComment[];
   parentId?: number | null;
 }
@@ -24,17 +26,48 @@ interface Post {
   title: string;
   content: string;
   imageUrl: string | null;
+  originalFileName?: string | null;
   lottoRank?: number;
   lottoRound?: number;
   createdAt: string;
   visitor?: { nickname?: string | null };
   _count?: { likes: number; comments: number };
   isLiked?: boolean;
+  isAdmin?: boolean;
   comments?: PostComment[];
+  attachments?: {
+    id: number;
+    imageUrl: string;
+    originalFileName?: string | null;
+  }[];
 }
 
+const renderContentWithImages = (content: string) => {
+  const parts = content.split(/(!\[[^\]]*\]\([^)]+\))/g);
+  return parts.map((part, index) => {
+    const match = part.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (match) {
+      return (
+        <img
+          key={index}
+          src={match[2]}
+          alt={match[1]}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '400px',
+            display: 'block',
+            margin: '8px 0',
+            borderRadius: '8px',
+          }}
+        />
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+};
+
 export function Board() {
-  const { showAlert, visitorId } = useApp();
+  const { showAlert, visitorId, isAdminMode, adminKey } = useApp();
   const [posts, setPosts] = useState<Post[]>([]);
   const [category, setCategory] = useState<'FREE' | 'KNOWHOW' | 'WINNING'>(
     'FREE',
@@ -50,9 +83,14 @@ export function Board() {
 
   // Form states
   const [isWriting, setIsWriting] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<
+    { id: number; imageUrl: string; originalFileName?: string | null }[]
+  >([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Lotto OCR states
@@ -63,6 +101,8 @@ export function Board() {
   const [lottoIdentifier, setLottoIdentifier] = useState<string | null>(null);
   const [lottoError, setLottoError] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string>('');
+  // Tracks original filename returned by presigned-url API
+  const [uploadedFilename, setUploadedFilename] = useState<string>('');
 
   // Dialog State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -73,6 +113,33 @@ export function Board() {
 
   // Detail view state
   const [activePost, setActivePost] = useState<Post | null>(null);
+  const [showAttachmentDropdown, setShowAttachmentDropdown] = useState(false);
+  const [modalPreviewImage, setModalPreviewImage] = useState<string | null>(
+    null,
+  );
+  const [showPostPreviewModal, setShowPostPreviewModal] = useState(false);
+  const [showPdfNotice, setShowPdfNotice] = useState(false);
+
+  useEffect(() => {
+    if (modalPreviewImage && /\.pdf$/i.test(modalPreviewImage.split('?')[0])) {
+      setShowPdfNotice(true);
+      const timer = setTimeout(() => setShowPdfNotice(false), 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowPdfNotice(false);
+    }
+  }, [modalPreviewImage]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setModalPreviewImage(null);
+        setShowPostPreviewModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // My posts filter state
   // My posts filter state
@@ -202,7 +269,9 @@ export function Board() {
     activeSearchTarget,
   ]);
 
-  const handleImageUpload = async (file: File): Promise<string> => {
+  const handleImageUpload = async (
+    file: File,
+  ): Promise<{ imageUrl: string; originalFilename: string }> => {
     const vid = visitorId || localStorage.getItem('visitor_id') || '';
     const res = await fetch(`${API_BASE_URL}/user/board/presigned-url`, {
       method: 'POST',
@@ -213,11 +282,19 @@ export function Board() {
       body: JSON.stringify({
         filename: file.name,
         contentType: file.type,
+        originalFilename: file.name,
       }),
     });
 
-    if (!res.ok) throw new Error('업로드 URL 발급에 실패했습니다.');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.message || '업로드 URL 발급에 실패했습니다.');
+    }
     const { data } = await res.json();
+
+    const originalFilename: string = data.originalFilename || file.name;
+    // Also update state for UI display (existing file row)
+    setUploadedFilename(originalFilename);
 
     const uploadRes = await fetch(data.uploadUrl, {
       method: 'PUT',
@@ -231,7 +308,55 @@ export function Board() {
       );
     }
 
-    return data.imageUrl;
+    return { imageUrl: data.imageUrl, originalFilename };
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          if (category === 'WINNING') {
+            handleWinningImageSelect(file);
+          } else {
+            try {
+              showAlert('success', '이미지 업로드 중...');
+              const { imageUrl: url } = await handleImageUpload(file);
+              const markdownImage = `![image](${url})`;
+
+              // Insert at cursor position if possible
+              const target = e.target as HTMLTextAreaElement;
+              const start = target.selectionStart;
+              const end = target.selectionEnd;
+              if (start !== undefined && end !== undefined) {
+                const newContent =
+                  content.substring(0, start) +
+                  markdownImage +
+                  content.substring(end);
+                setContent(newContent);
+                // Try to restore cursor after state update
+                setTimeout(() => {
+                  target.selectionStart = target.selectionEnd =
+                    start + markdownImage.length;
+                  target.focus();
+                }, 0);
+              } else {
+                setContent((prev) => prev + '\n' + markdownImage);
+              }
+              showAlert('success', '본문에 이미지가 삽입되었습니다.');
+            } catch (err: any) {
+              showAlert(
+                'error',
+                err.message || '이미지 업로드에 실패했습니다.',
+              );
+            }
+          }
+          break;
+        }
+      }
+    }
   };
 
   const handleWinningImageSelect = async (file: File) => {
@@ -244,7 +369,7 @@ export function Board() {
     const objectUrl = URL.createObjectURL(file);
     setPreviewImageUrl(objectUrl);
     try {
-      const uploadedUrl = await handleImageUpload(file);
+      const { imageUrl: uploadedUrl } = await handleImageUpload(file);
       setWinningImageUrl(uploadedUrl);
 
       const vid = visitorId || localStorage.getItem('visitor_id') || '';
@@ -279,6 +404,86 @@ export function Board() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (editingPostId) {
+      if (!title.trim() || !content.trim()) {
+        showAlert('error', '제목과 내용을 모두 입력해주세요.');
+        return;
+      }
+      setSubmitting(true);
+      try {
+        let finalImageUrl = winningImageUrl;
+        let finalOriginalFilename: string | null | undefined = undefined;
+        let finalAttachments:
+          | { imageUrl: string; originalFileName?: string | null }[]
+          | undefined = undefined;
+
+        if (category !== 'WINNING') {
+          const uploadedFiles = await Promise.all(
+            imageFiles.map((file) => handleImageUpload(file)),
+          );
+          const newAttachments = uploadedFiles.map((up) => ({
+            imageUrl: up.imageUrl,
+            originalFileName: up.originalFilename,
+          }));
+
+          finalAttachments = [
+            ...existingAttachments.map((att) => ({
+              imageUrl: att.imageUrl,
+              originalFileName: att.originalFileName,
+            })),
+            ...newAttachments,
+          ];
+        }
+
+        const vid = visitorId || localStorage.getItem('visitor_id') || '';
+        const res = await fetch(`${API_BASE_URL}/user/board/${editingPostId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(vid ? { 'x-visitor-id': vid } : {}),
+            ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
+          },
+          body: JSON.stringify({
+            title,
+            content,
+            imageUrl: finalImageUrl === '' ? null : finalImageUrl || undefined,
+            originalFileName:
+              finalImageUrl === '' ? null : finalOriginalFilename,
+            attachments: finalAttachments,
+          }),
+        });
+
+        if (res.ok) {
+          const updated = await res.json();
+          showAlert('success', '게시글이 성공적으로 수정되었습니다.');
+          setIsWriting(false);
+          setEditingPostId(null);
+          setTitle('');
+          setContent('');
+          setImageFiles([]);
+          setWinningImageUrl('');
+          setLottoRank(null);
+          setLottoRound(null);
+          setLottoIdentifier(null);
+          fetchPosts();
+          // Stay on the updated post
+          if (updated?.data) {
+            setActivePost(updated.data);
+          } else {
+            setActivePost(null);
+          }
+        } else {
+          const err = await res.json();
+          showAlert('error', err.message || '게시글 수정에 실패했습니다.');
+        }
+      } catch (err: any) {
+        showAlert('error', err.message || '오류가 발생했습니다.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
     if (!title.trim() || !content.trim()) {
       showAlert('error', '제목과 내용을 입력해주세요.');
       return;
@@ -296,10 +501,21 @@ export function Board() {
     setSubmitting(true);
     try {
       let imageUrl: string | undefined = undefined;
+      let originalFileName: string | undefined = undefined;
+      let attachments: {
+        imageUrl: string;
+        originalFileName?: string | null;
+      }[] = [];
       if (category === 'WINNING') {
         imageUrl = winningImageUrl;
       } else if (imageFiles.length > 0) {
-        imageUrl = await handleImageUpload(imageFiles[0]);
+        const uploadedFiles = await Promise.all(
+          imageFiles.map((file) => handleImageUpload(file)),
+        );
+        attachments = uploadedFiles.map((up) => ({
+          imageUrl: up.imageUrl,
+          originalFileName: up.originalFilename,
+        }));
       }
 
       const vid = visitorId || localStorage.getItem('visitor_id') || '';
@@ -308,12 +524,18 @@ export function Board() {
         headers: {
           'Content-Type': 'application/json',
           ...(vid ? { 'x-visitor-id': vid } : {}),
+          ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
         },
         body: JSON.stringify({
           category,
           title,
           content,
           imageUrl,
+          originalFileName,
+          attachments:
+            category !== 'WINNING' && attachments.length > 0
+              ? attachments
+              : undefined,
           lottoRank: category === 'WINNING' ? lottoRank : undefined,
           lottoRound: category === 'WINNING' ? lottoRound : undefined,
           lottoIdentifier: category === 'WINNING' ? lottoIdentifier : undefined,
@@ -321,10 +543,12 @@ export function Board() {
       });
 
       if (res.ok) {
+        const created = await res.json();
         showAlert('success', '글이 성공적으로 등록되었습니다.');
         setTitle('');
         setContent('');
         setImageFiles([]);
+        setExistingAttachments([]);
         setWinningImageUrl('');
         setLottoRank(null);
         setLottoRound(null);
@@ -333,6 +557,10 @@ export function Board() {
         setPreviewImageUrl('');
         setIsWriting(false);
         fetchPosts();
+        // Navigate to the newly created post
+        if (created?.data) {
+          setActivePost(created.data);
+        }
       } else {
         const data = await res.json();
         throw new Error(data.message || '글 등록에 실패했습니다.');
@@ -437,6 +665,7 @@ export function Board() {
           headers: {
             'Content-Type': 'application/json',
             ...(vid ? { 'x-visitor-id': vid } : {}),
+            ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
           },
           body: JSON.stringify({ content: commentContent }),
         },
@@ -463,6 +692,7 @@ export function Board() {
           headers: {
             'Content-Type': 'application/json',
             ...(vid ? { 'x-visitor-id': vid } : {}),
+            ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
           },
           body: JSON.stringify({ content: replyContent, parentId }),
         },
@@ -590,6 +820,539 @@ export function Board() {
   const filteredPosts = myPostsOnly
     ? posts.filter((p) => p.visitorId === visitorId)
     : posts;
+
+  const uploadUI = (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        textAlign: 'left',
+      }}
+    >
+      {!(category === 'WINNING' && winningImageUrl) && (
+        <label
+          style={{
+            fontSize: '0.78rem',
+            color: 'var(--text-dim)',
+            fontWeight: '600',
+          }}
+        >
+          {category === 'WINNING'
+            ? '인증 사진 첨부 (한 번 첨부 후 수정 불가)'
+            : '파일 첨부'}{' '}
+          {category === 'WINNING' && (
+            <span style={{ color: '#ff4b4b' }}>(필수)</span>
+          )}
+        </label>
+      )}
+
+      <div
+        style={{
+          border:
+            category === 'WINNING' && winningImageUrl
+              ? 'none'
+              : '2px dashed rgba(255,255,255,0.1)',
+          borderRadius: '8px',
+          padding:
+            category === 'WINNING' && winningImageUrl
+              ? '0'
+              : category === 'WINNING'
+                ? '20px'
+                : '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          background:
+            category === 'WINNING' && winningImageUrl
+              ? 'transparent'
+              : 'rgba(255,255,255,0.01)',
+          minHeight:
+            category === 'WINNING' && winningImageUrl
+              ? 'auto'
+              : category === 'WINNING'
+                ? '100px'
+                : '60px',
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (e.dataTransfer.files) {
+            const files = Array.from(e.dataTransfer.files);
+            const allowedExtensions =
+              /\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i;
+
+            if (category === 'WINNING') {
+              const file = files[0];
+              if (!file.type.startsWith('image/')) {
+                showAlert(
+                  'error',
+                  '당첨 인증 게시판에는 이미지 형식의 파일만 업로드할 수 있습니다.',
+                );
+                return;
+              }
+              handleWinningImageSelect(file);
+            } else {
+              const invalid = files.some(
+                (f) => !allowedExtensions.test(f.name),
+              );
+              if (invalid) {
+                showAlert(
+                  'error',
+                  '허용되지 않는 파일 형식입니다. (이미지, PDF, 오피스 문서 및 텍스트 파일만 업로드 가능)',
+                );
+                return;
+              }
+              setImageFiles((prev) => [...prev, ...files]);
+            }
+          }
+        }}
+      >
+        <input
+          type="file"
+          multiple
+          accept={
+            category === 'WINNING'
+              ? 'image/png, image/jpeg, image/jpg, image/gif, image/webp'
+              : '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt'
+          }
+          onChange={(e) => {
+            if (e.target.files) {
+              const files = Array.from(e.target.files);
+              const allowedExtensions =
+                /\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i;
+
+              if (category === 'WINNING') {
+                const file = files[0];
+                if (!file.type.startsWith('image/')) {
+                  showAlert(
+                    'error',
+                    '당첨 인증 게시판에는 이미지 형식의 파일만 업로드할 수 있습니다.',
+                  );
+                  e.target.value = '';
+                  return;
+                }
+                handleWinningImageSelect(file);
+              } else {
+                const invalid = files.some(
+                  (f) => !allowedExtensions.test(f.name),
+                );
+                if (invalid) {
+                  showAlert(
+                    'error',
+                    '허용되지 않는 파일 형식입니다. (이미지, PDF, 오피스 문서 및 텍스트 파일만 업로드 가능)',
+                  );
+                  e.target.value = '';
+                  return;
+                }
+                setImageFiles((prev) => [...prev, ...files]);
+              }
+            }
+          }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            opacity: 0,
+            cursor: 'pointer',
+            display:
+              category === 'WINNING' && winningImageUrl ? 'none' : 'block',
+          }}
+        />
+
+        {lottoAnalyzing ? (
+          <div
+            style={{
+              padding: '30px',
+              background: 'rgba(255,255,255,0.02)',
+              borderRadius: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <style>{`
+                      @keyframes scanline {
+                        0% { top: 0%; opacity: 0; }
+                        10% { opacity: 1; }
+                        90% { opacity: 1; }
+                        100% { top: 100%; opacity: 0; }
+                      }
+                    `}</style>
+            {previewImageUrl && (
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  maxWidth: '150px',
+                  marginBottom: '20px',
+                }}
+              >
+                <img
+                  src={previewImageUrl}
+                  alt="scanning preview"
+                  style={{
+                    width: '100%',
+                    borderRadius: '8px',
+                    opacity: 0.6,
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: 'var(--primary-cyan)',
+                    boxShadow: '0 0 12px var(--primary-cyan)',
+                    animation: 'scanline 1.5s linear infinite',
+                  }}
+                />
+              </div>
+            )}
+            {!previewImageUrl && (
+              <div
+                style={{
+                  margin: '0 auto 16px',
+                  width: '36px',
+                  height: '36px',
+                  border: '3px solid rgba(0,240,255,0.2)',
+                  borderTopColor: 'var(--primary-cyan)',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }}
+              ></div>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '4px',
+              }}
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--primary-cyan)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  filter: 'drop-shadow(0 0 4px var(--primary-cyan))',
+                }}
+              >
+                <path d="M4 7V4h3" />
+                <path d="M17 4h3v3" />
+                <path d="M20 17v3h-3" />
+                <path d="M7 20H4v-3" />
+                <rect x="7" y="7" width="10" height="10" rx="2" />
+                <line
+                  x1="2"
+                  y1="12"
+                  x2="22"
+                  y2="12"
+                  style={{ animation: 'scanline 1.5s linear infinite' }}
+                />
+              </svg>
+              <span
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                  color: 'var(--primary-cyan)',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                AI가 로또 이미지를 스캔하고 있습니다
+              </span>
+            </div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              안전한 인증을 위해 당첨 번호와 식별자를 분석 중입니다...
+            </span>
+          </div>
+        ) : category === 'WINNING' && winningImageUrl ? (
+          <div
+            style={{
+              textAlign: 'center',
+              position: 'relative',
+              zIndex: 10,
+              pointerEvents: 'auto',
+              display: 'block',
+              width: '100%',
+            }}
+          >
+            <img
+              src={winningImageUrl}
+              alt="Uploaded"
+              style={{
+                maxHeight: '150px',
+                borderRadius: '8px',
+                marginBottom: '12px',
+              }}
+            />
+          </div>
+        ) : imageFiles.length > 0 ||
+          existingAttachments.length > 0 ||
+          (winningImageUrl && category !== 'WINNING') ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              position: 'relative',
+              zIndex: 10,
+              pointerEvents: 'auto',
+            }}
+          >
+            {winningImageUrl && category !== 'WINNING' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 8px',
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '4px',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--primary-cyan)',
+                    fontWeight: 'bold',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '80%',
+                  }}
+                >
+                  {uploadedFilename ||
+                    (() => {
+                      // fallback: decode from URL
+                      try {
+                        const pathname = new URL(winningImageUrl).pathname;
+                        const parts = pathname.split('/');
+                        const raw = parts[parts.length - 1];
+                        try {
+                          return decodeURIComponent(raw);
+                        } catch {
+                          return raw;
+                        }
+                      } catch {
+                        return '첨부파일';
+                      }
+                    })()}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setWinningImageUrl(''); // 기존 파일 삭제 (상태 비우기)
+                  }}
+                  style={{
+                    background: 'rgba(255,75,75,0.2)',
+                    border: 'none',
+                    color: '#ff4b4b',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontSize: '0.7rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
+            )}
+            {existingAttachments.map((att) => (
+              <div
+                key={`existing-${att.id}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 8px',
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '4px',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--primary-cyan)',
+                    fontWeight: 'bold',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '80%',
+                  }}
+                >
+                  {att.originalFileName ||
+                    (() => {
+                      try {
+                        const pathname = new URL(att.imageUrl).pathname;
+                        const parts = pathname.split('/');
+                        const raw = parts[parts.length - 1];
+                        try {
+                          return decodeURIComponent(raw);
+                        } catch {
+                          return raw;
+                        }
+                      } catch {
+                        return '첨부파일';
+                      }
+                    })()}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setExistingAttachments((prev) =>
+                      prev.filter((item) => item.id !== att.id),
+                    );
+                  }}
+                  style={{
+                    background: 'rgba(255,75,75,0.2)',
+                    border: 'none',
+                    color: '#ff4b4b',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontSize: '0.7rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+            {imageFiles.map((file, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 8px',
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '4px',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--primary-cyan)',
+                    fontWeight: 'bold',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '80%',
+                  }}
+                >
+                  {file.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setImageFiles((prev) => prev.filter((_, i) => i !== idx));
+                  }}
+                  style={{
+                    background: 'rgba(255,75,75,0.2)',
+                    border: 'none',
+                    color: '#ff4b4b',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontSize: '0.7rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              textAlign: 'center',
+              display: 'block',
+              width: '100%',
+              marginTop:
+                category === 'WINNING' && winningImageUrl ? '16px' : '0',
+            }}
+          >
+            {category === 'WINNING' && winningImageUrl ? (
+              <div
+                style={{
+                  padding: '20px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <h3
+                  style={{
+                    margin: '0 0 8px 0',
+                    color: 'var(--primary-cyan)',
+                  }}
+                >
+                  {lottoRank === 1
+                    ? '🏆'
+                    : lottoRank === 2
+                      ? '🥈'
+                      : lottoRank === 3
+                        ? '🥉'
+                        : '🎊'}{' '}
+                  {lottoRank}등 당첨! 축하합니다!
+                </h3>
+                {lottoRound && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '0.9rem',
+                      color: 'var(--text-dim)',
+                    }}
+                  >
+                    제 {lottoRound}회차
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: '1.2rem',
+                    marginBottom: '4px',
+                  }}
+                >
+                  📤
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.78rem',
+                    color: 'var(--text-dim)',
+                  }}
+                >
+                  클릭하거나 파일을 여기로 드래그하여 업로드하세요
+                </span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -841,6 +1604,7 @@ export function Board() {
                 setTitle('');
                 setContent('');
                 setImageFiles([]);
+                setExistingAttachments([]);
                 setWinningImageUrl('');
                 setLottoRank(null);
                 setLottoRound(null);
@@ -1086,421 +1850,13 @@ export function Board() {
               textAlign: 'left',
             }}
           >
-            새 글 작성
+            {editingPostId ? '게시글 수정' : '새 글 작성'}
           </h4>
           <form
             onSubmit={handleSubmit}
             style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                textAlign: 'left',
-              }}
-            >
-              {!(category === 'WINNING' && winningImageUrl) && (
-                <label
-                  style={{
-                    fontSize: '0.78rem',
-                    color: 'var(--text-dim)',
-                    fontWeight: '600',
-                  }}
-                >
-                  {category === 'WINNING'
-                    ? '인증 사진 첨부 (한 번 첨부 후 수정 불가)'
-                    : '파일 첨부'}{' '}
-                  {category === 'WINNING' && (
-                    <span style={{ color: '#ff4b4b' }}>(필수)</span>
-                  )}
-                </label>
-              )}
-
-              <div
-                style={{
-                  border:
-                    category === 'WINNING' && winningImageUrl
-                      ? 'none'
-                      : '2px dashed rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  padding:
-                    category === 'WINNING' && winningImageUrl ? '0' : '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  background:
-                    category === 'WINNING' && winningImageUrl
-                      ? 'transparent'
-                      : 'rgba(255,255,255,0.01)',
-                  minHeight:
-                    category === 'WINNING' && winningImageUrl
-                      ? 'auto'
-                      : '100px',
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (e.dataTransfer.files) {
-                    const files = Array.from(e.dataTransfer.files);
-                    const allowedExtensions =
-                      /\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i;
-
-                    if (category === 'WINNING') {
-                      const file = files[0];
-                      if (!file.type.startsWith('image/')) {
-                        showAlert(
-                          'error',
-                          '당첨 인증 게시판에는 이미지 형식의 파일만 업로드할 수 있습니다.',
-                        );
-                        return;
-                      }
-                      handleWinningImageSelect(file);
-                    } else {
-                      const invalid = files.some(
-                        (f) => !allowedExtensions.test(f.name),
-                      );
-                      if (invalid) {
-                        showAlert(
-                          'error',
-                          '허용되지 않는 파일 형식입니다. (이미지, PDF, 오피스 문서 및 텍스트 파일만 업로드 가능)',
-                        );
-                        return;
-                      }
-                      setImageFiles((prev) => [...prev, ...files]);
-                    }
-                  }
-                }}
-              >
-                <input
-                  type="file"
-                  multiple
-                  accept={
-                    category === 'WINNING'
-                      ? 'image/png, image/jpeg, image/jpg, image/gif, image/webp'
-                      : '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt'
-                  }
-                  onChange={(e) => {
-                    if (e.target.files) {
-                      const files = Array.from(e.target.files);
-                      const allowedExtensions =
-                        /\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i;
-
-                      if (category === 'WINNING') {
-                        const file = files[0];
-                        if (!file.type.startsWith('image/')) {
-                          showAlert(
-                            'error',
-                            '당첨 인증 게시판에는 이미지 형식의 파일만 업로드할 수 있습니다.',
-                          );
-                          e.target.value = '';
-                          return;
-                        }
-                        handleWinningImageSelect(file);
-                      } else {
-                        const invalid = files.some(
-                          (f) => !allowedExtensions.test(f.name),
-                        );
-                        if (invalid) {
-                          showAlert(
-                            'error',
-                            '허용되지 않는 파일 형식입니다. (이미지, PDF, 오피스 문서 및 텍스트 파일만 업로드 가능)',
-                          );
-                          e.target.value = '';
-                          return;
-                        }
-                        setImageFiles((prev) => [...prev, ...files]);
-                      }
-                    }
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    opacity: 0,
-                    cursor: 'pointer',
-                    display:
-                      category === 'WINNING' && winningImageUrl
-                        ? 'none'
-                        : 'block',
-                  }}
-                />
-
-                {lottoAnalyzing ? (
-                  <div
-                    style={{
-                      padding: '30px',
-                      background: 'rgba(255,255,255,0.02)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <style>{`
-                      @keyframes scanline {
-                        0% { top: 0%; opacity: 0; }
-                        10% { opacity: 1; }
-                        90% { opacity: 1; }
-                        100% { top: 100%; opacity: 0; }
-                      }
-                    `}</style>
-                    {previewImageUrl && (
-                      <div
-                        style={{
-                          position: 'relative',
-                          width: '100%',
-                          maxWidth: '150px',
-                          marginBottom: '20px',
-                        }}
-                      >
-                        <img
-                          src={previewImageUrl}
-                          alt="scanning preview"
-                          style={{
-                            width: '100%',
-                            borderRadius: '8px',
-                            opacity: 0.6,
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                            height: '3px',
-                            background: 'var(--primary-cyan)',
-                            boxShadow: '0 0 12px var(--primary-cyan)',
-                            animation: 'scanline 1.5s linear infinite',
-                          }}
-                        />
-                      </div>
-                    )}
-                    {!previewImageUrl && (
-                      <div
-                        style={{
-                          margin: '0 auto 16px',
-                          width: '36px',
-                          height: '36px',
-                          border: '3px solid rgba(0,240,255,0.2)',
-                          borderTopColor: 'var(--primary-cyan)',
-                          borderRadius: '50%',
-                          animation: 'spin 1s linear infinite',
-                        }}
-                      ></div>
-                    )}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="var(--primary-cyan)"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{
-                          filter: 'drop-shadow(0 0 4px var(--primary-cyan))',
-                        }}
-                      >
-                        <path d="M4 7V4h3" />
-                        <path d="M17 4h3v3" />
-                        <path d="M20 17v3h-3" />
-                        <path d="M7 20H4v-3" />
-                        <rect x="7" y="7" width="10" height="10" rx="2" />
-                        <line
-                          x1="2"
-                          y1="12"
-                          x2="22"
-                          y2="12"
-                          style={{ animation: 'scanline 1.5s linear infinite' }}
-                        />
-                      </svg>
-                      <span
-                        style={{
-                          fontSize: '0.9rem',
-                          fontWeight: 'bold',
-                          color: 'var(--primary-cyan)',
-                          letterSpacing: '0.5px',
-                        }}
-                      >
-                        AI가 로또 이미지를 스캔하고 있습니다
-                      </span>
-                    </div>
-                    <span
-                      style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
-                    >
-                      안전한 인증을 위해 당첨 번호와 식별자를 분석 중입니다...
-                    </span>
-                  </div>
-                ) : category === 'WINNING' && winningImageUrl ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      position: 'relative',
-                      zIndex: 10,
-                      pointerEvents: 'auto',
-                      display: 'block',
-                      width: '100%',
-                    }}
-                  >
-                    <img
-                      src={winningImageUrl}
-                      alt="Uploaded"
-                      style={{
-                        maxHeight: '150px',
-                        borderRadius: '8px',
-                        marginBottom: '12px',
-                      }}
-                    />
-                  </div>
-                ) : imageFiles.length > 0 && category !== 'WINNING' ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px',
-                      position: 'relative',
-                      zIndex: 10,
-                      pointerEvents: 'auto',
-                    }}
-                  >
-                    {imageFiles.map((file, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '4px 8px',
-                          background: 'rgba(255,255,255,0.05)',
-                          borderRadius: '4px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '0.82rem',
-                            color: 'var(--primary-cyan)',
-                            fontWeight: 'bold',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            maxWidth: '80%',
-                          }}
-                        >
-                          {file.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            setImageFiles((prev) =>
-                              prev.filter((_, i) => i !== idx),
-                            );
-                          }}
-                          style={{
-                            background: 'rgba(255,75,75,0.2)',
-                            border: 'none',
-                            color: '#ff4b4b',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      display: 'block',
-                      width: '100%',
-                      marginTop:
-                        category === 'WINNING' && winningImageUrl
-                          ? '16px'
-                          : '0',
-                    }}
-                  >
-                    {category === 'WINNING' && winningImageUrl ? (
-                      <div
-                        style={{
-                          padding: '20px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          borderRadius: '12px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                        }}
-                      >
-                        <h3
-                          style={{
-                            margin: '0 0 8px 0',
-                            color: 'var(--primary-cyan)',
-                          }}
-                        >
-                          {lottoRank === 1
-                            ? '🏆'
-                            : lottoRank === 2
-                              ? '🥈'
-                              : lottoRank === 3
-                                ? '🥉'
-                                : '🎊'}{' '}
-                          {lottoRank}등 당첨! 축하합니다!
-                        </h3>
-                        {lottoRound && (
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: '0.9rem',
-                              color: 'var(--text-dim)',
-                            }}
-                          >
-                            제 {lottoRound}회차
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <span
-                          style={{
-                            display: 'block',
-                            fontSize: '1.2rem',
-                            marginBottom: '4px',
-                          }}
-                        >
-                          📤
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '0.78rem',
-                            color: 'var(--text-dim)',
-                          }}
-                        >
-                          클릭하거나 파일을 여기로 드래그하여 업로드하세요
-                        </span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
+            {category === 'WINNING' && uploadUI}
             {category === 'WINNING' && (
               <div style={{ textAlign: 'center', marginTop: '8px' }}>
                 {lottoError ? (
@@ -1647,29 +2003,82 @@ export function Board() {
                   maxLength={100}
                   style={{ height: '36px', textAlign: 'left' }}
                 />
-                <textarea
-                  className="input-glow"
-                  placeholder={
-                    category === 'WINNING'
-                      ? '당첨 소감을 입력해주세요.'
-                      : '내용을 작성해주세요.'
-                  }
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                <div
                   style={{
-                    minHeight: '150px',
-                    padding: '10px',
-                    textAlign: 'left',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }}
-                />
+                >
+                  <textarea
+                    className="input-glow"
+                    placeholder={
+                      category === 'WINNING'
+                        ? '당첨 소감을 입력해주세요.'
+                        : '내용을 작성해주세요.'
+                    }
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    onPaste={handlePaste}
+                    style={{
+                      minHeight: '150px',
+                      padding: '10px',
+                      textAlign: 'left',
+                    }}
+                  />
+                  {content.trim() && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        marginTop: '-4px',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setShowPostPreviewModal(true)}
+                        style={{
+                          background: 'rgba(0, 240, 255, 0.1)',
+                          border: '1px solid rgba(0, 240, 255, 0.3)',
+                          color: 'var(--primary-cyan)',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        미리보기
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             )}
+
+            {category !== 'WINNING' && uploadUI}
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
               <button
                 type="button"
                 onClick={() => {
                   setIsWriting(false);
+                  setEditingPostId(null);
                   setTitle('');
                   setContent('');
                   setImageFiles([]);
@@ -1782,9 +2191,14 @@ export function Board() {
                 }}
               >
                 <span
-                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                  style={{
+                    cursor: activePost.isAdmin ? 'default' : 'pointer',
+                    textDecoration: activePost.isAdmin ? 'none' : 'underline',
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (activePost.isAdmin) return;
+
                     const name = activePost.visitor?.nickname;
                     if (name) {
                       setNicknameToReport({
@@ -1795,8 +2209,24 @@ export function Board() {
                     }
                   }}
                 >
-                  {activePost.visitor?.nickname ||
-                    activePost.visitorId.substring(0, 8)}
+                  {activePost.isAdmin ? (
+                    <span
+                      style={{
+                        background:
+                          'linear-gradient(135deg, #FFD700 0%, #F7931A 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        fontWeight: 'bold',
+                        marginRight: '6px',
+                        fontSize: '0.9em',
+                      }}
+                    >
+                      [M] 관리자
+                    </span>
+                  ) : (
+                    activePost.visitor?.nickname ||
+                    activePost.visitorId.substring(0, 8)
+                  )}
                 </span>
                 <span>|</span>
                 <span>
@@ -1825,10 +2255,249 @@ export function Board() {
                   </svg>
                   {activePost._count?.likes || 0}
                 </span>
+                <span>|</span>
+                <span
+                  style={{
+                    position: 'relative',
+                    cursor:
+                      activePost.imageUrl ||
+                      (activePost.attachments &&
+                        activePost.attachments.length > 0)
+                        ? 'pointer'
+                        : 'default',
+                    textDecoration:
+                      activePost.imageUrl ||
+                      (activePost.attachments &&
+                        activePost.attachments.length > 0)
+                        ? 'underline'
+                        : 'none',
+                    color:
+                      activePost.imageUrl ||
+                      (activePost.attachments &&
+                        activePost.attachments.length > 0)
+                        ? 'var(--primary-cyan)'
+                        : 'inherit',
+                  }}
+                  onClick={() => {
+                    if (
+                      activePost.imageUrl ||
+                      (activePost.attachments &&
+                        activePost.attachments.length > 0)
+                    ) {
+                      setShowAttachmentDropdown(!showAttachmentDropdown);
+                    }
+                  }}
+                >
+                  첨부파일(
+                  {(activePost.imageUrl ? 1 : 0) +
+                    (activePost.attachments?.length || 0)}
+                  )
+                  {showAttachmentDropdown &&
+                    (activePost.imageUrl ||
+                      (activePost.attachments &&
+                        activePost.attachments.length > 0)) &&
+                    (() => {
+                      const allAttachments = [];
+                      if (activePost.imageUrl) {
+                        allAttachments.push({
+                          imageUrl: activePost.imageUrl,
+                          originalFileName: activePost.originalFileName,
+                        });
+                      }
+                      if (activePost.attachments) {
+                        allAttachments.push(...activePost.attachments);
+                      }
+
+                      return (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 'auto',
+                            left: 0,
+                            marginTop: '8px',
+                            background: '#1a1d24',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '6px',
+                            padding: '10px 14px',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                            zIndex: 10,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            whiteSpace: 'nowrap',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {allAttachments.map((att, index) => {
+                            const url = att.imageUrl;
+                            const isImage =
+                              /\.(jpg|jpeg|png|gif|webp|svg|heic)$/i.test(
+                                url.split('?')[0],
+                              );
+                            const isPdf = /\.pdf$/i.test(url.split('?')[0]);
+                            const imageSvg = (
+                              <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{ color: 'var(--primary-cyan)' }}
+                              >
+                                <rect
+                                  x="3"
+                                  y="3"
+                                  width="18"
+                                  height="18"
+                                  rx="2"
+                                  ry="2"
+                                ></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                              </svg>
+                            );
+                            const fileSvg = (
+                              <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{ color: 'var(--primary-cyan)' }}
+                              >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                              </svg>
+                            );
+                            const icon = isImage ? imageSvg : fileSvg;
+
+                            let filename =
+                              att.originalFileName || `첨부파일 ${index + 1}`;
+                            if (!att.originalFileName) {
+                              try {
+                                const path = new URL(url).pathname;
+                                const parts = path.split('/');
+                                const raw = parts[parts.length - 1];
+                                try {
+                                  filename = decodeURIComponent(raw);
+                                } catch {
+                                  filename = raw;
+                                }
+                              } catch {}
+                            }
+
+                            const handleDownload = async (
+                              e: React.MouseEvent,
+                            ) => {
+                              e.preventDefault();
+                              try {
+                                const response = await fetch(url);
+                                const blob = await response.blob();
+                                const blobUrl =
+                                  window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = blobUrl;
+                                a.download = filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(blobUrl);
+                              } catch (err) {
+                                alert('다운로드에 실패했습니다.');
+                              }
+                            };
+
+                            return (
+                              <div
+                                key={index}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '20px',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: '0.85rem',
+                                    color: 'var(--text-main)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                  }}
+                                >
+                                  {icon}
+                                  <span
+                                    style={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      maxWidth: '250px',
+                                    }}
+                                  >
+                                    {filename}
+                                  </span>
+                                </div>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '0.75rem',
+                                    color: 'var(--text-dim)',
+                                  }}
+                                >
+                                  {(isImage || isPdf) && (
+                                    <>
+                                      <span
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setShowAttachmentDropdown(false);
+                                          setModalPreviewImage(url);
+                                        }}
+                                        style={{
+                                          color: 'var(--primary-cyan)',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        미리보기
+                                      </span>
+                                      <span>|</span>
+                                    </>
+                                  )}
+                                  <span
+                                    onClick={handleDownload}
+                                    style={{
+                                      color: 'var(--primary-cyan)',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    다운로드
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                </span>
               </div>
             </div>
             <button
-              onClick={() => setActivePost(null)}
+              onClick={() => {
+                setShowAttachmentDropdown(false);
+                setActivePost(null);
+              }}
               style={{
                 background: 'none',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -1842,37 +2511,6 @@ export function Board() {
             </button>
           </div>
 
-          {activePost.imageUrl && (
-            <div
-              style={{
-                marginBottom: '16px',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                textAlign: 'left',
-              }}
-            >
-              {/\.(jpg|jpeg|png|gif|webp|svg)/i.test(activePost.imageUrl) ? (
-                <img
-                  src={activePost.imageUrl}
-                  alt="Attachment"
-                  style={{ maxWidth: '100%', maxHeight: '350px' }}
-                />
-              ) : (
-                <a
-                  href={activePost.imageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="attachment-card"
-                >
-                  <svg className="attachment-icon-svg" viewBox="0 0 24 24">
-                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                  </svg>
-                  <span className="attachment-text">첨부파일 다운로드</span>
-                </a>
-              )}
-            </div>
-          )}
-
           <p
             style={{
               color: 'var(--text-muted)',
@@ -1882,7 +2520,7 @@ export function Board() {
               textAlign: 'left',
             }}
           >
-            {activePost.content}
+            {renderContentWithImages(activePost.content)}
           </p>
 
           <div
@@ -1895,24 +2533,26 @@ export function Board() {
               marginTop: '24px',
             }}
           >
-            <button
-              onClick={() => setShowReportModal(true)}
-              style={{
-                padding: '6px 12px',
-                background: 'rgba(255,75,75,0.1)',
-                border: '1px solid rgba(255,75,75,0.2)',
-                color: '#ff4b4b',
-                borderRadius: '4px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-              }}
-            >
-              🚨 신고하기
-            </button>
+            {!activePost.isAdmin && (
+              <button
+                onClick={() => setShowReportModal(true)}
+                style={{
+                  padding: '4px 8px',
+                  background: 'rgba(255,75,75,0.1)',
+                  border: '1px solid rgba(255,75,75,0.2)',
+                  color: '#ff4b4b',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                }}
+              >
+                🚨 신고하기
+              </button>
+            )}
             <button
               onClick={handlePostLike}
               style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: activePost.isLiked
                   ? 'rgba(0,240,255,0.1)'
                   : 'rgba(255,255,255,0.05)',
@@ -1923,7 +2563,7 @@ export function Board() {
                   ? 'var(--primary-cyan)'
                   : 'var(--text-dim)',
                 borderRadius: '4px',
-                fontSize: '0.8rem',
+                fontSize: '0.75rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1944,22 +2584,50 @@ export function Board() {
               </svg>
               좋아요
             </button>
-            {(activePost.visitorId === visitorId ||
-              localStorage.getItem('mk')) && (
-              <button
-                onClick={() => handleDelete(activePost.id)}
-                style={{
-                  padding: '6px 12px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'var(--text-dim)',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                }}
-              >
-                삭제
-              </button>
+            {((activePost.visitorId ===
+              (visitorId || localStorage.getItem('visitor_id')) &&
+              !activePost.isAdmin) ||
+              isAdminMode) && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    setEditingPostId(activePost.id);
+                    setTitle(activePost.title);
+                    setContent(activePost.content);
+                    setCategory(activePost.category);
+                    setWinningImageUrl(activePost.imageUrl || '');
+                    setImageFiles([]);
+                    setExistingAttachments(activePost.attachments || []);
+                    setUploadedFilename(activePost.originalFileName || '');
+                    setIsWriting(true);
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    background: 'rgba(255,165,0,0.1)',
+                    border: '1px solid rgba(255,165,0,0.3)',
+                    color: 'orange',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => handleDelete(activePost.id)}
+                  style={{
+                    padding: '4px 8px',
+                    background: 'rgba(255,75,75,0.1)',
+                    border: '1px solid rgba(255,75,75,0.3)',
+                    color: '#ff4b4b',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
             )}
           </div>
 
@@ -2067,8 +2735,24 @@ export function Board() {
                             }
                           }}
                         >
-                          {comment.visitor?.nickname ||
-                            comment.visitorId.substring(0, 8)}
+                          {comment.isAdmin ? (
+                            <span
+                              style={{
+                                background:
+                                  'linear-gradient(135deg, #FFD700 0%, #F7931A 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                fontWeight: 'bold',
+                                marginRight: '6px',
+                                fontSize: '0.9em',
+                              }}
+                            >
+                              [M] 관리자
+                            </span>
+                          ) : (
+                            comment.visitor?.nickname ||
+                            comment.visitorId.substring(0, 8)
+                          )}
                         </span>
                       </span>
                       <span
@@ -2278,8 +2962,24 @@ export function Board() {
                                       });
                                   }}
                                 >
-                                  {reply.visitor?.nickname ||
-                                    reply.visitorId.substring(0, 8)}
+                                  {reply.isAdmin ? (
+                                    <span
+                                      style={{
+                                        background:
+                                          'linear-gradient(135deg, #FFD700 0%, #F7931A 100%)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        fontWeight: 'bold',
+                                        marginRight: '4px',
+                                        fontSize: '0.9em',
+                                      }}
+                                    >
+                                      [M] 관리자
+                                    </span>
+                                  ) : (
+                                    reply.visitor?.nickname ||
+                                    reply.visitorId.substring(0, 8)
+                                  )}
                                 </span>
                               </span>
                               <span
@@ -2464,31 +3164,70 @@ export function Board() {
                             </span>
                           )}
                         {post.title}
-                        {post.imageUrl && (
-                          <span className="list-attachment-icon">
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                        {(() => {
+                          const hasAttachment =
+                            (post.attachments && post.attachments.length > 0) ||
+                            !!post.imageUrl;
+                          const hasContentImage =
+                            /!\[.*?\]\(.*?\)|<img.*?src=['"].*?['"]/i.test(
+                              post.content || '',
+                            );
+                          if (!hasAttachment && !hasContentImage) return null;
+                          return (
+                            <span
+                              className="list-attachment-icon"
+                              style={{
+                                display: 'inline-flex',
+                                gap: '4px',
+                                alignItems: 'center',
+                              }}
                             >
-                              <rect
-                                x="3"
-                                y="3"
-                                width="18"
-                                height="18"
-                                rx="2"
-                                ry="2"
-                              ></rect>
-                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                              <polyline points="21 15 16 10 5 21"></polyline>
-                            </svg>
-                          </span>
-                        )}
+                              {hasAttachment && (
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <title>첨부파일</title>
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                  <polyline points="14 2 14 8 20 8"></polyline>
+                                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                                  <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                              )}
+                              {hasContentImage && (
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <title>본문 이미지</title>
+                                  <rect
+                                    x="3"
+                                    y="3"
+                                    width="18"
+                                    height="18"
+                                    rx="2"
+                                    ry="2"
+                                  ></rect>
+                                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                  <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                              )}
+                            </span>
+                          );
+                        })()}
                       </span>
                       <div
                         style={{
@@ -2502,8 +3241,23 @@ export function Board() {
                         }}
                       >
                         <span>
-                          {post.visitor?.nickname ||
-                            post.visitorId.substring(0, 8)}
+                          {post.isAdmin ? (
+                            <span
+                              style={{
+                                background:
+                                  'linear-gradient(135deg, #FFD700 0%, #F7931A 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                fontWeight: 'bold',
+                                marginRight: '4px',
+                              }}
+                            >
+                              [M] 관리자
+                            </span>
+                          ) : (
+                            post.visitor?.nickname ||
+                            post.visitorId.substring(0, 8)
+                          )}
                         </span>
                         <span>|</span>
                         <span>
@@ -2857,7 +3611,208 @@ export function Board() {
           </div>
         </div>
       )}
+      {modalPreviewImage &&
+        createPortal(
+          (() => {
+            const isPdfPreview = /\.pdf$/i.test(
+              modalPreviewImage.split('?')[0],
+            );
+            return (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0,0,0,0.8)',
+                  zIndex: 999999,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backdropFilter: 'blur(4px)',
+                }}
+                onClick={() => setModalPreviewImage(null)}
+              >
+                <div
+                  style={
+                    isPdfPreview
+                      ? {
+                          position: 'relative',
+                          width: '100vw',
+                          height: '100vh',
+                          display: 'flex',
+                          flexDirection: 'column',
+                        }
+                      : {
+                          position: 'relative',
+                          maxWidth: '90%',
+                          maxHeight: '90%',
+                        }
+                  }
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {!isPdfPreview && (
+                    <button
+                      style={{
+                        position: 'absolute',
+                        top: '-40px',
+                        right: '0',
+                        background: 'rgba(255,255,255,0.2)',
+                        border: 'none',
+                        color: '#fff',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10,
+                      }}
+                      onClick={() => setModalPreviewImage(null)}
+                    >
+                      ×
+                    </button>
+                  )}
+                  {isPdfPreview ? (
+                    <>
+                      {showPdfNotice && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '16px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'rgba(0,0,0,0.6)',
+                            color: 'rgba(255,255,255,0.9)',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            fontSize: '0.9rem',
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                            backdropFilter: 'blur(4px)',
+                            animation: 'fadeInOut 2s ease-in-out forwards',
+                          }}
+                        >
+                          ESC 키를 눌러 닫을 수 있습니다
+                        </div>
+                      )}
+                      <iframe
+                        src={modalPreviewImage}
+                        title="PDF Preview"
+                        style={{
+                          width: '100%',
+                          flex: 1,
+                          border: 'none',
+                          backgroundColor: '#fff',
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <img
+                      src={modalPreviewImage}
+                      alt="Preview"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '80vh',
+                        objectFit: 'contain',
+                        borderRadius: '8px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })(),
+          document.body,
+        )}
+      {showPostPreviewModal &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.8)',
+              zIndex: 999999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backdropFilter: 'blur(4px)',
+            }}
+            onClick={() => setShowPostPreviewModal(false)}
+          >
+            <div
+              style={{
+                position: 'relative',
+                width: '90%',
+                maxWidth: '800px',
+                maxHeight: '85vh',
+                background: '#1a1a2e',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '16px 20px',
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                }}
+              >
+                <h3
+                  style={{
+                    margin: 0,
+                    color: 'var(--text-main)',
+                    fontSize: '1.1rem',
+                  }}
+                >
+                  글 미리보기
+                </h3>
+                <button
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-dim)',
+                    fontSize: '24px',
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setShowPostPreviewModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div
+                style={{
+                  padding: '20px',
+                  overflowY: 'auto',
+                  color: 'var(--text-main)',
+                  fontSize: '0.95rem',
+                  lineHeight: '1.6',
+                  textAlign: 'left',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {renderContentWithImages(content)}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
+
 export default Board;
