@@ -693,6 +693,8 @@ body {
   transition: var(--transition-smooth);
   display: flex;
   flex-direction: column;
+  height: 85vh;
+  height: 85dvh;
   max-height: 85vh;
   max-height: 85dvh;
 }
@@ -926,7 +928,7 @@ body {
 
 .dashboard-container {
   text-align: left;
-  padding: 30px 40px;
+  padding: 30px 40px 15px 40px;
   width: 100%;
 }
 
@@ -957,7 +959,7 @@ body {
     padding: 12px 0;
   }
   .dashboard-container {
-    padding: 20px 16px;
+    padding: 20px 16px 10px 16px;
   }
   .admin-tabs {
     flex-wrap: nowrap;
@@ -1007,7 +1009,7 @@ body {
 
 @media (max-width: 480px) {
   .dashboard-container {
-    padding: 16px 12px;
+    padding: 16px 12px 8px 12px;
   }
   .stats-card {
     padding: 12px !important;

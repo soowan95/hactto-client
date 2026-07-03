@@ -936,68 +936,70 @@ export function Stats() {
           </div>
 
           {/* Prediction Weights Breakdown */}
-          <div style={{ textAlign: 'left' }}>
-            <div
-              style={{
-                fontSize: '0.8rem',
-                color: 'var(--text-dim)',
-                marginBottom: '8px',
-                fontWeight: 600,
-              }}
-            >
-              설정된 가중치 조합
-            </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '8px',
-              }}
-            >
-              {(() => {
-                const weights = (prediction.weights || []).slice(0, 6);
-                const maxWeight = Math.max(...weights, 1);
-                const items = weights.map((w, idx) => ({
-                  val: w,
-                  label: `${idx + 1}구`,
-                }));
-                const sorted = [...items].sort((a, b) => b.val - a.val);
+          {prediction.algorithm.includes('WEIGHTS') && (
+            <div style={{ textAlign: 'left' }}>
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--text-dim)',
+                  marginBottom: '8px',
+                  fontWeight: 600,
+                }}
+              >
+                설정된 가중치 조합
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '8px',
+                }}
+              >
+                {(() => {
+                  const weights = (prediction.weights || []).slice(0, 6);
+                  const maxWeight = Math.max(...weights, 1);
+                  const items = weights.map((w, idx) => ({
+                    val: w,
+                    label: `${idx + 1}구`,
+                  }));
+                  const sorted = [...items].sort((a, b) => b.val - a.val);
 
-                return sorted.map((item, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      background: 'rgba(255,255,255,0.02)',
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      border: 'var(--border-glass)',
-                      fontSize: '0.75rem',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <span
+                  return sorted.map((item, idx) => (
+                    <div
+                      key={idx}
                       style={{
-                        color: 'var(--text-muted)',
-                        fontFamily: 'monospace',
+                        background: 'rgba(255,255,255,0.02)',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        border: 'var(--border-glass)',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      {item.label}
-                    </span>
-                    <span
-                      style={{
-                        color: 'var(--primary-purple)',
-                        fontWeight: 'bold',
-                        opacity: 0.35 + (item.val / maxWeight) * 0.65,
-                      }}
-                    >
-                      {item.val}%
-                    </span>
-                  </div>
-                ));
-              })()}
+                      <span
+                        style={{
+                          color: 'var(--text-muted)',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {item.label}
+                      </span>
+                      <span
+                        style={{
+                          color: 'var(--primary-purple)',
+                          fontWeight: 'bold',
+                          opacity: 0.35 + (item.val / maxWeight) * 0.65,
+                        }}
+                      >
+                        {item.val}%
+                      </span>
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -2016,75 +2018,77 @@ export function Stats() {
                       )}
 
                       {/* Weights breakdown */}
-                      <div>
-                        <div
-                          style={{
-                            fontSize: '0.8rem',
-                            color: 'rgba(255,255,255,0.6)',
-                            marginBottom: '8px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          설정된 가중치 조합
-                        </div>
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: '8px',
-                          }}
-                        >
-                          {(() => {
-                            const weights = Array.isArray(prediction.weights)
-                              ? prediction.weights.slice(0, 6)
-                              : [];
-                            const maxWeight = Math.max(...weights, 1);
-                            const items = weights.map(
-                              (w: number, idx: number) => ({
-                                val: w,
-                                label: `${idx + 1}구`,
-                              }),
-                            );
-                            const sorted = [...items].sort(
-                              (a, b) => b.val - a.val,
-                            );
+                      {prediction.algorithm.includes('WEIGHTS') && (
+                        <div>
+                          <div
+                            style={{
+                              fontSize: '0.8rem',
+                              color: 'rgba(255,255,255,0.6)',
+                              marginBottom: '8px',
+                              fontWeight: 600,
+                            }}
+                          >
+                            설정된 가중치 조합
+                          </div>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(3, 1fr)',
+                              gap: '8px',
+                            }}
+                          >
+                            {(() => {
+                              const weights = Array.isArray(prediction.weights)
+                                ? prediction.weights.slice(0, 6)
+                                : [];
+                              const maxWeight = Math.max(...weights, 1);
+                              const items = weights.map(
+                                (w: number, idx: number) => ({
+                                  val: w,
+                                  label: `${idx + 1}구`,
+                                }),
+                              );
+                              const sorted = [...items].sort(
+                                (a, b) => b.val - a.val,
+                              );
 
-                            return sorted.map((item, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  background: 'rgba(255,255,255,0.02)',
-                                  padding: '8px 10px',
-                                  borderRadius: '6px',
-                                  border: 'var(--border-glass)',
-                                  fontSize: '0.72rem',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                }}
-                              >
-                                <span
+                              return sorted.map((item, idx) => (
+                                <div
+                                  key={idx}
                                   style={{
-                                    color: 'rgba(255,255,255,0.85)',
-                                    fontFamily: 'monospace',
+                                    background: 'rgba(255,255,255,0.02)',
+                                    padding: '8px 10px',
+                                    borderRadius: '6px',
+                                    border: 'var(--border-glass)',
+                                    fontSize: '0.72rem',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
                                   }}
                                 >
-                                  {item.label}
-                                </span>
-                                <span
-                                  style={{
-                                    color: '#c084fc',
-                                    fontWeight: 'bold',
-                                    opacity:
-                                      0.35 + (item.val / maxWeight) * 0.65,
-                                  }}
-                                >
-                                  {item.val}%
-                                </span>
-                              </div>
-                            ));
-                          })()}
+                                  <span
+                                    style={{
+                                      color: 'rgba(255,255,255,0.85)',
+                                      fontFamily: 'monospace',
+                                    }}
+                                  >
+                                    {item.label}
+                                  </span>
+                                  <span
+                                    style={{
+                                      color: '#c084fc',
+                                      fontWeight: 'bold',
+                                      opacity:
+                                        0.35 + (item.val / maxWeight) * 0.65,
+                                    }}
+                                  >
+                                    {item.val}%
+                                  </span>
+                                </div>
+                              ));
+                            })()}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })()}

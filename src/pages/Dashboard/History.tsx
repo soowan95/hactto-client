@@ -7,16 +7,17 @@ import { LottoBalls } from '../../components/LottoBall';
 import { LottoAnalysisCard } from '../../components/LottoAnalysisCard';
 import { PersonalAnalysisCard } from '../../components/PersonalAnalysisCard';
 import { HonHistoryModal } from '../../components/HonHistoryModal';
-import type { PersonalAnalysis } from '../../types';
 
 export function History() {
   const location = useLocation();
   const { visitorId, appendAuth, showAlert } = useApp();
   const [showHonHistoryModal, setShowHonHistoryModal] = useState(false);
-  const [selectedPersonalAnalysis, setSelectedPersonalAnalysis] = useState<{
+  const [selectedAnalysis, setSelectedAnalysis] = useState<{
     numbers: number[];
-    analysis: PersonalAnalysis;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    analysis: any;
     episode: number;
+    type: 'personal' | 'algorithm';
   } | null>(null);
 
   const defaultTab =
@@ -27,19 +28,16 @@ export function History() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedItems, setExpandedItems] = useState<
-    Record<string | number, boolean>
-  >({});
 
   // Prevent body scroll when modal is open and add ESC key support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setSelectedPersonalAnalysis(null);
+        setSelectedAnalysis(null);
       }
     };
 
-    if (selectedPersonalAnalysis) {
+    if (selectedAnalysis) {
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     } else {
@@ -49,14 +47,9 @@ export function History() {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedPersonalAnalysis]);
+  }, [selectedAnalysis]);
 
-  const toggleExpand = (id: string | number) => {
-    setExpandedItems((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
+
 
   useEffect(() => {
     const fetchHistoryList = async () => {
@@ -64,7 +57,6 @@ export function History() {
       try {
         setLoading(true);
         setHistoryList([]);
-        setExpandedItems({});
 
         const endpoint =
           activeSubTab === 'algorithm'
@@ -216,7 +208,6 @@ export function History() {
         ) : (
           historyList.map((hist) => {
             const hasResult = hist.matchResult !== null;
-            const isExpanded = !!expandedItems[hist.id];
             return (
               <div key={hist.id} className="history-card">
                 <div
@@ -283,15 +274,12 @@ export function History() {
                   <div style={{ marginTop: '8px', textAlign: 'right' }}>
                     <button
                       onClick={() => {
-                        if (activeSubTab === 'personal') {
-                          setSelectedPersonalAnalysis({
-                            numbers: hist.numbers,
-                            analysis: hist.analysis,
-                            episode: hist.episode,
-                          });
-                        } else {
-                          toggleExpand(hist.id);
-                        }
+                        setSelectedAnalysis({
+                          numbers: hist.numbers,
+                          analysis: hist.analysis,
+                          episode: hist.episode,
+                          type: activeSubTab,
+                        });
                       }}
                       style={{
                         background: 'transparent',
@@ -303,23 +291,10 @@ export function History() {
                         fontWeight: 600,
                       }}
                     >
-                      {activeSubTab === 'personal'
-                        ? '상세 분석 보기 →'
-                        : isExpanded
-                          ? '상세 분석 접기 ▲'
-                          : '상세 분석 보기 ▼'}
+                      상세 분석 보기 →
                     </button>
                   </div>
                 </div>
-
-                {isExpanded &&
-                  hist.analysis &&
-                  activeSubTab === 'algorithm' && (
-                    <LottoAnalysisCard
-                      numbers={hist.numbers}
-                      analysis={hist.analysis}
-                    />
-                  )}
 
                 {hasResult && hist.matchResult && (
                   <div
@@ -361,17 +336,17 @@ export function History() {
         onClose={() => setShowHonHistoryModal(false)}
       />
 
-      {selectedPersonalAnalysis &&
+      {selectedAnalysis &&
         createPortal(
           <div
             className="admin-modal-overlay"
             style={{
               overflowY: 'auto',
               padding: '40px 20px',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               zIndex: 1000,
             }}
-            onClick={() => setSelectedPersonalAnalysis(null)}
+            onClick={() => setSelectedAnalysis(null)}
           >
             <div
               style={{
@@ -397,7 +372,7 @@ export function History() {
                 }}
               >
                 <button
-                  onClick={() => setSelectedPersonalAnalysis(null)}
+                  onClick={() => setSelectedAnalysis(null)}
                   style={{
                     position: 'absolute',
                     right: '0px',
@@ -438,10 +413,17 @@ export function History() {
                 </button>
               </div>
 
-              <PersonalAnalysisCard
-                numbers={selectedPersonalAnalysis.numbers}
-                analysis={selectedPersonalAnalysis.analysis}
-              />
+              {selectedAnalysis.type === 'personal' ? (
+                <PersonalAnalysisCard
+                  numbers={selectedAnalysis.numbers}
+                  analysis={selectedAnalysis.analysis}
+                />
+              ) : (
+                <LottoAnalysisCard
+                  numbers={selectedAnalysis.numbers}
+                  analysis={selectedAnalysis.analysis}
+                />
+              )}
             </div>
           </div>,
           document.body,
