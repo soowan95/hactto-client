@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { AlertState } from '../types';
 
 interface AlertProps {
@@ -7,10 +8,11 @@ interface AlertProps {
 export function Alert({ alert }: AlertProps) {
   if (!alert) return null;
 
-  return (
+  return createPortal(
     <div className={`alert alert-${alert.type}`}>
       <span>{alert.type === 'success' ? '✓' : '⚠'}</span>
       <div>{alert.text}</div>
-    </div>
+    </div>,
+    document.body,
   );
 }
