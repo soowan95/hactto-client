@@ -7,3 +7,6 @@
 
 ## Git Branch Guidelines
 - Branches must be created using the format: `anti/v1/{type:feat|chore|refactor|fix|hotfix}/{description}`
+
+## Pre-PR Requirements
+- Always run `npm run lint` and `npm run format` (or equivalent formatting/linting scripts) to ensure code quality before creating a Pull Request.

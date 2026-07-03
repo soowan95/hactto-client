@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { MouseEvent } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Alert } from './Alert';
 import { UnsavedChangesModal } from './UnsavedChangesModal';
@@ -13,6 +13,38 @@ import { PrivacyModal } from './PrivacyModal';
 import { TermsModal } from './TermsModal';
 import { RefundPolicyModal } from './RefundPolicyModal';
 import { NicknameModal } from './NicknameModal';
+
+const MENU_GROUPS = [
+  {
+    title: '당첨 결과',
+    items: [
+      { path: '/home', label: '최근 당첨번호' },
+      { path: '/search', label: '당첨번호 조회' },
+    ],
+  },
+  {
+    title: '통계 및 분석',
+    items: [
+      { path: '/stats', label: '알고리즘 통계' },
+      { path: '/analysis-charts', label: '당첨통계 차트' },
+    ],
+  },
+  {
+    title: '예측 시스템',
+    items: [{ path: '/generate', label: '예측번호 분석기' }],
+  },
+  {
+    title: '마이페이지',
+    items: [{ path: '/history', label: '내 당첨이력' }],
+  },
+  {
+    title: '커뮤니티 및 지원',
+    items: [
+      { path: '/board', label: '게시판' },
+      { path: '/support', label: '1:1 문의' },
+    ],
+  },
+];
 
 export function Layout() {
   const {
@@ -33,6 +65,7 @@ export function Layout() {
   } = useApp();
 
   const navigate = useNavigate();
+  const location = useLocation();
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -436,79 +469,41 @@ export function Layout() {
             </div>
           </div>
 
-          <div className="admin-tabs">
-            <NavLink
-              to="/home"
-              onClick={(e) => handleTabClick(e, '/home')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              최근 당첨번호
-            </NavLink>
-            <NavLink
-              to="/search"
-              onClick={(e) => handleTabClick(e, '/search')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              당첨번호 조회
-            </NavLink>
-            <NavLink
-              to="/stats"
-              onClick={(e) => handleTabClick(e, '/stats')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              알고리즘 통계
-            </NavLink>
-            <NavLink
-              to="/analysis-charts"
-              onClick={(e) => handleTabClick(e, '/analysis-charts')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              당첨통계 차트
-            </NavLink>
-            <NavLink
-              to="/generate"
-              onClick={(e) => handleTabClick(e, '/generate')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              예측번호 분석기
-            </NavLink>
-            <NavLink
-              to="/history"
-              onClick={(e) => handleTabClick(e, '/history')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              내 당첨이력
-            </NavLink>
-            <NavLink
-              to="/board"
-              onClick={(e) => handleTabClick(e, '/board')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              게시판
-            </NavLink>
-            <NavLink
-              to="/support"
-              onClick={(e) => handleTabClick(e, '/support')}
-              className={({ isActive }) =>
-                `tab-btn ${isActive ? 'active-tab' : ''}`
-              }
-            >
-              1:1 문의
-            </NavLink>
+          <div
+            className="admin-tabs"
+            style={{ position: 'relative', zIndex: 10 }}
+          >
+            {MENU_GROUPS.map((group) => {
+              const isActive = group.items.some(
+                (item) => location.pathname === item.path,
+              );
+
+              return (
+                <div key={group.title} className="dropdown-container">
+                  <div
+                    className={`tab-btn dropdown-trigger ${
+                      isActive ? 'active-tab' : ''
+                    }`}
+                  >
+                    {group.title}
+                  </div>
+                  <div className="dropdown-menu">
+                    {group.items.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={(e) => handleTabClick(e, item.path)}
+                        className={({ isActive }) =>
+                          `dropdown-item ${isActive ? 'active-item' : ''}`
+                        }
+                      >
+                        {item.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* 모바일/태블릿용 가로형 구글 광고 지면 */}
