@@ -252,17 +252,17 @@ export function Support() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
+      <div style={{ flexShrink: 0 }}>
         <h3
           className="section-title"
-          style={{ color: 'var(--primary-cyan)', marginBottom: '8px' }}
+          style={{ color: 'var(--primary-cyan)', marginBottom: '4px', marginTop: 0 }}
         >
           1:1 관리자 문의하기
         </h3>
         <p
           className="access-desc"
-          style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}
+          style={{ fontSize: '0.85rem', color: 'var(--text-dim)', margin: 0 }}
         >
           서비스 이용 중 불편한 점이나 건의사항을 남겨주시면 관리자가 신속하게
           답변해 드립니다.
@@ -273,7 +273,9 @@ export function Support() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '24px',
+          gap: '16px',
+          flex: 1,
+          minHeight: 0,
         }}
       >
         {/* Inquiry Form */}
@@ -285,7 +287,8 @@ export function Support() {
             border: '1px solid rgba(255, 255, 255, 0.06)',
             borderRadius: '12px',
             overflow: 'hidden',
-            height: '420px',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <h4
@@ -454,7 +457,8 @@ export function Support() {
             border: '1px solid rgba(255, 255, 255, 0.06)',
             borderRadius: '12px',
             overflow: 'hidden',
-            height: '420px',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <h4
