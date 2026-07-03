@@ -13,12 +13,14 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialHighlight?: 'HON' | 'SUBSCRIPTION';
 }
 
 export function PaymentModal({
   isOpen,
   onClose,
   onSuccess,
+  initialHighlight,
 }: PaymentModalProps) {
   const { visitorId, showAlert, alert, subscription, checkIpStatus, paidHon } =
     useApp();
@@ -34,6 +36,18 @@ export function PaymentModal({
   const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
 
   const [hasActiveRefund, setHasActiveRefund] = useState<boolean>(false);
+  const [highlight, setHighlight] = useState<
+    'HON' | 'SUBSCRIPTION' | undefined
+  >(initialHighlight);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHighlight(initialHighlight);
+    if (initialHighlight && isOpen) {
+      const timer = setTimeout(() => setHighlight(undefined), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [initialHighlight, isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -288,7 +302,7 @@ export function PaymentModal({
     <div
       className="admin-modal-overlay"
       style={{
-        zIndex: 1000,
+        zIndex: 100000,
       }}
     >
       <div
@@ -523,6 +537,11 @@ export function PaymentModal({
               minHeight: '450px',
               overflow: 'visible',
               maxHeight: 'none',
+              boxShadow:
+                highlight === 'HON'
+                  ? '0 0 0 2px var(--primary-cyan), 0 0 20px 4px rgba(0, 240, 255, 0.4)'
+                  : 'none',
+              transition: 'box-shadow 0.5s ease',
             }}
           >
             <h4
@@ -898,6 +917,11 @@ export function PaymentModal({
               minHeight: '450px',
               overflow: 'visible',
               maxHeight: 'none',
+              boxShadow:
+                highlight === 'SUBSCRIPTION'
+                  ? '0 0 0 2px var(--primary-purple), 0 0 20px 4px rgba(168, 85, 247, 0.4)'
+                  : 'none',
+              transition: 'box-shadow 0.5s ease',
             }}
           >
             <h4
@@ -1125,6 +1149,11 @@ export function PaymentModal({
               minHeight: '450px',
               overflow: 'visible',
               maxHeight: 'none',
+              boxShadow:
+                highlight === 'SUBSCRIPTION'
+                  ? '0 0 0 2px #eab308, 0 0 20px 4px rgba(234, 179, 8, 0.4)'
+                  : 'none',
+              transition: 'box-shadow 0.5s ease',
             }}
           >
             <div

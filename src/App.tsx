@@ -19,7 +19,8 @@ import { Generate } from './pages/Dashboard/Generate';
 import { History } from './pages/Dashboard/History';
 import { Board } from './pages/Dashboard/Board';
 import { Support } from './pages/Dashboard/Support';
-import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminAuthModal } from './components/AdminAuthModal';
+import { AdminPage } from './pages/Dashboard/AdminPage';
 import { InteractiveBackground } from './components/InteractiveBackground';
 
 function AppContent() {
@@ -79,7 +80,7 @@ function AppContent() {
     return (
       <>
         <BlockedPage />
-        <AdminLoginModal
+        <AdminAuthModal
           isOpen={showAdminModal}
           onClose={() => {
             setShowAdminModal(false);
@@ -95,7 +96,7 @@ function AppContent() {
     return (
       <>
         <SystemAnalyzing />
-        <AdminLoginModal
+        <AdminAuthModal
           isOpen={showAdminModal}
           onClose={() => {
             setShowAdminModal(false);
@@ -130,12 +131,13 @@ function AppContent() {
           <Route path="/history" element={<History />} />
           <Route path="/board" element={<Board />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/system" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Route>
       </Routes>
 
-      {/* Secret admin login modal */}
-      <AdminLoginModal
+      {/* Secret admin auth modal */}
+      <AdminAuthModal
         isOpen={showAdminModal}
         onClose={() => {
           setShowAdminModal(false);
