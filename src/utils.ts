@@ -8,7 +8,9 @@ export const ALGORITHM_NAMES: Record<string, string> = {
   TOTAL_MAX_COUNT: '전체 열번호',
 };
 
-export const parseAlgorithmName = (type: string | { type: string; name?: string }): string => {
+export const parseAlgorithmName = (
+  type: string | { type: string; name?: string },
+): string => {
   if (!type) return '';
   if (typeof type === 'object') {
     return type.name || ALGORITHM_NAMES[type.type] || type.type;

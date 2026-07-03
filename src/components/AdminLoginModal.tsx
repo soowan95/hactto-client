@@ -59,7 +59,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [syncingAlgos, setSyncingAlgos] = useState(false);
 
   // HON_EVENTS Tab States
-   
+
   const [honEvents, setHonEvents] = useState<any[]>([]);
   const [loadingHonEvents, setLoadingHonEvents] = useState(false);
   const [newHonEventType, setNewHonEventType] = useState<'RESET' | 'ADD'>(
@@ -78,7 +78,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   } | null>(null);
 
   // Notice management states
-   
+
   const [nicknameReports, setNicknameReports] = useState<any[]>([]);
   const [bannedWords, setBannedWords] = useState<string[]>([]);
   const [newBannedWord, setNewBannedWord] = useState('');
@@ -89,7 +89,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const [newNoticeEndsAt, setNewNoticeEndsAt] = useState('');
 
   // Inquiry answering states
-   
+
   const [adminInquiries, setAdminInquiries] = useState<any[]>([]);
   const [loadingAdminInquiries, setLoadingAdminInquiries] = useState(false);
   const [inquiryFilter, setInquiryFilter] = useState<
@@ -107,7 +107,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
   // Visitor management states
   const [searchVisitorId, setSearchVisitorId] = useState('');
-   
+
   const [visitorDetails, setVisitorDetails] = useState<any>(null);
   const [loadingVisitorDetails, setLoadingVisitorDetails] = useState(false);
   const [manageHonAmount, setManageHonAmount] = useState('');
@@ -125,7 +125,6 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   // Reset local auth state and key whenever the modal opens
   useEffect(() => {
     if (isOpen) {
-       
       setIsAuthSuccessLocal(false);
       setAdminKey('');
       setAdminError('');
@@ -289,10 +288,8 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
 
   useEffect(() => {
     if (isOpen && isAuthSuccessLocal && activeTab === 'algo') {
-       
       fetchAlgorithms();
     }
-     
   }, [isOpen, isAuthSuccessLocal, activeTab]);
 
   useEffect(() => {
@@ -311,7 +308,6 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         fetchHonEvents();
       }
     }
-     
   }, [isOpen, isAuthSuccessLocal, activeTab]);
 
   useEffect(() => {

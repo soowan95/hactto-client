@@ -252,11 +252,22 @@ export function Support() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        height: '100%',
+      }}
+    >
       <div style={{ flexShrink: 0 }}>
         <h3
           className="section-title"
-          style={{ color: 'var(--primary-cyan)', marginBottom: '4px', marginTop: 0 }}
+          style={{
+            color: 'var(--primary-cyan)',
+            marginBottom: '4px',
+            marginTop: 0,
+          }}
         >
           1:1 관리자 문의하기
         </h3>
