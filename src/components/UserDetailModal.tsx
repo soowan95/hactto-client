@@ -96,11 +96,15 @@ export function UserDetailModal({
     setLoadingNoti(true);
     try {
       const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/visitor/notifications`, {
-        headers: {
-          ...(vid ? { 'x-visitor-id': vid } : {}),
+      const res = await fetch(
+        `${API_BASE_URL}/visitor/notifications?t=${Date.now()}`,
+        {
+          headers: {
+            ...(vid ? { 'x-visitor-id': vid } : {}),
+          },
+          cache: 'no-store',
         },
-      });
+      );
       if (res.ok) {
         const data = await res.json();
         setNotifications(Array.isArray(data.data) ? data.data : []);
