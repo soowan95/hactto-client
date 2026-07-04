@@ -80,9 +80,10 @@ export function Layout() {
     const fetchUnreadCount = () => {
       if (visitorId) {
         fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/visitor/notifications/unread-count`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/visitor/notifications/unread-count?t=${Date.now()}`,
           {
             headers: { 'x-visitor-id': visitorId },
+            cache: 'no-store',
           },
         )
           .then((res) => res.json())
