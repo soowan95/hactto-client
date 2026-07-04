@@ -77,20 +77,31 @@ export function Layout() {
   const [unreadNotiCount, setUnreadNotiCount] = useState(0);
 
   useEffect(() => {
-    if (visitorId) {
-      fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/visitor/notifications/unread-count`,
-        {
-          headers: { 'x-visitor-id': visitorId },
-        },
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) setUnreadNotiCount(data.data.count);
-        })
-        .catch(console.error);
-    }
-  }, [visitorId, showUserDetailModal]); // refetch when modal closes
+    const fetchUnreadCount = () => {
+      if (visitorId) {
+        fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/visitor/notifications/unread-count`,
+          {
+            headers: { 'x-visitor-id': visitorId },
+          },
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) setUnreadNotiCount(data.data.count);
+          })
+          .catch(console.error);
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000);
+    window.addEventListener('notification-sent', fetchUnreadCount);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notification-sent', fetchUnreadCount);
+    };
+  }, [visitorId, showUserDetailModal]); // refetch when modal closes and poll periodically
 
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
