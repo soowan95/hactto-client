@@ -3464,6 +3464,8 @@ export function AdminPage() {
                           padding: '8px',
                           background: 'transparent',
                           color: 'white',
+                          width: '130px',
+                          flexShrink: 0,
                         }}
                       >
                         <option value="NICKNAME" style={{ color: 'black' }}>
