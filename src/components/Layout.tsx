@@ -13,6 +13,7 @@ import { PrivacyModal } from './PrivacyModal';
 import { TermsModal } from './TermsModal';
 import { RefundPolicyModal } from './RefundPolicyModal';
 import { UserDetailModal } from './UserDetailModal';
+import { API_BASE_URL } from '../utils';
 
 const MENU_GROUPS = [
   {
@@ -78,17 +79,24 @@ export function Layout() {
 
   useEffect(() => {
     const fetchUnreadCount = () => {
-      if (visitorId) {
+      const vid = visitorId || localStorage.getItem('visitor_id');
+      if (vid) {
         fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/visitor/notifications/unread-count?t=${Date.now()}`,
+          `${API_BASE_URL}/visitor/notifications/unread-count?t=${Date.now()}`,
           {
-            headers: { 'x-visitor-id': visitorId },
+            headers: { 'x-visitor-id': vid },
             cache: 'no-store',
           },
         )
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success) setUnreadNotiCount(data.data.count);
+          .then(async (res) => {
+            if (res.ok) {
+              const data = await res.json();
+              if (data.data && typeof data.data.count === 'number') {
+                setUnreadNotiCount(data.data.count);
+              } else if (typeof data.count === 'number') {
+                setUnreadNotiCount(data.count);
+              }
+            }
           })
           .catch(console.error);
       }
