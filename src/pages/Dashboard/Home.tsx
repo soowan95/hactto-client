@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../../utils';
 import { LottoBalls } from '../../components/LottoBall';
 import { LottoAnalysisCard } from '../../components/LottoAnalysisCard';
 import type { WinningNumber } from '../../types';
+import { SEO } from '../../components/SEO';
 
 export function Home() {
   const { appendAuth, showAlert } = useApp();
@@ -33,6 +34,7 @@ export function Home() {
 
   return (
     <div>
+      <SEO canonical="https://hactto.com/" />
       <h2
         className="access-title"
         style={{ fontSize: '1.3rem', marginBottom: '16px' }}
