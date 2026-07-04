@@ -76,6 +76,7 @@ export function AdminPage() {
       setNotiTarget('');
       setNotiTitle('');
       setNotiContent('');
+      window.dispatchEvent(new CustomEvent('notification-sent'));
     } catch (err: any) {
       showAlert('error', err.message);
     }
