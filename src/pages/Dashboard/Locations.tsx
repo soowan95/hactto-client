@@ -10,6 +10,8 @@ interface Store {
   atmtPsvYnTxt: string;
   wnShpRnk: number;
   region: string;
+  shpLat: number;
+  shpLot: number;
 }
 
 const regionNameMap: Record<string, string> = {
@@ -166,7 +168,7 @@ export function Locations() {
           >
             <div style={{ position: 'relative' }}>
               <select
-                value={episode}
+                value={episode ?? ''}
                 onChange={(e) => setEpisode(Number(e.target.value))}
                 style={{
                   appearance: 'none',
