@@ -4,14 +4,16 @@ import { useApp } from '../../context/AppContext';
 import { API_BASE_URL } from '../../utils';
 
 interface Store {
-  rnum: number;
-  shpNm: string;
-  shpAddr: string;
-  atmtPsvYnTxt: string;
-  wnShpRnk: number;
+  id: number;
+  episode: number;
+  rank: number;
+  sortOrder: number;
+  shopName: string;
+  shopAddress: string;
+  purchaseType: string;
   region: string;
-  shpLat: number;
-  shpLot: number;
+  shopLatitude: number | null;
+  shopLongitude: number | null;
 }
 
 const regionNameMap: Record<string, string> = {
@@ -81,14 +83,15 @@ export function Locations() {
       setError(null);
       try {
         const res = await fetch(
-          `https://www.dhlottery.co.kr/wnprchsplcsrch/selectLtWnShp.do?srchWnShpRnk=all&srchLtEpsd=${episode}&srchShpLctn=&_=${Date.now()}`,
+          appendAuth(`${API_BASE_URL}/winning-numbers/${episode}/shops`),
         );
         if (!res.ok) throw new Error('API 요청 실패');
 
         const data = await res.json();
+        const list = data.data || data;
 
-        if (data && data.data && data.data.list) {
-          setStores(data.data.list);
+        if (Array.isArray(list)) {
+          setStores(list);
         } else {
           setStores([]);
         }
@@ -101,7 +104,7 @@ export function Locations() {
     };
 
     fetchStores();
-  }, [episode]);
+  }, [episode, appendAuth]);
 
   const handleLocationClick = (id: string, name: string) => {
     setSelectedRegion({ id, name });
@@ -110,8 +113,8 @@ export function Locations() {
   const filteredStores = selectedRegion
     ? stores.filter((store) => {
         if (store.region !== regionNameMap[selectedRegion.name]) return false;
-        if (rankFilter !== 'all' && store.wnShpRnk !== rankFilter) return false;
-        if (typeFilter !== 'all' && store.atmtPsvYnTxt !== typeFilter)
+        if (rankFilter !== 'all' && store.rank !== rankFilter) return false;
+        if (typeFilter !== 'all' && store.purchaseType !== typeFilter)
           return false;
         return true;
       })
@@ -460,7 +463,7 @@ export function Locations() {
                 >
                   {filteredStores.map((store) => (
                     <div
-                      key={store.rnum}
+                      key={store.id}
                       style={{
                         background: 'rgba(255, 255, 255, 0.03)',
                         borderRadius: '12px',
@@ -470,10 +473,17 @@ export function Locations() {
                         cursor: 'pointer',
                       }}
                       onClick={() => {
-                        window.open(
-                          `https://map.kakao.com/link/map/${store.shpNm},${store.shpLat},${store.shpLot}`,
-                          '_blank',
-                        );
+                        if (store.shopLatitude && store.shopLongitude) {
+                          window.open(
+                            `https://map.kakao.com/link/map/${store.shopName},${store.shopLatitude},${store.shopLongitude}`,
+                            '_blank',
+                          );
+                        } else {
+                          window.open(
+                            `https://map.kakao.com/link/search/${encodeURIComponent(store.shopAddress)}`,
+                            '_blank',
+                          );
+                        }
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-2px)';
@@ -501,7 +511,7 @@ export function Locations() {
                             color: 'var(--text-main)',
                           }}
                         >
-                          {store.shpNm}
+                          {store.shopName}
                         </div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <span
@@ -510,20 +520,20 @@ export function Locations() {
                               padding: '2px 6px',
                               borderRadius: '4px',
                               background:
-                                store.wnShpRnk === 1
+                                store.rank === 1
                                   ? 'rgba(255, 215, 0, 0.15)'
                                   : 'rgba(255, 255, 255, 0.1)',
                               color:
-                                store.wnShpRnk === 1
+                                store.rank === 1
                                   ? '#FFD700'
                                   : 'var(--text-dim)',
                               border:
-                                store.wnShpRnk === 1
+                                store.rank === 1
                                   ? '1px solid rgba(255, 215, 0, 0.3)'
                                   : '1px solid transparent',
                             }}
                           >
-                            {store.wnShpRnk}등
+                            {store.rank}등
                           </span>
                           <span
                             style={{
@@ -534,7 +544,7 @@ export function Locations() {
                               color: 'var(--primary-cyan)',
                             }}
                           >
-                            {store.atmtPsvYnTxt}
+                            {store.purchaseType}
                           </span>
                         </div>
                       </div>
@@ -566,7 +576,7 @@ export function Locations() {
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                           </svg>
-                          <span>{store.shpAddr.trim()}</span>
+                          <span>{store.shopAddress.trim()}</span>
                         </div>
                       </div>
                     </div>
