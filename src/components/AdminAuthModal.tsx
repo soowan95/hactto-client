@@ -65,6 +65,7 @@ export function AdminAuthModal({ isOpen, onClose }: AdminAuthModalProps) {
         alignItems: 'center',
         zIndex: 99999,
         backdropFilter: 'blur(10px)',
+        overflow: 'hidden',
       }}
       onClick={onClose}
     >
@@ -78,6 +79,7 @@ export function AdminAuthModal({ isOpen, onClose }: AdminAuthModalProps) {
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
+          overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
