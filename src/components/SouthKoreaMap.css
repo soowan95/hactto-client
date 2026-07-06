@@ -1,0 +1,14 @@
+.korea-svg-map {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+.map-path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.map-path:hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
+  z-index: 10;
+}
