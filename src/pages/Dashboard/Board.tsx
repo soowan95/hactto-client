@@ -1399,12 +1399,18 @@ export function Board() {
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border:
+                    category === cat
+                      ? '1px solid var(--primary-cyan)'
+                      : '1px solid rgba(255, 255, 255, 0.15)',
                   background:
                     category === cat
+                      ? 'rgba(56, 189, 248, 0.1)'
+                      : 'rgba(255, 255, 255, 0.03)',
+                  color:
+                    category === cat
                       ? 'var(--primary-cyan)'
-                      : 'rgba(255,255,255,0.05)',
-                  color: category === cat ? '#0f111a' : 'var(--text-main)',
+                      : 'var(--text-main)',
                   fontWeight: 'bold',
                   cursor: 'pointer',
                 }}
@@ -1615,12 +1621,20 @@ export function Board() {
               style={{
                 padding: '6px 16px',
                 borderRadius: '6px',
-                border: 'none',
-                background:
-                  'linear-gradient(135deg, var(--primary-cyan) 0%, var(--primary-purple) 100%)',
-                color: '#0f111a',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                background: 'rgba(255, 255, 255, 0.03)',
+                color: 'var(--text-main)',
                 fontWeight: 'bold',
                 cursor: 'pointer',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
               }}
             >
               글쓰기
@@ -1814,19 +1828,21 @@ export function Board() {
               style={{
                 padding: '0 16px',
                 borderRadius: '6px',
-                border: 'none',
-                background: 'var(--primary-cyan)',
-                color: '#0f111a',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                background: 'rgba(255, 255, 255, 0.03)',
+                color: 'var(--text-main)',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                transition: 'background 0.2s',
+                transition: 'all 0.3s ease',
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = 'var(--primary-cyan-hover)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = 'var(--primary-cyan)')
-              }
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              }}
             >
               검색
             </button>

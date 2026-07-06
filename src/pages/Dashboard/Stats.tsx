@@ -1227,12 +1227,6 @@ export function Stats() {
                 style={{ overflow: 'visible' }}
               >
                 <defs>
-                  {/* Glowing gradient for chart line */}
-                  <linearGradient id="line-grad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="var(--primary-cyan)" />
-                    <stop offset="100%" stopColor="var(--primary-purple)" />
-                  </linearGradient>
-
                   {/* Gradient for area fill under line */}
                   <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
                     <stop
@@ -1242,7 +1236,7 @@ export function Stats() {
                     />
                     <stop
                       offset="100%"
-                      stopColor="var(--primary-purple)"
+                      stopColor="var(--primary-cyan)"
                       stopOpacity="0.0"
                     />
                   </linearGradient>
@@ -1332,13 +1326,13 @@ export function Stats() {
                 <path
                   d={linePath}
                   fill="none"
-                  stroke="url(#line-grad)"
+                  stroke="var(--primary-cyan)"
                   strokeWidth="2.5"
                 />
                 <path
                   d={linePath}
                   fill="none"
-                  stroke="url(#line-grad)"
+                  stroke="var(--primary-cyan)"
                   strokeWidth="5"
                   filter="url(#glow)"
                   opacity="0.4"
