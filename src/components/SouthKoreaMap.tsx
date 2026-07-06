@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import southKoreaMap from '@svg-maps/south-korea';
 import './SouthKoreaMap.css';
 
@@ -43,7 +43,7 @@ export function SouthKoreaMap({
         className="korea-svg-map"
         style={{ width: '100%', height: 'auto', maxHeight: '100%' }}
       >
-        {southKoreaMap.locations.map((location) => (
+        {southKoreaMap.locations.map((location: any) => (
           <path
             key={location.id}
             id={location.id}
@@ -88,10 +88,10 @@ export function SouthKoreaMap({
           }}
         >
           {regionNameMap[
-            southKoreaMap.locations.find((loc) => loc.id === hoveredLocation)
+            southKoreaMap.locations.find((loc: any) => loc.id === hoveredLocation)
               ?.name || ''
           ] ||
-            southKoreaMap.locations.find((loc) => loc.id === hoveredLocation)
+            southKoreaMap.locations.find((loc: any) => loc.id === hoveredLocation)
               ?.name}
         </div>
       )}
