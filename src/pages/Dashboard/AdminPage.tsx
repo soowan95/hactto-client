@@ -99,7 +99,6 @@ export function AdminPage() {
   const [analyzingReliability, setAnalyzingReliability] = useState(false);
   const [fetchEpisodeInput, setFetchEpisodeInput] = useState('');
   const [syncingAlgos, setSyncingAlgos] = useState(false);
-  const [syncingShops, setSyncingShops] = useState(false);
 
   // HON_EVENTS Tab States
 
@@ -486,26 +485,6 @@ export function AdminPage() {
       showAlert('error', '동기화 중 오류가 발생했습니다.');
     } finally {
       setFetchingWinningNumbers(false);
-    }
-  };
-
-  const handleAdminSyncShops = async () => {
-    setSyncingShops(true);
-    try {
-      const res = await fetch(
-        appendAuth(`${API_BASE_URL}/winning-numbers/shops/fetch`),
-        { method: 'POST' },
-      );
-      if (!res.ok) throw new Error('당첨지점 동기화에 실패했습니다.');
-      showAlert(
-        'success',
-        '모든 누락된 당첨지점 동기화가 성공적으로 완료되었습니다.',
-      );
-    } catch (err) {
-      console.error(err);
-      showAlert('error', '동기화 중 오류가 발생했습니다.');
-    } finally {
-      setSyncingShops(false);
     }
   };
 
@@ -1643,51 +1622,6 @@ export function AdminPage() {
                         {fetchingWinningNumbers ? '동기화중' : '실행'}
                       </button>
                     </form>
-                  </div>
-
-                  {/* Sync Winning Shops */}
-                  <div
-                    style={{
-                      background: 'rgba(255,255,255,0.02)',
-                      padding: '16px',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(255,255,255,0.04)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <h4
-                      style={{
-                        fontSize: '0.9rem',
-                        color: 'var(--primary-cyan)',
-                        margin: '0 0 6px 0',
-                      }}
-                    >
-                      당첨지점 동기화 (Sync Shops)
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-dim)',
-                        margin: '0 0 12px 0',
-                      }}
-                    >
-                      1회차부터 최근 회차까지 데이터베이스에 누락된 당첨지점
-                      정보를 동행복권에서 가져와 동기화합니다.
-                    </p>
-                    <button
-                      className="btn-neon btn-outline"
-                      onClick={handleAdminSyncShops}
-                      disabled={syncingShops}
-                      style={{
-                        fontSize: '0.78rem',
-                        padding: '6px 12px',
-                        height: '32px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto',
-                      }}
-                    >
-                      {syncingShops ? '동기화 중...' : '당첨지점 동기화 실행'}
-                    </button>
                   </div>
 
                   {/* Batch analysis */}
