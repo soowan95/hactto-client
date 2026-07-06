@@ -21,6 +21,7 @@ const MENU_GROUPS = [
     items: [
       { path: '/home', label: '최근 당첨번호' },
       { path: '/search', label: '당첨번호 조회' },
+      { path: '/locations', label: '당첨지점 조회' },
     ],
   },
   {
