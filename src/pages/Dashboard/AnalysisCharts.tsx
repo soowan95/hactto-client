@@ -1127,7 +1127,7 @@ export function AnalysisCharts() {
                 cy="50"
                 r="40"
                 fill="transparent"
-                stroke="var(--primary-cyan)"
+                stroke="var(--color-even, #0ea5e9)"
                 strokeWidth="12"
                 strokeDasharray="251.2"
                 strokeDashoffset={
@@ -1137,7 +1137,7 @@ export function AnalysisCharts() {
                 style={{
                   transition:
                     'transform 0.6s cubic-bezier(0.1, 0.8, 0.3, 1), stroke-dashoffset 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)',
-                  filter: 'drop-shadow(0 0 4px rgba(0, 240, 255, 0.3))',
+                  filter: 'drop-shadow(0 0 4px rgba(14, 165, 233, 0.3))',
                 }}
               />
               {/* Odd (Purple) Arc */}
@@ -1146,7 +1146,7 @@ export function AnalysisCharts() {
                 cy="50"
                 r="40"
                 fill="transparent"
-                stroke="var(--primary-purple)"
+                stroke="var(--color-odd, #f43f5e)"
                 strokeWidth="12"
                 strokeDasharray="251.2"
                 strokeDashoffset={
@@ -1156,7 +1156,7 @@ export function AnalysisCharts() {
                 style={{
                   transition:
                     'stroke-dashoffset 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)',
-                  filter: 'drop-shadow(0 0 4px rgba(189, 0, 255, 0.3))',
+                  filter: 'drop-shadow(0 0 4px rgba(244, 63, 94, 0.3))',
                 }}
               />
             </svg>
@@ -1200,12 +1200,18 @@ export function AnalysisCharts() {
               }}
             >
               <span
-                style={{ color: 'var(--primary-purple)', fontWeight: 'bold' }}
+                style={{
+                  color: 'var(--color-odd, #f43f5e)',
+                  fontWeight: 'bold',
+                }}
               >
                 홀수 (Odd): {statsSummary?.oddPct}%
               </span>
               <span
-                style={{ color: 'var(--primary-cyan)', fontWeight: 'bold' }}
+                style={{
+                  color: 'var(--color-even, #0ea5e9)',
+                  fontWeight: 'bold',
+                }}
               >
                 짝수 (Even): {statsSummary?.evenPct}%
               </span>
@@ -1226,7 +1232,7 @@ export function AnalysisCharts() {
                 style={{
                   width: `${statsSummary?.oddPct}%`,
                   background:
-                    'linear-gradient(90deg, #bd00ff 0%, #e879f9 100%)',
+                    'linear-gradient(90deg, #f43f5e 0%, #fb7185 100%)',
                   transition: 'width 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)',
                 }}
               />
@@ -1234,7 +1240,7 @@ export function AnalysisCharts() {
                 style={{
                   width: `${statsSummary?.evenPct}%`,
                   background:
-                    'linear-gradient(90deg, #22d3ee 0%, #00f0ff 100%)',
+                    'linear-gradient(90deg, #0ea5e9 0%, #38bdf8 100%)',
                   transition: 'width 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)',
                 }}
               />
