@@ -12,6 +12,8 @@ export function AnalysisCharts() {
   // States to manage hover tooltips for line charts
   const [hoveredSumIndex, setHoveredSumIndex] = useState<number | null>(null);
   const [hoveredAcIndex, setHoveredAcIndex] = useState<number | null>(null);
+  const [sumMousePos, setSumMousePos] = useState({ x: 0, y: 0 });
+  const [acMousePos, setAcMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const fetchWinningNumbers = async () => {
@@ -297,6 +299,13 @@ export function AnalysisCharts() {
         {/* Chart 1: Sum Trendline */}
         <div
           className="glass-card"
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setSumMousePos({
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+            });
+          }}
           style={{
             padding: '20px',
             borderRadius: '16px',
@@ -529,9 +538,10 @@ export function AnalysisCharts() {
             <div
               style={{
                 position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'rgba(10, 11, 18, 0.85)',
+                left: `${sumMousePos.x}px`,
+                top: `${sumMousePos.y}px`,
+                transform: `translate(${sumMousePos.x > 500 ? '-110%' : '15px'}, ${sumMousePos.y > 120 ? '-110%' : '15px'})`,
+                background: 'rgba(10, 11, 18, 0.95)',
                 border: '1px solid rgba(0, 240, 255, 0.3)',
                 borderRadius: '8px',
                 padding: '6px 10px',
@@ -539,6 +549,8 @@ export function AnalysisCharts() {
                 pointerEvents: 'none',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                 backdropFilter: 'blur(4px)',
+                zIndex: 10,
+                whiteSpace: 'nowrap',
               }}
             >
               <div style={{ color: 'var(--text-muted)', fontWeight: 'bold' }}>
@@ -559,6 +571,13 @@ export function AnalysisCharts() {
         {/* Chart 2: AC Trendline */}
         <div
           className="glass-card"
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setAcMousePos({
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+            });
+          }}
           style={{
             padding: '20px',
             borderRadius: '16px',
@@ -786,9 +805,10 @@ export function AnalysisCharts() {
             <div
               style={{
                 position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'rgba(10, 11, 18, 0.85)',
+                left: `${acMousePos.x}px`,
+                top: `${acMousePos.y}px`,
+                transform: `translate(${acMousePos.x > 500 ? '-110%' : '15px'}, ${acMousePos.y > 120 ? '-110%' : '15px'})`,
+                background: 'rgba(10, 11, 18, 0.95)',
                 border: '1px solid rgba(189, 0, 255, 0.3)',
                 borderRadius: '8px',
                 padding: '6px 10px',
@@ -796,6 +816,8 @@ export function AnalysisCharts() {
                 pointerEvents: 'none',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                 backdropFilter: 'blur(4px)',
+                zIndex: 10,
+                whiteSpace: 'nowrap',
               }}
             >
               <div style={{ color: 'var(--text-muted)', fontWeight: 'bold' }}>
