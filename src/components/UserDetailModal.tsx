@@ -134,6 +134,26 @@ export function UserDetailModal({
     }
   }, [isOpen, activeTab, nickname, fetchHistory, fetchNotifications]);
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showConfirmModal) {
+          setShowConfirmModal(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, showConfirmModal, onClose]);
+
   useEffect(() => {
     if (!nicknameInput) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -623,7 +643,7 @@ export function UserDetailModal({
                       borderRadius: '2px',
                     }}
                   />
-                  이용권 및 포인트
+                  HON/구독
                 </h3>
 
                 <div

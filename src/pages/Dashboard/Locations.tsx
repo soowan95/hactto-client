@@ -347,7 +347,11 @@ export function Locations() {
                   <div style={{ position: 'relative' }}>
                     <select
                       value={typeFilter}
-                      onChange={(e) => setTypeFilter(e.target.value as 'all' | '자동' | '수동' | '반자동')}
+                      onChange={(e) =>
+                        setTypeFilter(
+                          e.target.value as 'all' | '자동' | '수동' | '반자동',
+                        )
+                      }
                       style={{
                         appearance: 'none',
                         WebkitAppearance: 'none',

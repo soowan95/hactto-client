@@ -645,6 +645,10 @@ export function Stats() {
     }
 
     const { prediction, winningNumber } = championData;
+    const algoType =
+      typeof prediction.algorithm === 'object' && prediction.algorithm !== null
+        ? (prediction.algorithm as { type: string }).type
+        : prediction.algorithm;
     const mainNumbers = winningNumber?.numbers?.slice(0, 6) ?? [];
     const bonusNumber = winningNumber?.numbers?.[6];
 
@@ -744,20 +748,15 @@ export function Stats() {
             <span>적용 알고리즘</span>
             <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
               {parseAlgorithmName(
-                algorithmTypes.find((a) => a.type === prediction.algorithm) ||
-                  prediction.algorithm,
+                algorithmTypes.find((a) => a.type === algoType) || algoType,
               )}
             </span>
           </div>
 
           {/* 적용 알고리즘 설명 박스 */}
           {(() => {
-            const algoObj = algorithmTypes.find(
-              (a) => a.type === prediction.algorithm,
-            );
-            const desc = getAlgorithmDescription(
-              algoObj || prediction.algorithm,
-            );
+            const algoObj = algorithmTypes.find((a) => a.type === algoType);
+            const desc = getAlgorithmDescription(algoObj || algoType);
             if (!desc) return null;
             return (
               <div
@@ -936,7 +935,7 @@ export function Stats() {
           </div>
 
           {/* Prediction Weights Breakdown */}
-          {prediction.algorithm.includes('WEIGHTS') && (
+          {algoType.includes('WEIGHTS') && (
             <div style={{ textAlign: 'left' }}>
               <div
                 style={{
@@ -1722,6 +1721,14 @@ export function Stats() {
                 (() => {
                   const prediction = clickedPointData.prediction;
                   const winningNumber = clickedPointData.winningNumber;
+                  const algoType =
+                    prediction &&
+                    typeof prediction.algorithm === 'object' &&
+                    prediction.algorithm !== null
+                      ? (prediction.algorithm as { type: string }).type
+                      : prediction
+                        ? prediction.algorithm
+                        : '';
 
                   if (!prediction) {
                     return (
@@ -2018,7 +2025,7 @@ export function Stats() {
                       )}
 
                       {/* Weights breakdown */}
-                      {prediction.algorithm.includes('WEIGHTS') && (
+                      {algoType.includes('WEIGHTS') && (
                         <div>
                           <div
                             style={{

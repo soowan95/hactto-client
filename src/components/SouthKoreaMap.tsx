@@ -88,11 +88,13 @@ export function SouthKoreaMap({
           }}
         >
           {regionNameMap[
-            southKoreaMap.locations.find((loc: any) => loc.id === hoveredLocation)
-              ?.name || ''
+            southKoreaMap.locations.find(
+              (loc: any) => loc.id === hoveredLocation,
+            )?.name || ''
           ] ||
-            southKoreaMap.locations.find((loc: any) => loc.id === hoveredLocation)
-              ?.name}
+            southKoreaMap.locations.find(
+              (loc: any) => loc.id === hoveredLocation,
+            )?.name}
         </div>
       )}
     </div>
