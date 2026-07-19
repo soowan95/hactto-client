@@ -5,6 +5,7 @@ import { API_BASE_URL, parseAlgorithmName } from '../../utils';
 import { Alert } from '../../components/Alert';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
+import { AdminPolicyManagement } from '../../components/AdminPolicyManagement';
 
 export function AdminPage() {
   const navigate = useNavigate();
@@ -36,17 +37,18 @@ export function AdminPage() {
     | 'system'
     | 'notices'
     | 'inquiries'
-    | 'visitors'
-    | 'visitors'
+    | 'users'
+    | 'users'
     | 'NICKNAME_REPORTS'
     | 'BANNED_WORDS'
     | 'HON_EVENTS'
     | 'NOTIFICATIONS'
+    | 'POLICIES'
   >('algo');
 
-  const [notiTargetType, setNotiTargetType] = useState<
-    'NICKNAME' | 'VISITOR_ID'
-  >('NICKNAME');
+  const [notiTargetType, setNotiTargetType] = useState<'NICKNAME' | 'USER_ID'>(
+    'NICKNAME',
+  );
   const [notiTarget, setNotiTarget] = useState('');
   const [notiTitle, setNotiTitle] = useState('');
   const [notiContent, setNotiContent] = useState('');
@@ -148,11 +150,11 @@ export function AdminPage() {
   const [rejectingInqId, setRejectingInqId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  // Visitor management states
-  const [searchVisitorId, setSearchVisitorId] = useState('');
+  // User management states
+  const [searchUserId, setSearchUserId] = useState('');
 
-  const [visitorDetails, setVisitorDetails] = useState<any>(null);
-  const [loadingVisitorDetails, setLoadingVisitorDetails] = useState(false);
+  const [userDetails, setUserDetails] = useState<any>(null);
+  const [loadingUserDetails, setLoadingUserDetails] = useState(false);
   const [manageHonAmount, setManageHonAmount] = useState('');
   const [freePassEndsAt, setFreePassEndsAt] = useState('');
 
@@ -330,7 +332,7 @@ export function AdminPage() {
         fetchAdminNotices();
       } else if (activeTab === 'inquiries') {
         fetchAdminInquiries();
-      } else if (activeTab === 'visitors') {
+      } else if (activeTab === 'users') {
         fetchStats();
       } else if (activeTab === 'NICKNAME_REPORTS') {
         fetchNicknameReports();
@@ -751,7 +753,7 @@ export function AdminPage() {
         setProcessingBulkHon(true);
         try {
           const res = await fetch(
-            appendAuth(`${API_BASE_URL}/manager/visitors/bulk-hon`),
+            appendAuth(`${API_BASE_URL}/manager/users/bulk-hon`),
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -763,9 +765,9 @@ export function AdminPage() {
             setBulkHonAmount('');
             // Refresh stats
             await fetchStats();
-            // Refresh search details if a visitor is currently displayed
-            if (searchVisitorId.trim() && visitorDetails) {
-              fetchVisitorDetails(searchVisitorId);
+            // Refresh search details if a user is currently displayed
+            if (searchUserId.trim() && userDetails) {
+              fetchUserDetails(searchUserId);
             }
           } else {
             const data = await res.json();
@@ -785,33 +787,33 @@ export function AdminPage() {
     });
   };
 
-  const fetchVisitorDetails = async (id: string) => {
-    setLoadingVisitorDetails(true);
-    setVisitorDetails(null);
+  const fetchUserDetails = async (id: string) => {
+    setLoadingUserDetails(true);
+    setUserDetails(null);
     try {
       const res = await fetch(
-        appendAuth(`${API_BASE_URL}/manager/visitors/${id.trim()}`),
+        appendAuth(`${API_BASE_URL}/manager/users/${id.trim()}`),
       );
       if (res.ok) {
         const data = await res.json();
-        setVisitorDetails(data.data || data);
+        setUserDetails(data.data || data);
       } else {
         showAlert('error', '해당 방문자를 찾을 수 없습니다.');
       }
     } catch {
       showAlert('error', '방문자 정보 조회 실패');
     } finally {
-      setLoadingVisitorDetails(false);
+      setLoadingUserDetails(false);
     }
   };
 
-  const handleSearchVisitor = async (e: React.FormEvent) => {
+  const handleSearchUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchVisitorId.trim()) {
-      showAlert('error', '조회할 visitorId를 입력해 주세요.');
+    if (!searchUserId.trim()) {
+      showAlert('error', '조회할 userId를 입력해 주세요.');
       return;
     }
-    await fetchVisitorDetails(searchVisitorId);
+    await fetchUserDetails(searchUserId);
   };
 
   const handleToggleBlock = async (e?: React.MouseEvent) => {
@@ -819,13 +821,13 @@ export function AdminPage() {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (!visitorDetails) return;
-    const isBlocked = visitorDetails.isBlocked;
+    if (!userDetails) return;
+    const isBlocked = userDetails.isBlocked;
     const endpoint = isBlocked ? 'unblock' : 'block';
     try {
       const res = await fetch(
         appendAuth(
-          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/${endpoint}`,
+          `${API_BASE_URL}/manager/users/${userDetails.id}/${endpoint}`,
         ),
         {
           method: 'POST',
@@ -838,10 +840,10 @@ export function AdminPage() {
         );
         // Refresh details
         const updatedRes = await fetch(
-          appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}`),
+          appendAuth(`${API_BASE_URL}/manager/users/${userDetails.id}`),
         );
         const updatedData = await updatedRes.json();
-        setVisitorDetails(updatedData.data || updatedData);
+        setUserDetails(updatedData.data || updatedData);
       }
     } catch {
       showAlert('error', '상태 변경 중 오류가 발생했습니다.');
@@ -853,11 +855,11 @@ export function AdminPage() {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (!visitorDetails) return;
+    if (!userDetails) return;
     try {
       const res = await fetch(
         appendAuth(
-          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/reset-nickname`,
+          `${API_BASE_URL}/manager/users/${userDetails.id}/reset-nickname`,
         ),
         {
           method: 'POST',
@@ -867,10 +869,10 @@ export function AdminPage() {
         showAlert('success', '닉네임이 초기화되었습니다.');
         // Refresh details
         const updatedRes = await fetch(
-          appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}`),
+          appendAuth(`${API_BASE_URL}/manager/users/${userDetails.id}`),
         );
         const updatedData = await updatedRes.json();
-        setVisitorDetails(updatedData.data || updatedData);
+        setUserDetails(updatedData.data || updatedData);
       }
     } catch {
       showAlert('error', '닉네임 초기화 중 오류가 발생했습니다.');
@@ -879,7 +881,7 @@ export function AdminPage() {
 
   const handleManageHon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!visitorDetails || !manageHonAmount.trim()) return;
+    if (!userDetails || !manageHonAmount.trim()) return;
     const amount = parseInt(manageHonAmount, 10);
     if (isNaN(amount)) {
       showAlert('error', '올바른 숫자를 입력하세요.');
@@ -887,7 +889,7 @@ export function AdminPage() {
     }
     try {
       const res = await fetch(
-        appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}/hon`),
+        appendAuth(`${API_BASE_URL}/manager/users/${userDetails.id}/hon`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -899,10 +901,10 @@ export function AdminPage() {
         setManageHonAmount('');
         // Refresh details
         const updatedRes = await fetch(
-          appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}`),
+          appendAuth(`${API_BASE_URL}/manager/users/${userDetails.id}`),
         );
         const updatedData = await updatedRes.json();
-        setVisitorDetails(updatedData.data || updatedData);
+        setUserDetails(updatedData.data || updatedData);
       }
     } catch {
       showAlert('error', '혼 조율 실패');
@@ -911,14 +913,14 @@ export function AdminPage() {
 
   const handleGrantUnlimited = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!visitorDetails || !freePassEndsAt) {
+    if (!userDetails || !freePassEndsAt) {
       showAlert('error', '이용권 만료 기한을 선택해 주세요.');
       return;
     }
     try {
       const res = await fetch(
         appendAuth(
-          `${API_BASE_URL}/manager/visitors/${visitorDetails.id}/subscription/unlimited`,
+          `${API_BASE_URL}/manager/users/${userDetails.id}/subscription/unlimited`,
         ),
         {
           method: 'POST',
@@ -933,10 +935,10 @@ export function AdminPage() {
         setFreePassEndsAt('');
         // Refresh details
         const updatedRes = await fetch(
-          appendAuth(`${API_BASE_URL}/manager/visitors/${visitorDetails.id}`),
+          appendAuth(`${API_BASE_URL}/manager/users/${userDetails.id}`),
         );
         const updatedData = await updatedRes.json();
-        setVisitorDetails(updatedData.data || updatedData);
+        setUserDetails(updatedData.data || updatedData);
       } else {
         throw new Error('지급 실패');
       }
@@ -1106,15 +1108,15 @@ export function AdminPage() {
                 문의
               </button>
               <button
-                className={`tab-btn ${activeTab === 'visitors' ? 'active-tab' : ''}`}
-                onClick={() => setActiveTab('visitors')}
+                className={`tab-btn ${activeTab === 'users' ? 'active-tab' : ''}`}
+                onClick={() => setActiveTab('users')}
                 style={{
                   background: 'transparent',
                   border: 'none',
                   padding: '8px 12px',
                   fontSize: '0.85rem',
                   color:
-                    activeTab === 'visitors'
+                    activeTab === 'users'
                       ? 'var(--primary-cyan)'
                       : 'var(--text-dim)',
                   cursor: 'pointer',
@@ -1192,6 +1194,25 @@ export function AdminPage() {
                 }}
               >
                 알림 발송
+              </button>
+
+              <button
+                className={`tab-btn ${activeTab === 'POLICIES' ? 'active-tab' : ''}`}
+                onClick={() => setActiveTab('POLICIES')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '8px 12px',
+                  fontSize: '0.85rem',
+                  color:
+                    activeTab === 'POLICIES'
+                      ? 'var(--primary-cyan)'
+                      : 'var(--text-dim)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                정책 관리
               </button>
             </div>
 
@@ -2200,7 +2221,7 @@ export function AdminPage() {
                                     fontFamily: 'monospace',
                                   }}
                                 >
-                                  ID: {inq.visitorId}
+                                  ID: {inq.userId}
                                 </span>
                                 <span
                                   style={{
@@ -2471,8 +2492,8 @@ export function AdminPage() {
                   );
                 })()}
 
-              {activeTab === 'visitors' && (
-                /* Visitor Management Tab */
+              {activeTab === 'users' && (
+                /* User Management Tab */
                 <div
                   style={{
                     display: 'flex',
@@ -2627,15 +2648,15 @@ export function AdminPage() {
                       방문자 조회
                     </h4>
                     <form
-                      onSubmit={handleSearchVisitor}
+                      onSubmit={handleSearchUser}
                       style={{ display: 'flex', gap: '8px' }}
                     >
                       <input
                         type="text"
                         className="input-glow"
-                        placeholder="visitorId 또는 IP 입력"
-                        value={searchVisitorId}
-                        onChange={(e) => setSearchVisitorId(e.target.value)}
+                        placeholder="userId 또는 IP 입력"
+                        value={searchUserId}
+                        onChange={(e) => setSearchUserId(e.target.value)}
                         style={{
                           flex: 1,
                           height: '36px',
@@ -2645,7 +2666,7 @@ export function AdminPage() {
                       <button
                         type="submit"
                         className="btn-submit"
-                        disabled={loadingVisitorDetails}
+                        disabled={loadingUserDetails}
                         style={{
                           height: '36px',
                           padding: '0 14px',
@@ -2657,7 +2678,7 @@ export function AdminPage() {
                     </form>
                   </div>
 
-                  {loadingVisitorDetails && (
+                  {loadingUserDetails && (
                     <p
                       style={{
                         fontSize: '0.82rem',
@@ -2668,7 +2689,7 @@ export function AdminPage() {
                     </p>
                   )}
 
-                  {visitorDetails && (
+                  {userDetails && (
                     <div
                       style={{
                         background: 'rgba(255,255,255,0.01)',
@@ -2703,8 +2724,8 @@ export function AdminPage() {
                             fontFamily: 'monospace',
                           }}
                         >
-                          {visitorDetails.id}
-                          {visitorDetails.nickname && (
+                          {userDetails.id}
+                          {userDetails.nickname && (
                             <span
                               style={{
                                 marginLeft: '8px',
@@ -2712,7 +2733,7 @@ export function AdminPage() {
                                 fontSize: '0.9rem',
                               }}
                             >
-                              ({visitorDetails.nickname})
+                              ({userDetails.nickname})
                             </span>
                           )}
                         </h4>
@@ -2737,7 +2758,7 @@ export function AdminPage() {
                             최근 IP
                           </span>
                           <span style={{ color: 'var(--text-main)' }}>
-                            {visitorDetails.ip}
+                            {userDetails.ip}
                           </span>
                         </div>
                         <div>
@@ -2752,13 +2773,13 @@ export function AdminPage() {
                           </span>
                           <span
                             style={{
-                              color: visitorDetails.isBlocked
+                              color: userDetails.isBlocked
                                 ? '#ff4b4b'
                                 : 'var(--primary-cyan)',
                               fontWeight: 'bold',
                             }}
                           >
-                            {visitorDetails.isBlocked ? '차단됨' : '정상'}
+                            {userDetails.isBlocked ? '차단됨' : '정상'}
                           </span>
                         </div>
                         <div>
@@ -2777,7 +2798,7 @@ export function AdminPage() {
                               fontWeight: 'bold',
                             }}
                           >
-                            {visitorDetails.hon.balance} HON
+                            {userDetails.hon.balance} HON
                           </span>
                         </div>
                         <div>
@@ -2796,8 +2817,8 @@ export function AdminPage() {
                               fontWeight: 'bold',
                             }}
                           >
-                            {visitorDetails.subscription
-                              ? visitorDetails.subscription.plan
+                            {userDetails.subscription
+                              ? userDetails.subscription.plan
                               : '구독 없음'}
                           </span>
                         </div>
@@ -2819,42 +2840,40 @@ export function AdminPage() {
                             width: '100%',
                             height: '32px',
                             fontSize: '0.78rem',
-                            background: visitorDetails.isBlocked
+                            background: userDetails.isBlocked
                               ? 'rgba(0, 240, 255, 0.1)'
                               : 'rgba(255, 75, 75, 0.1)',
-                            border: visitorDetails.isBlocked
+                            border: userDetails.isBlocked
                               ? '1px solid rgba(0, 240, 255, 0.3)'
                               : '1px solid rgba(255, 75, 75, 0.3)',
-                            color: visitorDetails.isBlocked
+                            color: userDetails.isBlocked
                               ? 'var(--primary-cyan)'
                               : '#ff4b4b',
                             cursor: 'pointer',
                             borderRadius: '4px',
                           }}
                         >
-                          {visitorDetails.isBlocked
-                            ? '차단 해제'
-                            : '사용자 차단'}
+                          {userDetails.isBlocked ? '차단 해제' : '사용자 차단'}
                         </button>
 
                         <button
                           type="button"
                           onClick={handleResetNickname}
-                          disabled={!visitorDetails.nickname}
+                          disabled={!userDetails.nickname}
                           style={{
                             width: '100%',
                             height: '32px',
                             fontSize: '0.78rem',
-                            background: visitorDetails.nickname
+                            background: userDetails.nickname
                               ? 'rgba(255, 165, 0, 0.1)'
                               : 'rgba(255,255,255,0.05)',
-                            border: visitorDetails.nickname
+                            border: userDetails.nickname
                               ? '1px solid rgba(255, 165, 0, 0.3)'
                               : '1px solid rgba(255,255,255,0.1)',
-                            color: visitorDetails.nickname
+                            color: userDetails.nickname
                               ? 'orange'
                               : 'var(--text-dim)',
-                            cursor: visitorDetails.nickname
+                            cursor: userDetails.nickname
                               ? 'pointer'
                               : 'not-allowed',
                             borderRadius: '4px',
@@ -3527,7 +3546,7 @@ export function AdminPage() {
                         value={notiTargetType}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                           setNotiTargetType(
-                            e.target.value as 'NICKNAME' | 'VISITOR_ID',
+                            e.target.value as 'NICKNAME' | 'USER_ID',
                           )
                         }
                         className="input-glow"
@@ -3542,8 +3561,8 @@ export function AdminPage() {
                         <option value="NICKNAME" style={{ color: 'black' }}>
                           닉네임
                         </option>
-                        <option value="VISITOR_ID" style={{ color: 'black' }}>
-                          Visitor ID
+                        <option value="USER_ID" style={{ color: 'black' }}>
+                          User ID
                         </option>
                       </select>
                       <input
@@ -3553,7 +3572,7 @@ export function AdminPage() {
                         placeholder={
                           notiTargetType === 'NICKNAME'
                             ? '대상 닉네임'
-                            : '대상 Visitor ID'
+                            : '대상 User ID'
                         }
                         className="input-glow"
                         style={{ flex: 1 }}
@@ -3583,6 +3602,7 @@ export function AdminPage() {
                   </form>
                 </div>
               )}
+              {activeTab === 'POLICIES' && <AdminPolicyManagement />}
             </div>
           </div>
 

@@ -167,7 +167,7 @@ export function NoticeBanner() {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/visitor/notices`);
+        const res = await fetch(`${API_BASE_URL}/user/notices`);
         if (res.ok) {
           const data = await res.json();
           const list = Array.isArray(data.data)
@@ -183,6 +183,10 @@ export function NoticeBanner() {
     };
 
     fetchNotices();
+
+    const handleRefresh = () => fetchNotices();
+    window.addEventListener('refresh-notices', handleRefresh);
+    return () => window.removeEventListener('refresh-notices', handleRefresh);
   }, []);
 
   // Automatic notice rotation interval

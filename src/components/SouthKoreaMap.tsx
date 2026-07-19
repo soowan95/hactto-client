@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState } from 'react';
 import southKoreaMap from '@svg-maps/south-korea';
 import './SouthKoreaMap.css';
@@ -52,7 +53,10 @@ export function SouthKoreaMap({
             className={`map-path ${hoveredLocation === location.id || selectedRegionId === location.id ? 'hovered' : ''}`}
             onMouseEnter={() => setHoveredLocation(location.id)}
             onMouseLeave={() => setHoveredLocation(null)}
-            onClick={() => onLocationClick?.(location.id, location.name)}
+            onClick={() => {
+              setHoveredLocation(null);
+              onLocationClick?.(location.id, location.name);
+            }}
             style={{
               cursor: 'pointer',
               transition: 'fill 0.3s ease, transform 0.3s ease',
@@ -69,7 +73,7 @@ export function SouthKoreaMap({
           </path>
         ))}
       </svg>
-      {hoveredLocation && (
+      {hoveredLocation && hoveredLocation !== selectedRegionId && (
         <div
           style={{
             position: 'absolute',

@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
-import type { MouseEvent } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth, authFetch } from '../context/AuthContext';
 import { Alert } from './Alert';
 import { UnsavedChangesModal } from './UnsavedChangesModal';
 import { HelpModal } from './HelpModal';
-import { WelcomeModal } from './WelcomeModal';
 import { PaymentModal } from './PaymentModal';
 import { NoticeBanner } from './NoticeBanner';
 import { AdSenseBanner } from './AdSenseBanner';
@@ -13,6 +12,7 @@ import { PrivacyModal } from './PrivacyModal';
 import { TermsModal } from './TermsModal';
 import { RefundPolicyModal } from './RefundPolicyModal';
 import { UserDetailModal } from './UserDetailModal';
+
 import { API_BASE_URL } from '../utils';
 
 const MENU_GROUPS = [
@@ -56,18 +56,18 @@ export function Layout() {
     setShowUnsavedModal,
     setUnsavedActionTarget,
     setShowAdminModal,
-    showWelcomeModal,
-    setShowWelcomeModal,
     subscription,
     checkIpStatus,
-    nickname,
-    visitorId,
     isAdminMode,
   } = useApp();
+
+  const { isAuthenticated, user } = useAuth();
 
   const navigate = useNavigate();
   const location = useLocation();
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<
     'HON' | 'SUBSCRIPTION' | undefined
@@ -76,42 +76,93 @@ export function Layout() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
+
   const [unreadNotiCount, setUnreadNotiCount] = useState(0);
 
+  const menuRef = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
-    const fetchUnreadCount = () => {
-      const vid = visitorId || localStorage.getItem('visitor_id');
-      if (vid) {
-        fetch(
-          `${API_BASE_URL}/visitor/notifications/unread-count?t=${Date.now()}`,
-          {
-            headers: { 'x-visitor-id': vid },
-            cache: 'no-store',
-          },
-        )
-          .then(async (res) => {
-            if (res.ok) {
-              const data = await res.json();
-              if (data.data && typeof data.data.count === 'number') {
-                setUnreadNotiCount(data.data.count);
-              } else if (typeof data.count === 'number') {
-                setUnreadNotiCount(data.count);
-              }
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        isMobileMenuOpen &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        hamburgerRef.current &&
+        !hamburgerRef.current.contains(event.target as Node)
+      ) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    return () => {};
+  }, []);
+
+  useEffect(() => {
+    let socket: import('socket.io-client').Socket | null = null;
+
+    const fetchUnreadCount = async () => {
+      if (isAuthenticated) {
+        try {
+          const res = await authFetch(
+            `${API_BASE_URL}/user/notifications/unread-count?t=${Date.now()}`,
+            { cache: 'no-store' },
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data.data && typeof data.data.count === 'number') {
+              setUnreadNotiCount(data.data.count);
             }
-          })
-          .catch(console.error);
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    };
+
+    const setupWebSocket = async () => {
+      if (!isAuthenticated) return;
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      try {
+        const { io } = await import('socket.io-client');
+        const url = new URL(API_BASE_URL);
+        socket = io(url.origin, {
+          reconnection: true,
+          auth: { token },
+          transports: ['websocket'],
+        });
+
+        socket.on('new-notification', () => {
+          fetchUnreadCount();
+        });
+      } catch (e) {
+        console.error('Failed to setup WebSocket', e);
       }
     };
 
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 10000);
+    setupWebSocket();
     window.addEventListener('notification-sent', fetchUnreadCount);
 
     return () => {
-      clearInterval(interval);
+      if (socket) {
+        socket.disconnect();
+      }
       window.removeEventListener('notification-sent', fetchUnreadCount);
     };
-  }, [visitorId, showUserDetailModal]); // refetch when modal closes and poll periodically
+  }, [isAuthenticated, showUserDetailModal]); // refetch when modal closes and poll periodically
 
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
@@ -128,7 +179,14 @@ export function Layout() {
     localStorage.getItem('mk') || sessionStorage.getItem('mk')
   );
 
-  const handleTabClick = (e: MouseEvent<HTMLAnchorElement>, path: string) => {
+  const handleTabClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    path: string,
+  ) => {
+    if (isMobileOrTablet) {
+      setIsMobileMenuOpen(false);
+    }
+
     if (path === '/system' && !hasAdminAccess) {
       e.preventDefault();
       setShowAdminModal(true);
@@ -187,73 +245,109 @@ export function Layout() {
               >
                 hactto
               </span>
-              {!isAdminMode && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.85rem',
-                    color: 'var(--text-main)',
-                    background: 'rgba(255,255,255,0.05)',
-                    padding: '4px 10px',
-                    borderRadius: '20px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onClick={() => setShowUserDetailModal(true)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
-                    e.currentTarget.style.borderColor =
-                      'rgba(0, 240, 255, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                  }}
-                  title={'프로필 및 알림 보기'}
-                >
-                  <span style={{ fontWeight: 'bold' }}>
-                    {nickname || visitorId?.substring(0, 8)}
-                  </span>
-                  님
-                  {unreadNotiCount > 0 && (
-                    <div
-                      style={{
-                        background: '#ff4b4b',
-                        color: '#fff',
-                        fontSize: '0.65rem',
-                        fontWeight: 'bold',
-                        padding: '2px 6px',
-                        borderRadius: '10px',
-                        marginLeft: '4px',
-                      }}
-                    >
-                      {unreadNotiCount}
-                    </div>
-                  )}
-                  {!nickname && (
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--text-dim)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{ marginLeft: '2px' }}
-                    >
-                      <path d="M12 20h9"></path>
-                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                    </svg>
-                  )}
-                </div>
-              )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+              {!isAdminMode &&
+                (isAuthenticated ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.85rem',
+                      color: 'var(--text-main)',
+                      background: 'rgba(255,255,255,0.05)',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onClick={() => setShowUserDetailModal(true)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background =
+                        'rgba(0, 240, 255, 0.1)';
+                      e.currentTarget.style.borderColor =
+                        'rgba(0, 240, 255, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background =
+                        'rgba(255,255,255,0.05)';
+                      e.currentTarget.style.borderColor =
+                        'rgba(255,255,255,0.1)';
+                    }}
+                    title={'프로필 및 알림 보기'}
+                  >
+                    <span style={{ fontWeight: 'bold' }}>
+                      {user?.nickname || user?.email?.split('@')[0]}
+                    </span>
+                    님
+                    {unreadNotiCount > 0 && (
+                      <div
+                        style={{
+                          background: '#ff4b4b',
+                          color: '#fff',
+                          fontSize: '0.65rem',
+                          fontWeight: 'bold',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          marginLeft: '4px',
+                        }}
+                      >
+                        {unreadNotiCount}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => navigate('/login')}
+                      style={{
+                        fontSize: '0.85rem',
+                        color: 'var(--text-main)',
+                        background: 'transparent',
+                        padding: '4px 8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--text-main)';
+                      }}
+                    >
+                      로그인
+                    </button>
+                    <button
+                      onClick={() => navigate('/login')}
+                      style={{
+                        fontSize: '0.85rem',
+                        color: 'var(--text-main)',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background =
+                          'rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.color = 'var(--text-main)';
+                      }}
+                    >
+                      회원가입
+                    </button>
+                  </div>
+                ))}
               <button
                 onClick={() => setShowHelpModal(true)}
                 style={{
@@ -290,12 +384,47 @@ export function Layout() {
               >
                 ?
               </button>
+              {isMobileOrTablet && (
+                <button
+                  ref={hamburgerRef}
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                    outline: 'none',
+                  }}
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
           <div
-            className="admin-tabs"
-            style={{ position: 'relative', zIndex: 10 }}
+            ref={menuRef}
+            className={`admin-tabs ${isMobileOrTablet && isMobileMenuOpen ? 'mobile-menu-open' : ''}`}
+            style={{ zIndex: 10 }}
           >
             {MENU_GROUPS.map((group) => {
               const filteredItems = isAdminMode
@@ -319,10 +448,46 @@ export function Layout() {
                     className={`tab-btn dropdown-trigger ${
                       isActive ? 'active-tab' : ''
                     }`}
+                    onClick={() => {
+                      if (isMobileOrTablet) {
+                        setExpandedMenu(
+                          expandedMenu === group.title ? null : group.title,
+                        );
+                      }
+                    }}
+                    style={{
+                      cursor: isMobileOrTablet ? 'pointer' : 'default',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
                   >
-                    {group.title}
+                    <span>{group.title}</span>
+                    {isMobileOrTablet && (
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          transform:
+                            expandedMenu === group.title
+                              ? 'rotate(180deg)'
+                              : 'rotate(0deg)',
+                          transition: 'transform 0.2s',
+                        }}
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    )}
                   </div>
-                  <div className="dropdown-menu">
+                  <div
+                    className={`dropdown-menu ${expandedMenu === group.title ? 'expanded' : ''}`}
+                  >
                     {filteredItems.map((item) => (
                       <NavLink
                         key={item.path}
@@ -346,14 +511,48 @@ export function Layout() {
                   className={`tab-btn dropdown-trigger ${
                     location.pathname === '/system' ? 'active-tab' : ''
                   }`}
+                  onClick={() => {
+                    if (isMobileOrTablet) {
+                      setExpandedMenu(
+                        expandedMenu === '관리자' ? null : '관리자',
+                      );
+                    }
+                  }}
                   style={{
                     color: '#FFD700',
                     textShadow: '0 0 10px rgba(255, 215, 0, 0.4)',
+                    cursor: isMobileOrTablet ? 'pointer' : 'default',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
                 >
-                  관리자
+                  <span>관리자</span>
+                  {isMobileOrTablet && (
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{
+                        transform:
+                          expandedMenu === '관리자'
+                            ? 'rotate(180deg)'
+                            : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                      }}
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  )}
                 </div>
-                <div className="dropdown-menu">
+                <div
+                  className={`dropdown-menu ${expandedMenu === '관리자' ? 'expanded' : ''}`}
+                >
                   <NavLink
                     to="/system"
                     onClick={(e) => handleTabClick(e, '/system')}
@@ -388,14 +587,14 @@ export function Layout() {
           <div
             className="scroll-y-container"
             style={{
+              position: 'relative',
               flex: 1,
+              height: '100%',
               overflowY: 'auto',
               overflowX: 'hidden',
               paddingRight: '8px',
               marginRight: '-8px',
               minHeight: 0,
-              maxHeight: 'calc(100% - 10px)',
-              marginBottom: 0,
             }}
           >
             <Outlet />
@@ -544,10 +743,7 @@ export function Layout() {
           isOpen={showHelpModal}
           onClose={() => setShowHelpModal(false)}
         />
-        <WelcomeModal
-          isOpen={showWelcomeModal}
-          onClose={() => setShowWelcomeModal(false)}
-        />
+
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth, authFetch } from '../context/AuthContext';
 import { API_BASE_URL } from '../utils';
 import type { PaymentStatus } from '../types';
 import PortOne from '@portone/browser-sdk/v2';
@@ -22,8 +23,8 @@ export function PaymentModal({
   onSuccess,
   initialHighlight,
 }: PaymentModalProps) {
-  const { visitorId, showAlert, alert, subscription, checkIpStatus, paidHon } =
-    useApp();
+  const { showAlert, alert, subscription, checkIpStatus, paidHon } = useApp();
+  const { user } = useAuth();
   const [purchasing, setPurchasing] = useState<boolean>(false);
   const [cancelling, setCancelling] = useState<boolean>(false);
   const [paymentStatus, setPaymentStatus] = useState<{
@@ -62,11 +63,11 @@ export function PaymentModal({
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (isOpen && visitorId) {
+    if (isOpen && user) {
       const checkRefundInquiries = async () => {
         try {
-          const res = await fetch(
-            `${API_BASE_URL}/visitor/inquiries?type=REFUND`,
+          const res = await authFetch(
+            `${API_BASE_URL}/user/inquiries?type=REFUND`,
           );
           if (res.ok) {
             const result = await res.json();
@@ -84,7 +85,7 @@ export function PaymentModal({
       };
       checkRefundInquiries();
     }
-  }, [isOpen, visitorId]);
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
@@ -92,11 +93,13 @@ export function PaymentModal({
     if (cancelling) return;
     try {
       setCancelling(true);
-      const res = await fetch(`${API_BASE_URL}/payments/subscription/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitorId }),
-      });
+      const res = await authFetch(
+        `${API_BASE_URL}/payments/subscription/cancel`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || '구독 해지에 실패했습니다.');
@@ -139,11 +142,10 @@ export function PaymentModal({
       const orderId = `order-${crypto.randomUUID()}`;
 
       // 1. API에 결제 준비 요청
-      const readyRes = await fetch(`${API_BASE_URL}/payments/ready`, {
+      const readyRes = await authFetch(`${API_BASE_URL}/payments/ready`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          visitorId,
           amount,
           orderId,
           orderName,

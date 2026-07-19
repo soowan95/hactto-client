@@ -1,4 +1,7 @@
-import React, { useEffect } from 'react';
+/* eslint-disable */
+import React, { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
+import { API_BASE_URL } from '../utils';
 
 interface PrivacyModalProps {
   isOpen: boolean;
@@ -9,6 +12,43 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const [versions, setVersions] = useState<any[]>([]);
+  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
+  const [content, setContent] = useState<string>('불러오는 중...');
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch(`${API_BASE_URL}/policy/privacy`)
+        .then((res) => res.json())
+        .then((data) => {
+          const resData = data.data;
+          setVersions(resData?.versions || []);
+          if (resData?.latest) {
+            setContent(resData.latest.content);
+            setSelectedVersionId(resData.latest.id.toString());
+          } else {
+            setContent('등록된 내용이 없습니다.');
+          }
+        })
+        .catch(() => setContent('불러오기 실패'));
+    }
+  }, [isOpen]);
+
+  const handleVersionChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const id = e.target.value;
+    setSelectedVersionId(id);
+    try {
+      setContent('불러오는 중...');
+      const res = await fetch(`${API_BASE_URL}/policy/privacy/${id}`);
+      const data = await res.json();
+      setContent(data.data?.content || '내용이 없습니다.');
+    } catch (err) {
+      setContent('불러오기 실패');
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -58,17 +98,41 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
             marginBottom: '20px',
           }}
         >
-          <h2
-            className="logo-glow"
-            style={{
-              fontSize: '1.4rem',
-              margin: 0,
-              fontWeight: 'bold',
-              color: 'var(--primary-cyan)',
-            }}
-          >
-            개인정보처리방침
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <h2
+              className="logo-glow"
+              style={{
+                fontSize: '1.4rem',
+                margin: 0,
+                fontWeight: 'bold',
+                color: 'var(--primary-cyan)',
+              }}
+            >
+              개인정보처리방침
+            </h2>
+            {versions.length > 0 && (
+              <select
+                value={selectedVersionId}
+                onChange={handleVersionChange}
+                style={{
+                  background: 'rgba(0,0,0,0.5)',
+                  color: 'var(--text-main)',
+                  border: '1px solid var(--border-color)',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.version
+                      ? v.version
+                      : `v${v.id} (${new Date(v.createdAt).toLocaleDateString()})`}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -110,178 +174,40 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
             color: 'var(--text-dim)',
             textAlign: 'left',
           }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
+        />
+
+        {/* Footer */}
+        <div
+          style={{
+            marginTop: '20px',
+            paddingTop: '16px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
         >
-          <p style={{ marginBottom: '15px' }}>
-            본 개인정보처리방침은 <strong>hactto</strong>(이하 '서비스')의
-            개인정보 수집, 이용 및 보호에 관한 사항을 설명합니다. 서비스는
-            이용자의 개인정보를 보호하고 관련 법령을 준수하기 위해 최선을 다하고
-            있습니다.
-          </p>
-
-          <h3
+          <button
+            onClick={onClose}
+            className="action-btn"
             style={{
-              fontSize: '1.1rem',
-              color: '#ffffff',
-              marginTop: '20px',
-              marginBottom: '8px',
-              fontWeight: '600',
+              padding: '8px 24px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: 'var(--text-main)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
             }}
           >
-            1. 수집하는 개인정보 항목 및 수집 방법
-          </h3>
-          <p>
-            서비스는 이용자가 대시보드에 접근하고 시스템을 이용할 때 아래와 같은
-            정보를 수집할 수 있습니다.
-          </p>
-          <ul
-            style={{
-              paddingLeft: '20px',
-              marginBottom: '15px',
-              listStyleType: 'disc',
-            }}
-          >
-            <li>
-              <strong>자동 수집 항목:</strong> 접속 IP 주소, 쿠키, 브라우저
-              종류, 운영체제(OS), 서비스 이용 기록, 국가 정보
-            </li>
-            <li>
-              <strong>수집 방법:</strong> 웹사이트 접속 시 자동 로그 및 분석
-              시스템을 통한 수집
-            </li>
-          </ul>
-
-          <h3
-            style={{
-              fontSize: '1.1rem',
-              color: '#ffffff',
-              marginTop: '20px',
-              marginBottom: '8px',
-              fontWeight: '600',
-            }}
-          >
-            2. 개인정보의 수집 및 이용 목적
-          </h3>
-          <p>수집된 정보는 다음 목적을 위해 활용됩니다.</p>
-          <ul
-            style={{
-              paddingLeft: '20px',
-              marginBottom: '15px',
-              listStyleType: 'disc',
-            }}
-          >
-            <li>
-              <strong>접근 제어 및 보안:</strong> IP 기반 접근 통제 및 관리자
-              화이트리스트 등록 처리
-            </li>
-            <li>
-              <strong>광고 게재 및 마케팅:</strong> 구글 애드센스(Google
-              AdSense)를 통한 광고 노출 및 광고 효과 분석
-            </li>
-            <li>
-              <strong>서비스 개선:</strong> 사용자 패턴 분석을 통한 대시보드
-              시스템 최적화
-            </li>
-          </ul>
-
-          <h3
-            style={{
-              fontSize: '1.1rem',
-              color: '#ffffff',
-              marginTop: '20px',
-              marginBottom: '8px',
-              fontWeight: '600',
-            }}
-          >
-            3. 구글 애드센스(Google AdSense) 쿠키 및 광고 정책 고지
-          </h3>
-          <p style={{ marginBottom: '10px' }}>
-            본 서비스는 제3자 광고 회사인 Google의 광고 서비스를 이용하고
-            있습니다.
-          </p>
-          <ul
-            style={{
-              paddingLeft: '20px',
-              marginBottom: '15px',
-              listStyleType: 'disc',
-            }}
-          >
-            <li>
-              Google을 포함한 제3자 제공업체는 사용자의 이전 웹사이트 방문
-              정보를 기반으로 광고를 게재하기 위해 쿠키를 사용합니다.
-            </li>
-            <li>
-              Google의 광고 쿠키를 사용함으로써 Google 및 파트너 업체는 본
-              사이트 및 다른 사이트 방문을 토대로 맞춤 광고를 제공할 수
-              있습니다.
-            </li>
-            <li>
-              이용자는{' '}
-              <a
-                href="https://adssettings.google.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: 'var(--primary-cyan)',
-                  textDecoration: 'underline',
-                }}
-              >
-                Google 광고 설정
-              </a>
-              으로 이동하여 맞춤 광고 게재를 설정 해제할 수 있습니다.
-            </li>
-          </ul>
-
-          <h3
-            style={{
-              fontSize: '1.1rem',
-              color: '#ffffff',
-              marginTop: '20px',
-              marginBottom: '8px',
-              fontWeight: '600',
-            }}
-          >
-            4. 개인정보의 보유 및 이용 기간
-          </h3>
-          <p style={{ marginBottom: '15px' }}>
-            이용자의 개인정보는 원칙적으로 수집 및 이용 목적이 달성되면 지체
-            없이 파기합니다. 단, 보안 및 IP 차단 이력 관리를 위해 필요한 정보는
-            관련 법령 및 서비스 내부 방침에 따라 일정 기간 보관될 수 있습니다.
-          </p>
-
-          <h3
-            style={{
-              fontSize: '1.1rem',
-              color: '#ffffff',
-              marginTop: '20px',
-              marginBottom: '8px',
-              fontWeight: '600',
-            }}
-          >
-            5. 이용자의 권리 및 거부 권한
-          </h3>
-          <p style={{ marginBottom: '15px' }}>
-            이용자는 언제든지 브라우저 설정을 통해 쿠키 수집을 거부할 수 있으며,
-            이로 인해 대시보드 접근 및 결제 기능 등 일부 서비스 이용에 제한이
-            발생할 수 있습니다.
-          </p>
-
-          <hr
-            style={{
-              border: '0',
-              borderTop: '1px solid rgba(255,255,255,0.08)',
-              margin: '20px 0',
-            }}
-          />
-
-          <p
-            style={{
-              fontSize: '0.8rem',
-              color: 'var(--text-dim)',
-              opacity: 0.6,
-            }}
-          >
-            시행일자: 2026년 6월 30일
-          </p>
+            닫기
+          </button>
         </div>
       </div>
     </div>
