@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth, authFetch } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { API_BASE_URL, parseAlgorithmName } from '../../utils';
 import { LottoBalls } from '../../components/LottoBall';
@@ -9,7 +10,15 @@ import { PersonalAnalysisCard } from '../../components/PersonalAnalysisCard';
 
 export function History() {
   const location = useLocation();
-  const { visitorId, appendAuth, showAlert } = useApp();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { showAlert } = useApp();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const [selectedAnalysis, setSelectedAnalysis] = useState<{
     numbers: number[];
@@ -50,7 +59,7 @@ export function History() {
 
   useEffect(() => {
     const fetchHistoryList = async () => {
-      if (!visitorId) return;
+      if (!isAuthenticated) return;
       try {
         setLoading(true);
         setHistoryList([]);
@@ -60,11 +69,8 @@ export function History() {
             ? `${API_BASE_URL}/algorithms/history`
             : `${API_BASE_URL}/personal-predictions/history`;
 
-        const res = await fetch(appendAuth(endpoint), {
-          headers: {
-            'x-visitor-id': visitorId,
-          },
-        });
+        // Use authFetch to automatically include the JWT token
+        const res = await authFetch(endpoint);
         if (!res.ok) throw new Error('당첨 이력을 가져오지 못했습니다.');
         const data = await res.json();
         setHistoryList(data.data || data || []);
@@ -77,7 +83,7 @@ export function History() {
     };
 
     fetchHistoryList();
-  }, [visitorId, appendAuth, showAlert, activeSubTab]);
+  }, [isAuthenticated, showAlert, activeSubTab]);
 
   const renderSubTabs = () => {
     const tabs = [
@@ -144,8 +150,8 @@ export function History() {
         className="access-desc"
         style={{ fontSize: '0.88rem', marginBottom: '24px' }}
       >
-        이 브라우저 세션을 통해 생성된 모든 예측 조합의 추첨 대조 내역입니다.
-        추첨이 완료되면 매칭된 등수(1~5등)가 표시됩니다.
+        회원님의 계정에서 생성된 모든 예측 조합의 추첨 대조 내역입니다. 추첨이
+        완료되면 매칭된 등수(1~5등)가 표시됩니다.
       </p>
 
       {renderSubTabs()}

@@ -776,6 +776,7 @@ body {
   height: 85dvh;
   max-height: 85vh;
   max-height: 85dvh;
+  position: relative;
 }
 
 .lotto-balls-container {
@@ -945,7 +946,9 @@ body {
 .layout-wrapper {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
+  height: 100vh;
+  height: 100dvh;
   gap: 24px;
   width: 100%;
   max-width: 1500px;
@@ -1003,12 +1006,23 @@ body {
   max-width: 1080px !important;
   width: 100%;
   flex-shrink: 1;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-container {
   text-align: left;
   padding: 30px 40px 15px 40px;
   width: 100%;
+  flex: 1;
+  height: 85vh !important;
+  min-height: 85vh !important;
+  max-height: 85vh !important;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 1200px) {
@@ -1030,24 +1044,98 @@ body {
   .google-ad-horizontal-wrapper .adsbygoogle {
     height: 50px !important;
   }
+  #root {
+    align-items: stretch;
+  }
   .layout-wrapper {
     gap: 0;
     padding: 0 8px;
+    height: 100%;
+    align-items: stretch;
+  }
+  .access-container {
+    height: 100dvh;
+    max-height: 100dvh;
   }
   .dashboard-main-container {
     padding: 12px 0;
   }
   .dashboard-container {
     padding: 20px 16px 10px 16px;
+    position: relative;
+    max-height: none !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    overflow: hidden;
   }
   .admin-tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    background: rgba(15, 17, 26, 0.95);
+    position: absolute;
+    top: 80px;
+    right: 16px;
+    z-index: 100;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    width: 240px;
   }
-  .admin-tabs::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+  
+  .admin-tabs.mobile-menu-open {
+    display: flex;
+  }
+  
+  .dropdown-container {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  
+  .tab-btn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid transparent;
+  }
+  
+  .active-tab {
+    background: rgba(0, 240, 255, 0.05);
+    border-color: rgba(0, 240, 255, 0.2);
+  }
+  
+  .active-tab::after {
+    display: none;
+  }
+
+  .dropdown-menu {
+    position: static;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    box-shadow: none;
+    background: transparent;
+    border: none;
+    padding: 0 0 0 16px;
+    min-width: auto;
+    display: none;
+  }
+  
+  .dropdown-menu.expanded {
+    display: flex;
+    padding: 4px 0 8px 16px;
+  }
+  
+  .dropdown-container:hover .dropdown-menu {
+    transform: none;
+  }
+  
+  .dropdown-item {
+    padding: 10px 12px;
   }
   .tab-btn {
     white-space: nowrap;

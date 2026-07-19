@@ -14,7 +14,7 @@ interface Inquiry {
 }
 
 export function BlockedPage() {
-  const { clientIp, visitorId, alert, showAlert } = useApp();
+  const { clientIp, alert, showAlert } = useApp();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -29,7 +29,11 @@ export function BlockedPage() {
   const fetchInquiries = useCallback(async (silent = false) => {
     if (!silent) setLoadingList(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/visitor/inquiries?type=BLOCK`);
+      const res = await fetch(`${API_BASE_URL}/user/inquiries?type=BLOCK`, {
+        headers: {
+          'x-user-id': clientIp,
+        },
+      });
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.data)
@@ -46,6 +50,7 @@ export function BlockedPage() {
       if (!silent) setLoadingList(false);
     }
     return [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch inquiries on mount to determine initial view mode
@@ -68,10 +73,11 @@ export function BlockedPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/visitor/inquiries`, {
+      const res = await fetch(`${API_BASE_URL}/user/inquiries`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': clientIp,
         },
         body: JSON.stringify({ title, content, type: 'BLOCK' }),
       });
@@ -238,14 +244,6 @@ export function BlockedPage() {
                 style={{ color: 'var(--text-main)', fontFamily: 'monospace' }}
               >
                 {clientIp || '확인 불가'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-dim)' }}>방문자 ID</span>
-              <span
-                style={{ color: 'var(--text-main)', fontFamily: 'monospace' }}
-              >
-                {visitorId || '확인 불가'}
               </span>
             </div>
           </div>

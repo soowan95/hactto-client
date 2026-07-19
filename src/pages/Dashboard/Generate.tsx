@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   API_BASE_URL,
   getAlgorithmDescription,
@@ -17,13 +18,15 @@ export function Generate() {
   const {
     appendAuth,
     showAlert,
-    visitorId,
     hasUnsavedWeights,
     setHasUnsavedWeights,
     setShowUnsavedModal,
     setUnsavedActionTarget,
     checkIpStatus,
   } = useApp();
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { requireAuthAction } = useAuth();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [algorithmTypes, setAlgorithmTypes] = useState<any[]>([]);
   const [generatingAlgo, setGeneratingAlgo] = useState('MIN_COUNT');
@@ -58,15 +61,6 @@ export function Generate() {
   const [isSaving, setIsSaving] = useState(false);
   const [latestEpisode, setLatestEpisode] = useState<number>(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Prevent body scroll when modal is open and add ESC key support
   useEffect(() => {
@@ -160,10 +154,10 @@ export function Generate() {
   );
   const [isWeightsExpanded, setIsWeightsExpanded] = useState(false);
 
-  // Fetch weights when algorithm or visitorId changes
+  // Fetch weights when algorithm or userId changes
   useEffect(() => {
     const fetchPersonalWeights = async () => {
-      if (!generatingAlgo || !visitorId) return;
+      if (!generatingAlgo || !userId) return;
 
       // WEIGHTS로 끝나지 않는 알고리즘은 가중치 개인설정 조회를 생략
       if (!generatingAlgo.endsWith('WEIGHTS')) {
@@ -178,11 +172,7 @@ export function Generate() {
           appendAuth(
             `${API_BASE_URL}/personal-weights?algorithm=${generatingAlgo}`,
           ),
-          {
-            headers: {
-              'x-visitor-id': visitorId,
-            },
-          },
+          {},
         );
         if (res.ok) {
           const data = await res.json();
@@ -205,7 +195,8 @@ export function Generate() {
       }
     };
     fetchPersonalWeights();
-  }, [generatingAlgo, visitorId, appendAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatingAlgo, appendAuth]);
 
   const currentWeightsSum = weights.reduce((a, b) => a + b, 0);
   const remainingWeight = 100 - currentWeightsSum;
@@ -224,39 +215,43 @@ export function Generate() {
   };
 
   const handleSaveWeights = async () => {
-    if (currentWeightsSum !== 100) {
-      showAlert('error', '가중치의 합계는 반드시 100이어야 합니다.');
-      return;
-    }
-    setSavingWeights(true);
-    try {
-      const res = await fetch(appendAuth(`${API_BASE_URL}/personal-weights`), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-visitor-id': visitorId,
-        },
-        body: JSON.stringify({
-          algorithm: generatingAlgo,
-          weights: weights,
-        }),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || '가중치 저장에 실패했습니다.');
+    requireAuthAction(async () => {
+      if (currentWeightsSum !== 100) {
+        showAlert('error', '가중치의 합계는 반드시 100이어야 합니다.');
+        return;
       }
-      showAlert(
-        'success',
-        '개인 가중치가 성공적으로 저장되었습니다. 번호 생성 시 이 가중치가 적용됩니다.',
-      );
-      setInitialWeights(weights);
-      setWeightStatus('saved');
-    } catch (err) {
-      const error = err as Error;
-      showAlert('error', error.message);
-    } finally {
-      setSavingWeights(false);
-    }
+      setSavingWeights(true);
+      try {
+        const res = await fetch(
+          appendAuth(`${API_BASE_URL}/personal-weights`),
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              algorithm: generatingAlgo,
+              weights: weights,
+            }),
+          },
+        );
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || '가중치 저장에 실패했습니다.');
+        }
+        showAlert(
+          'success',
+          '개인 가중치가 성공적으로 저장되었습니다. 번호 생성 시 이 가중치가 적용됩니다.',
+        );
+        setInitialWeights(weights);
+        setWeightStatus('saved');
+      } catch (err) {
+        const error = err as Error;
+        showAlert('error', error.message);
+      } finally {
+        setSavingWeights(false);
+      }
+    });
   };
 
   const handleResetWeights = () => {
@@ -320,52 +315,53 @@ export function Generate() {
   }, []);
 
   const handleGeneratePrediction = async () => {
-    setGenerating(true);
-    setGeneratedNumbers(null);
-    setGeneratedAnalysis(null);
-    try {
-      const isWeightsAlgo = generatingAlgo.endsWith('WEIGHTS');
-      const res = await fetch(
-        appendAuth(`${API_BASE_URL}/algorithms/${generatingAlgo}/generate`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-visitor-id': visitorId,
+    requireAuthAction(async () => {
+      setGenerating(true);
+      setGeneratedNumbers(null);
+      setGeneratedAnalysis(null);
+      try {
+        const isWeightsAlgo = generatingAlgo.endsWith('WEIGHTS');
+        const res = await fetch(
+          appendAuth(`${API_BASE_URL}/algorithms/${generatingAlgo}/generate`),
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(
+              isWeightsAlgo
+                ? {
+                    weights: weights,
+                  }
+                : {},
+            ),
           },
-          body: JSON.stringify(
-            isWeightsAlgo
-              ? {
-                  weights: weights,
-                }
-              : {},
-          ),
-        },
-      );
-      if (!res.ok) {
-        let errorMsg = '예측 번호 생성에 실패했습니다.';
-        try {
-          const errData = await res.json();
-          if (errData && errData.message) {
-            errorMsg = errData.message;
+        );
+        if (!res.ok) {
+          let errorMsg = '예측 번호 생성에 실패했습니다.';
+          try {
+            const errData = await res.json();
+            if (errData && errData.message) {
+              errorMsg = errData.message;
+            }
+          } catch {
+            // ignore error
           }
-        } catch {
-          // ignore error
+          throw new Error(errorMsg);
         }
-        throw new Error(errorMsg);
+        const data = await res.json();
+        const result = data.data || data;
+        setGeneratedNumbers(result.numbers as number[]);
+        setGeneratedAnalysis((result.analysis as LottoAnalysis) || null);
+        showAlert('success', '새로운 당첨 예측 번호가 생성되었습니다.');
+        checkIpStatus(true);
+      } catch (err) {
+        const error = err as Error;
+        showAlert('error', error.message);
+      } finally {
+        setGenerating(false);
       }
-      const data = await res.json();
-      const result = data.data || data;
-      setGeneratedNumbers(result.numbers as number[]);
-      setGeneratedAnalysis((result.analysis as LottoAnalysis) || null);
-      showAlert('success', '새로운 당첨 예측 번호가 생성되었습니다.');
-      checkIpStatus(true);
-    } catch (err) {
-      const error = err as Error;
-      showAlert('error', error.message);
-    } finally {
-      setGenerating(false);
-    }
+    });
   };
 
   const handleNumberToggleForGame = (gameIndex: number, num: number) => {
@@ -430,102 +426,105 @@ export function Generate() {
   };
 
   const handlePerformAnalysis = async () => {
-    setShowConfirmModal(false);
-    setAnalyzing(true);
-    setAnalyzedResults([]);
-    setSavedPredictionIds({});
-    setCurrentAnalysisIndex(0);
+    requireAuthAction(async () => {
+      setShowConfirmModal(false);
+      setAnalyzing(true);
+      setAnalyzedResults([]);
+      setSavedPredictionIds({});
+      setCurrentAnalysisIndex(0);
 
-    try {
-      const results = [];
+      try {
+        const results = [];
 
-      for (let i = 0; i < selectedGames.length; i++) {
-        const prediction = selectedGames[i];
-        if (prediction.length !== 6) continue;
+        for (let i = 0; i < selectedGames.length; i++) {
+          const prediction = selectedGames[i];
+          if (prediction.length !== 6) continue;
 
+          const res = await fetch(
+            appendAuth(`${API_BASE_URL}/personal-analysis`),
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prediction }),
+            },
+          );
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || '번호 분석에 실패했습니다.');
+          }
+          const data = await res.json();
+          results.push({
+            originalIndex: i,
+            numbers: prediction,
+            analysis: data.data || data,
+          });
+        }
+
+        setAnalyzedResults(results);
+        showAlert(
+          'success',
+          `${results.length}개의 예측 번호 분석이 완료되었습니다.`,
+        );
+        checkIpStatus(true);
+      } catch (err) {
+        const error = err as Error;
+        showAlert('error', error.message);
+      } finally {
+        setAnalyzing(false);
+      }
+    });
+  };
+
+  const handleSaveCurrent = async () => {
+    requireAuthAction(async () => {
+      const current = analyzedResults[currentAnalysisIndex];
+      if (!current) return;
+      setIsSaving(true);
+      try {
         const res = await fetch(
-          appendAuth(`${API_BASE_URL}/personal-analysis`),
+          appendAuth(`${API_BASE_URL}/personal-predictions`),
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prediction }),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              episode: latestEpisode + 1,
+              prediction: current.numbers,
+            }),
           },
         );
         if (!res.ok) {
           const errData = await res.json();
-          throw new Error(errData.message || '번호 분석에 실패했습니다.');
+          throw new Error(errData.message || '예측 번호 저장에 실패했습니다.');
         }
         const data = await res.json();
-        results.push({
-          originalIndex: i,
-          numbers: prediction,
-          analysis: data.data || data,
-        });
+        const savedId = (data.data || data).id || 9999;
+        setSavedPredictionIds((prev) => ({
+          ...prev,
+          [currentAnalysisIndex]: savedId,
+        }));
+
+        // Initialize/clear the original game paper that was saved
+        if (typeof current.originalIndex === 'number') {
+          setSelectedGames((prev) => {
+            const next = [...prev];
+            next[current.originalIndex] = [];
+            return next;
+          });
+        }
+
+        showAlert(
+          'success',
+          `${currentAnalysisIndex + 1}번째 예측번호가 저장되었습니다!`,
+        );
+      } catch (err) {
+        const error = err as Error;
+        showAlert('error', error.message);
+      } finally {
+        setIsSaving(false);
       }
-
-      setAnalyzedResults(results);
-      showAlert(
-        'success',
-        `${results.length}개의 예측 번호 분석이 완료되었습니다.`,
-      );
-      checkIpStatus(true);
-    } catch (err) {
-      const error = err as Error;
-      showAlert('error', error.message);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  const handleSaveCurrent = async () => {
-    const current = analyzedResults[currentAnalysisIndex];
-    if (!current) return;
-    setIsSaving(true);
-    try {
-      const res = await fetch(
-        appendAuth(`${API_BASE_URL}/personal-predictions`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-visitor-id': visitorId,
-          },
-          body: JSON.stringify({
-            episode: latestEpisode + 1,
-            prediction: current.numbers,
-          }),
-        },
-      );
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || '예측 번호 저장에 실패했습니다.');
-      }
-      const data = await res.json();
-      const savedId = (data.data || data).id || 9999;
-      setSavedPredictionIds((prev) => ({
-        ...prev,
-        [currentAnalysisIndex]: savedId,
-      }));
-
-      // Initialize/clear the original game paper that was saved
-      if (typeof current.originalIndex === 'number') {
-        setSelectedGames((prev) => {
-          const next = [...prev];
-          next[current.originalIndex] = [];
-          return next;
-        });
-      }
-
-      showAlert(
-        'success',
-        `${currentAnalysisIndex + 1}번째 예측번호가 저장되었습니다!`,
-      );
-    } catch (err) {
-      const error = err as Error;
-      showAlert('error', error.message);
-    } finally {
-      setIsSaving(false);
-    }
+    });
   };
 
   const renderSubTabs = () => {
@@ -1345,74 +1344,6 @@ export function Generate() {
     );
   };
 
-  if (isMobile) {
-    return (
-      <div>
-        <h2
-          className="access-title"
-          style={{ fontSize: '1.3rem', marginBottom: '16px' }}
-        >
-          예측번호 분석기
-        </h2>
-        <div
-          style={{
-            background: 'rgba(3, 7, 18, 0.4)',
-            border: '1px solid rgba(0, 240, 255, 0.15)',
-            boxShadow: '0 8px 32px 0 rgba(0, 240, 255, 0.05)',
-            borderRadius: '16px',
-            padding: '40px 24px',
-            textAlign: 'center',
-            marginTop: '20px',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '16px',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '2.5rem',
-              marginBottom: '8px',
-              animation: 'pulse 2s infinite',
-            }}
-          >
-            📱
-          </div>
-          <h3
-            style={{
-              fontSize: '1.15rem',
-              fontWeight: 'bold',
-              color: 'var(--text-main)',
-            }}
-          >
-            모바일 동기화 준비 중
-          </h3>
-          <p
-            style={{
-              fontSize: '0.85rem',
-              color: 'var(--text-dim)',
-              lineHeight: '1.6',
-              maxWidth: '360px',
-              margin: '0 auto',
-            }}
-          >
-            현재 hactto는 <strong>IP 기반 식별자</strong>를 사용하여 로그인 없이
-            간편하게 이용할 수 있도록 구축되어 있습니다.
-            <br />
-            <br />
-            모바일 네트워크 환경(LTE/5G/유동 IP) 특성상 모바일 예측/분석 및 HON
-            크레딧 사용 기능은 현재 <strong>준비 중</strong>에 있습니다.
-            <br />
-            <br />
-            PC 브라우저로 접속하시면 모든 예측 번호 생성 및 분석 기능을 즉시
-            정상 이용하실 수 있습니다.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <h2
@@ -1431,8 +1362,8 @@ export function Generate() {
             style={{ fontSize: '0.88rem', marginBottom: '16px' }}
           >
             사용하고자 하는 하이퍼-파라미터 알고리즘을 선택한 후 번호를
-            생성해주십시오. 결과는 고유 식별자(IP 및 브라우저 세션)를 통해 내
-            당첨이력에 즉시 아카이빙됩니다.
+            생성해주십시오. 결과는 내 계정에 즉시 아카이빙되며, 언제든지
+            마이페이지에서 확인할 수 있습니다.
           </p>
 
           {loading ? (
