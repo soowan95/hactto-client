@@ -1,17 +1,19 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuth, authFetch } from '../../context/AuthContext';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useApp } from '../../context/AppContext';
 import { API_BASE_URL } from '../../utils';
+import { UserProfileModal } from '../../components/UserProfileModal';
 
 interface PostComment {
   id: number;
   postId: number;
-  visitorId: string;
+  userId: string;
   content: string;
   createdAt: string;
-  visitor?: { nickname?: string | null };
+  user?: { id?: string; nickname?: string | null; avatarUrl?: string | null };
   _count?: { likes: number };
   isLiked?: boolean;
   isAdmin?: boolean;
@@ -21,7 +23,7 @@ interface PostComment {
 
 interface Post {
   id: number;
-  visitorId: string;
+  userId: string;
   category: 'FREE' | 'KNOWHOW' | 'WINNING';
   title: string;
   content: string;
@@ -30,7 +32,7 @@ interface Post {
   lottoRank?: number;
   lottoRound?: number;
   createdAt: string;
-  visitor?: { nickname?: string | null };
+  user?: { id?: string; nickname?: string | null; avatarUrl?: string | null };
   _count?: { likes: number; comments: number };
   isLiked?: boolean;
   isAdmin?: boolean;
@@ -67,7 +69,10 @@ const renderContentWithImages = (content: string) => {
 };
 
 export function Board() {
-  const { showAlert, visitorId, isAdminMode, adminKey } = useApp();
+  const { showAlert, isAdminMode, adminKey } = useApp();
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { isAuthenticated } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [category, setCategory] = useState<'FREE' | 'KNOWHOW' | 'WINNING'>(
     'FREE',
@@ -164,14 +169,25 @@ export function Board() {
   } | null>(null);
   const [nicknameReportReason, setNicknameReportReason] = useState('');
 
+  const [userProfileUserId, setUserProfileUserId] = useState<string | null>(
+    null,
+  );
+  const [nicknameMenuTarget, setNicknameMenuTarget] = useState<{
+    nickname: string;
+    id: string | number;
+    userId: string;
+    isComment: boolean;
+    x: number;
+    y: number;
+  } | null>(null);
+
   const submitNicknameReport = async () => {
     if (!nicknameToReport) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/visitor/nickname-report`, {
+      const res = await authFetch(`${API_BASE_URL}/user/nickname-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-visitor-id': visitorId || '',
         },
         body: JSON.stringify({
           targetNickname: nicknameToReport.nickname,
@@ -203,7 +219,6 @@ export function Board() {
   ) => {
     setLoading(true);
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
       const params = new URLSearchParams({ category: cat, sort: s });
       if (cat === 'WINNING') {
         if (r) params.append('rank', r);
@@ -214,13 +229,9 @@ export function Board() {
         params.append('target', t);
       }
 
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/user/board?${params.toString()}`,
-        {
-          headers: {
-            ...(vid ? { 'x-visitor-id': vid } : {}),
-          },
-        },
+        {},
       );
       if (res.ok) {
         const data = await res.json();
@@ -236,12 +247,11 @@ export function Board() {
 
   const fetchPostDetail = async (id: number) => {
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/user/board/${id}`, {
-        headers: {
-          ...(vid ? { 'x-visitor-id': vid } : {}),
-        },
-      });
+      const localUserId = userId || localStorage.getItem('userId');
+      const url = localUserId
+        ? `${API_BASE_URL}/user/board/${id}?userId=${localUserId}`
+        : `${API_BASE_URL}/user/board/${id}`;
+      const res = await authFetch(url);
       if (res.ok) {
         const data = await res.json();
         setActivePost(data.data);
@@ -272,12 +282,10 @@ export function Board() {
   const handleImageUpload = async (
     file: File,
   ): Promise<{ imageUrl: string; originalFilename: string }> => {
-    const vid = visitorId || localStorage.getItem('visitor_id') || '';
-    const res = await fetch(`${API_BASE_URL}/user/board/presigned-url`, {
+    const res = await authFetch(`${API_BASE_URL}/user/board/presigned-url`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(vid ? { 'x-visitor-id': vid } : {}),
       },
       body: JSON.stringify({
         filename: file.name,
@@ -372,12 +380,10 @@ export function Board() {
       const { imageUrl: uploadedUrl } = await handleImageUpload(file);
       setWinningImageUrl(uploadedUrl);
 
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/user/board/analyze-lotto`, {
+      const res = await authFetch(`${API_BASE_URL}/user/board/analyze-lotto`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(vid ? { 'x-visitor-id': vid } : {}),
         },
         body: JSON.stringify({ imageUrl: uploadedUrl }),
       });
@@ -436,23 +442,26 @@ export function Board() {
           ];
         }
 
-        const vid = visitorId || localStorage.getItem('visitor_id') || '';
-        const res = await fetch(`${API_BASE_URL}/user/board/${editingPostId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(vid ? { 'x-visitor-id': vid } : {}),
-            ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
+        const res = await authFetch(
+          `${API_BASE_URL}/user/board/${editingPostId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+
+              ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
+            },
+            body: JSON.stringify({
+              title,
+              content,
+              imageUrl:
+                finalImageUrl === '' ? null : finalImageUrl || undefined,
+              originalFileName:
+                finalImageUrl === '' ? null : finalOriginalFilename,
+              attachments: finalAttachments,
+            }),
           },
-          body: JSON.stringify({
-            title,
-            content,
-            imageUrl: finalImageUrl === '' ? null : finalImageUrl || undefined,
-            originalFileName:
-              finalImageUrl === '' ? null : finalOriginalFilename,
-            attachments: finalAttachments,
-          }),
-        });
+        );
 
         if (res.ok) {
           const updated = await res.json();
@@ -518,12 +527,11 @@ export function Board() {
         }));
       }
 
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/user/board`, {
+      const res = await authFetch(`${API_BASE_URL}/user/board`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(vid ? { 'x-visitor-id': vid } : {}),
+
           ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
         },
         body: JSON.stringify({
@@ -577,14 +585,12 @@ export function Board() {
     if (!activePost || !reportReason.trim()) return;
 
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/user/board/${activePost.id}/report`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(vid ? { 'x-visitor-id': vid } : {}),
           },
           body: JSON.stringify({ reason: reportReason }),
         },
@@ -609,12 +615,8 @@ export function Board() {
       message: '정말 이 게시글을 삭제하시겠습니까?',
       onConfirm: async () => {
         try {
-          const vid = visitorId || localStorage.getItem('visitor_id') || '';
-          const res = await fetch(`${API_BASE_URL}/user/board/${postId}`, {
+          const res = await authFetch(`${API_BASE_URL}/user/board/${postId}`, {
             method: 'DELETE',
-            headers: {
-              ...(vid ? { 'x-visitor-id': vid } : {}),
-            },
           });
 
           if (res.ok) {
@@ -636,12 +638,10 @@ export function Board() {
   const handlePostLike = async () => {
     if (!activePost) return;
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/user/board/${activePost.id}/like`,
         {
           method: 'POST',
-          headers: { ...(vid ? { 'x-visitor-id': vid } : {}) },
         },
       );
       if (res.ok) {
@@ -657,14 +657,13 @@ export function Board() {
     e.preventDefault();
     if (!activePost || !commentContent.trim()) return;
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/user/board/${activePost.id}/comments`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(vid ? { 'x-visitor-id': vid } : {}),
+
             ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
           },
           body: JSON.stringify({ content: commentContent }),
@@ -684,14 +683,13 @@ export function Board() {
     e.preventDefault();
     if (!activePost || !replyContent.trim()) return;
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/user/board/${activePost.id}/comments`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(vid ? { 'x-visitor-id': vid } : {}),
+
             ...(isAdminMode && adminKey ? { 'x-master-key': adminKey } : {}),
           },
           body: JSON.stringify({ content: replyContent, parentId }),
@@ -715,12 +713,10 @@ export function Board() {
       message: '댓글을 삭제하시겠습니까?',
       onConfirm: async () => {
         try {
-          const vid = visitorId || localStorage.getItem('visitor_id') || '';
-          const res = await fetch(
+          const res = await authFetch(
             `${API_BASE_URL}/user/board/${activePost.id}/comments/${commentId}`,
             {
               method: 'DELETE',
-              headers: { ...(vid ? { 'x-visitor-id': vid } : {}) },
             },
           );
           if (res.ok) {
@@ -740,12 +736,10 @@ export function Board() {
   const handleCommentLike = async (commentId: number) => {
     if (!activePost) return;
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/user/board/${activePost.id}/comments/${commentId}/like`,
         {
           method: 'POST',
-          headers: { ...(vid ? { 'x-visitor-id': vid } : {}) },
         },
       );
       if (res.ok) {
@@ -760,14 +754,12 @@ export function Board() {
     e.preventDefault();
     if (!activePost || !commentToReport || !commentReportReason.trim()) return;
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/user/board/${activePost.id}/comments/${commentToReport}/report`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(vid ? { 'x-visitor-id': vid } : {}),
           },
           body: JSON.stringify({ reason: commentReportReason }),
         },
@@ -791,12 +783,10 @@ export function Board() {
       message: `선택하신 ${selectedPostIds.length}개의 글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`,
       onConfirm: async () => {
         try {
-          const vid = visitorId || localStorage.getItem('visitor_id') || '';
-          const res = await fetch(`${API_BASE_URL}/user/board/bulk`, {
+          const res = await authFetch(`${API_BASE_URL}/user/board/bulk`, {
             method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',
-              ...(vid ? { 'x-visitor-id': vid } : {}),
             },
             body: JSON.stringify({ postIds: selectedPostIds }),
           });
@@ -818,7 +808,7 @@ export function Board() {
   };
 
   const filteredPosts = myPostsOnly
-    ? posts.filter((p) => p.visitorId === visitorId)
+    ? posts.filter((p) => p.userId === userId)
     : posts;
 
   const uploadUI = (
@@ -1423,7 +1413,7 @@ export function Board() {
               </button>
             ))}
 
-            {!isWriting && !activePost && (
+            {!isWriting && !activePost && isAuthenticated && (
               <button
                 onClick={() => {
                   setMyPostsOnly(!myPostsOnly);
@@ -1603,7 +1593,7 @@ export function Board() {
             )}
           </div>
 
-          {!isWriting && !activePost && (
+          {!isWriting && !activePost && isAuthenticated && (
             <button
               onClick={() => {
                 setIsWriting(true);
@@ -2215,12 +2205,15 @@ export function Board() {
                     e.stopPropagation();
                     if (activePost.isAdmin) return;
 
-                    const name = activePost.visitor?.nickname;
+                    const name = activePost.user?.nickname;
                     if (name) {
-                      setNicknameToReport({
+                      setNicknameMenuTarget({
                         nickname: name,
                         id: activePost.id,
+                        userId: activePost.userId,
                         isComment: false,
+                        x: e.clientX,
+                        y: e.clientY,
                       });
                     }
                   }}
@@ -2240,8 +2233,34 @@ export function Board() {
                       [M] 관리자
                     </span>
                   ) : (
-                    activePost.visitor?.nickname ||
-                    activePost.visitorId.substring(0, 8)
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          background: activePost.user?.avatarUrl
+                            ? `url(${activePost.user.avatarUrl}) center/cover`
+                            : 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(168,85,247,0.2))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {!activePost.user?.avatarUrl &&
+                          (activePost.user?.nickname?.charAt(0) ||
+                            activePost.userId.charAt(0))}
+                      </div>
+                      {activePost.user?.nickname ||
+                        activePost.userId.substring(0, 8)}
+                    </div>
                   )}
                 </span>
                 <span>|</span>
@@ -2567,20 +2586,20 @@ export function Board() {
             )}
             <button
               onClick={handlePostLike}
+              disabled={!isAuthenticated}
               style={{
                 padding: '4px 8px',
                 background: activePost.isLiked
-                  ? 'rgba(0,240,255,0.1)'
+                  ? 'rgba(255,105,180,0.1)'
                   : 'rgba(255,255,255,0.05)',
                 border: activePost.isLiked
-                  ? '1px solid rgba(0,240,255,0.3)'
+                  ? '1px solid rgba(255,105,180,0.3)'
                   : '1px solid rgba(255,255,255,0.1)',
-                color: activePost.isLiked
-                  ? 'var(--primary-cyan)'
-                  : 'var(--text-dim)',
+                color: activePost.isLiked ? '#ff69b4' : 'var(--text-dim)',
                 borderRadius: '4px',
                 fontSize: '0.75rem',
-                cursor: 'pointer',
+                cursor: isAuthenticated ? 'pointer' : 'not-allowed',
+                opacity: isAuthenticated ? 1 : 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -2600,8 +2619,8 @@ export function Board() {
               </svg>
               좋아요
             </button>
-            {((activePost.visitorId ===
-              (visitorId || localStorage.getItem('visitor_id')) &&
+            {((activePost.userId ===
+              (userId || localStorage.getItem('userId')) &&
               !activePost.isAdmin) ||
               isAdminMode) && (
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -2676,23 +2695,39 @@ export function Board() {
                 className="input-glow"
                 value={commentContent}
                 onChange={(e) => setCommentContent(e.target.value)}
-                placeholder="댓글을 남겨보세요..."
-                style={{ flex: 1, padding: '10px' }}
+                placeholder={
+                  isAuthenticated
+                    ? '댓글을 남겨보세요...'
+                    : '로그인 후 댓글을 작성할 수 있습니다.'
+                }
+                disabled={!isAuthenticated}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  opacity: isAuthenticated ? 1 : 0.5,
+                }}
                 maxLength={200}
               />
               <button
                 type="submit"
-                disabled={!commentContent.trim()}
+                disabled={!commentContent.trim() || !isAuthenticated}
                 style={{
                   padding: '0 20px',
-                  background: commentContent.trim()
-                    ? 'var(--primary-cyan)'
-                    : 'rgba(255,255,255,0.1)',
-                  color: commentContent.trim() ? '#0f111a' : 'var(--text-dim)',
+                  background:
+                    commentContent.trim() && isAuthenticated
+                      ? 'var(--primary-cyan)'
+                      : 'rgba(255,255,255,0.1)',
+                  color:
+                    commentContent.trim() && isAuthenticated
+                      ? '#0f111a'
+                      : 'var(--text-dim)',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: 'bold',
-                  cursor: commentContent.trim() ? 'pointer' : 'not-allowed',
+                  cursor:
+                    commentContent.trim() && isAuthenticated
+                      ? 'pointer'
+                      : 'not-allowed',
                 }}
               >
                 등록
@@ -2741,12 +2776,15 @@ export function Board() {
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            const name = comment.visitor?.nickname;
+                            const name = comment.user?.nickname;
                             if (name) {
-                              setNicknameToReport({
+                              setNicknameMenuTarget({
                                 nickname: name,
                                 id: comment.id,
+                                userId: comment.userId,
                                 isComment: true,
+                                x: e.clientX,
+                                y: e.clientY,
                               });
                             }
                           }}
@@ -2766,8 +2804,34 @@ export function Board() {
                               [M] 관리자
                             </span>
                           ) : (
-                            comment.visitor?.nickname ||
-                            comment.visitorId.substring(0, 8)
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  background: comment.user?.avatarUrl
+                                    ? `url(${comment.user.avatarUrl}) center/cover`
+                                    : 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(168,85,247,0.2))',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '10px',
+                                }}
+                              >
+                                {!comment.user?.avatarUrl &&
+                                  (comment.user?.nickname?.charAt(0) ||
+                                    comment.userId.charAt(0))}
+                              </div>
+                              {comment.user?.nickname ||
+                                comment.userId.substring(0, 8)}
+                            </div>
                           )}
                         </span>
                       </span>
@@ -2795,7 +2859,7 @@ export function Board() {
                           alignItems: 'center',
                           gap: '4px',
                           color: comment.isLiked
-                            ? 'var(--primary-cyan)'
+                            ? '#ff69b4'
                             : 'var(--text-dim)',
                           fontSize: '0.75rem',
                         }}
@@ -2830,7 +2894,7 @@ export function Board() {
                       >
                         신고
                       </button>
-                      {(comment.visitorId === visitorId ||
+                      {(comment.userId === userId ||
                         localStorage.getItem('mk')) && (
                         <>
                           <span style={{ color: 'rgba(255,255,255,0.1)' }}>
@@ -2871,12 +2935,14 @@ export function Board() {
                           replyingTo === comment.id ? null : comment.id,
                         )
                       }
+                      disabled={!isAuthenticated}
                       style={{
                         background: 'none',
                         border: 'none',
                         color: 'var(--primary-cyan)',
                         fontSize: '0.75rem',
-                        cursor: 'pointer',
+                        cursor: isAuthenticated ? 'pointer' : 'not-allowed',
+                        opacity: isAuthenticated ? 1 : 0.5,
                         padding: 0,
                       }}
                     >
@@ -2969,12 +3035,15 @@ export function Board() {
                                   }}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const name = reply.visitor?.nickname;
+                                    const name = reply.user?.nickname;
                                     if (name)
-                                      setNicknameToReport({
+                                      setNicknameMenuTarget({
                                         nickname: name,
                                         id: reply.id,
+                                        userId: reply.userId,
                                         isComment: true,
+                                        x: e.clientX,
+                                        y: e.clientY,
                                       });
                                   }}
                                 >
@@ -2993,8 +3062,34 @@ export function Board() {
                                       [M] 관리자
                                     </span>
                                   ) : (
-                                    reply.visitor?.nickname ||
-                                    reply.visitorId.substring(0, 8)
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: '16px',
+                                          height: '16px',
+                                          borderRadius: '50%',
+                                          background: reply.user?.avatarUrl
+                                            ? `url(${reply.user.avatarUrl}) center/cover`
+                                            : 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(168,85,247,0.2))',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '9px',
+                                        }}
+                                      >
+                                        {!reply.user?.avatarUrl &&
+                                          (reply.user?.nickname?.charAt(0) ||
+                                            reply.userId.charAt(0))}
+                                      </div>
+                                      {reply.user?.nickname ||
+                                        reply.userId.substring(0, 8)}
+                                    </div>
                                   )}
                                 </span>
                               </span>
@@ -3014,7 +3109,7 @@ export function Board() {
                                 alignItems: 'center',
                               }}
                             >
-                              {(reply.visitorId === visitorId ||
+                              {(reply.userId === userId ||
                                 localStorage.getItem('mk')) && (
                                 <button
                                   onClick={() => handleCommentDelete(reply.id)}
@@ -3186,7 +3281,7 @@ export function Board() {
                             !!post.imageUrl;
                           const hasContentImage =
                             /!\[.*?\]\(.*?\)|<img.*?src=['"].*?['"]/i.test(
-                              post.content || '',
+                              post.content,
                             );
                           if (!hasAttachment && !hasContentImage) return null;
                           return (
@@ -3271,8 +3366,34 @@ export function Board() {
                               [M] 관리자
                             </span>
                           ) : (
-                            post.visitor?.nickname ||
-                            post.visitorId.substring(0, 8)
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  borderRadius: '50%',
+                                  background: post.user?.avatarUrl
+                                    ? `url(${post.user.avatarUrl}) center/cover`
+                                    : 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(168,85,247,0.2))',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '10px',
+                                }}
+                              >
+                                {!post.user?.avatarUrl &&
+                                  (post.user?.nickname?.charAt(0) ||
+                                    post.userId.charAt(0))}
+                              </div>
+                              {post.user?.nickname ||
+                                post.userId.substring(0, 8)}
+                            </div>
                           )}
                         </span>
                         <span>|</span>
@@ -3534,6 +3655,99 @@ export function Board() {
           onCancel={() => setConfirmConfig(null)}
         />
       )}
+
+      {userProfileUserId && (
+        <UserProfileModal
+          userId={userProfileUserId}
+          onClose={() => setUserProfileUserId(null)}
+        />
+      )}
+
+      {nicknameMenuTarget &&
+        createPortal(
+          <>
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 999999,
+              }}
+              onClick={() => setNicknameMenuTarget(null)}
+            />
+            <div
+              style={{
+                position: 'fixed',
+                top: nicknameMenuTarget.y,
+                left: nicknameMenuTarget.x,
+                background: '#1a1a1a',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                padding: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                zIndex: 1000000,
+                minWidth: '120px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              }}
+            >
+              <button
+                style={{
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-main)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = 'transparent')
+                }
+                onClick={() => {
+                  setUserProfileUserId(nicknameMenuTarget.userId);
+                  setNicknameMenuTarget(null);
+                }}
+              >
+                정보보기
+              </button>
+              <button
+                style={{
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#ef5350',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = 'transparent')
+                }
+                onClick={() => {
+                  setNicknameToReport({
+                    nickname: nicknameMenuTarget.nickname,
+                    id: nicknameMenuTarget.id,
+                    isComment: nicknameMenuTarget.isComment,
+                  });
+                  setNicknameMenuTarget(null);
+                }}
+              >
+                신고하기
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
 
       {nicknameToReport && (
         <div

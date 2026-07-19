@@ -28,7 +28,6 @@ interface AppContextType {
   setAdminKey: (val: string) => void;
   adminError: string;
   setAdminError: (val: string) => void;
-  visitorId: string;
   alert: AlertState | null;
   setAlert: (alert: AlertState | null) => void;
   showAlert: (type: 'success' | 'error', text: string) => void;
@@ -80,7 +79,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [pending, setPending] = useState<boolean>(false);
   const [clientIp, setClientIp] = useState<string>('');
-  const [visitorId, setVisitorId] = useState<string>('');
   const [showWelcomeModal, setShowWelcomeModal] = useState<boolean>(false);
 
   // Unsaved weights warning states
@@ -143,24 +141,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return originalFetch(input, init);
       }
 
-      const vid = localStorage.getItem('visitor_id') || visitorId;
       const mk = sessionStorage.getItem('mk') || localStorage.getItem('mk');
+      const token = localStorage.getItem('accessToken');
 
       const newInit = { ...init };
-      const headers = { ...(init?.headers || {}) } as Record<string, string>;
+      const headers = new Headers(init?.headers);
 
-      if (vid) {
-        headers['x-visitor-id'] = vid;
-      }
       if (mk) {
-        headers['x-master-key'] = mk;
+        headers.set('x-master-key', mk);
+      }
+      if (token && !headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${token}`);
       }
 
       newInit.headers = headers;
 
       const response = await originalFetch(input, newInit);
 
-      if (response.status === 403 && !urlString.includes('/visitor/register')) {
+      if (response.status === 403 && !urlString.includes('/user/register')) {
         try {
           const clone = response.clone();
           const errData = await clone.json();
@@ -172,10 +170,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
               setIsBlockedUser(true);
             }
             if (errData.ip) setClientIp(errData.ip);
-            if (errData.visitorId) {
-              setVisitorId(errData.visitorId);
-              localStorage.setItem('visitor_id', errData.visitorId);
-            }
           }
         } catch {
           // Ignore
@@ -195,7 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       window.fetch = originalFetch;
     };
-  }, [visitorId]);
+  }, []);
 
   const checkIpStatus = useCallback(
     async (silent = false) => {
@@ -230,10 +224,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setAllowed(true);
             setPending(false);
             setClientIp(adminResult.ip || 'unknown');
-            if (adminResult.visitorId) {
-              setVisitorId(adminResult.visitorId);
-              localStorage.setItem('visitor_id', adminResult.visitorId);
-            }
             setIsBlockedUser(false);
             const isFirstVisit =
               adminRes.headers.get('x-first-visit') === 'true';
@@ -268,10 +258,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ) {
                 setIsBlockedUser(true);
                 if (errData.ip) setClientIp(errData.ip);
-                if (errData.visitorId) {
-                  setVisitorId(errData.visitorId);
-                  localStorage.setItem('visitor_id', errData.visitorId);
-                }
                 setLoading(false);
                 return;
               }
@@ -292,30 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSubscription(result.subscription || null);
         setAllowed(true);
         setPending(false);
-        setClientIp(result.ip || 'unknown');
-        if (result.visitorId) {
-          setVisitorId(result.visitorId);
-          localStorage.setItem('visitor_id', result.visitorId);
-
-          try {
-            const meRes = await fetch(`${API_BASE_URL}/visitor/me`, {
-              headers: { 'x-visitor-id': result.visitorId },
-            });
-            if (meRes.ok) {
-              const meData = await meRes.json();
-              if (meData.data) {
-                // Handle both { data: visitor } and { data: { data: visitor } } just in case
-                const visitorObj =
-                  meData.data.nickname !== undefined
-                    ? meData.data
-                    : meData.data.data;
-                if (visitorObj) {
-                  setNickname(visitorObj.nickname || null);
-                }
-              }
-            }
-          } catch {}
-        }
+        if (result.ip) setClientIp(result.ip);
 
         const isFirstVisit = res.headers.get('x-first-visit') === 'true';
         const hasConsented =
@@ -443,12 +406,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [checkIpStatus, loadAdminData]);
 
-  // Handle system status check (REST) & real-time updates (SSE)
+  // Handle system status check (REST) & real-time updates (WebSocket)
   useEffect(() => {
     if (isBlockedUser) return;
 
-    let sse: EventSource | null = null;
-    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let socket: import('socket.io-client').Socket | null = null;
 
     const checkSystemStatus = async () => {
       try {
@@ -472,16 +434,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const connectSSE = () => {
-      if (sse) {
-        sse.close();
+    const connectWebSocket = async () => {
+      if (socket) {
+        socket.disconnect();
       }
 
-      sse = new EventSource(`${API_BASE_URL}/system/status/sse`);
+      // dynamically import socket.io-client so we don't break SSR or bundle unnecessarily if possible,
+      // though top level import is fine too. Let's do dynamic import to be safe if it's not imported at top.
+      const { io } = await import('socket.io-client');
 
-      sse.onmessage = (event) => {
+      const url = new URL(API_BASE_URL);
+      socket = io(url.origin, {
+        reconnection: true,
+        reconnectionDelay: 5000,
+        reconnectionDelayMax: 10000,
+        transports: ['websocket'], // Force websocket
+      });
+
+      socket.on('system-status', (data) => {
         try {
-          const data = JSON.parse(event.data);
           setIsSystemAnalyzing(!!data.inProgress);
           if (data.inProgress) {
             setSystemAnalysisProgress({
@@ -493,22 +464,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setSystemAnalysisProgress(null);
           }
         } catch (err) {
-          console.error('시스템 상태 SSE 파싱 실패:', err);
+          console.error('시스템 상태 WebSocket 처리 실패:', err);
         }
-      };
+      });
 
-      sse.onerror = (err) => {
-        console.error('시스템 상태 SSE 에러, 재연결 중...', err);
-        sse?.close();
-        // Retry connection after 5 seconds
-        retryTimeout = setTimeout(() => {
-          connectSSE();
-        }, 5000);
-      };
+      socket.on('connect_error', (err) => {
+        console.error('시스템 상태 WebSocket 연결 에러:', err);
+      });
     };
 
     checkSystemStatus();
-    connectSSE();
+    connectWebSocket();
 
     // Re-check on window focus for extra robustness
     const handleFocus = () => {
@@ -517,8 +483,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     window.addEventListener('focus', handleFocus);
 
     return () => {
-      if (sse) sse.close();
-      if (retryTimeout) clearTimeout(retryTimeout);
+      if (socket) socket.disconnect();
       window.removeEventListener('focus', handleFocus);
     };
   }, [isBlockedUser]);
@@ -538,7 +503,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setAdminKey,
         adminError,
         setAdminError,
-        visitorId,
         alert,
         setAlert,
         showAlert,

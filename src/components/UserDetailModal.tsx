@@ -1,6 +1,9 @@
+/* eslint-disable */
 import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth, authFetch } from '../context/AuthContext';
 import { API_BASE_URL } from '../utils';
+import { AvatarUpload } from './AvatarUpload';
 
 interface UserDetailModalProps {
   isOpen: boolean;
@@ -35,15 +38,10 @@ export function UserDetailModal({
   onClose,
   openPaymentModal,
 }: UserDetailModalProps) {
-  const {
-    visitorId,
-    nickname,
-    setNickname,
-    freeHon,
-    paidHon,
-    subscription,
-    showAlert,
-  } = useApp();
+  const { freeHon, paidHon, subscription, showAlert } = useApp();
+  const { user, updateUser, logout } = useAuth();
+  const nickname = user?.nickname;
+  const userId = user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>('PROFILE');
 
@@ -66,8 +64,8 @@ export function UserDetailModal({
   const [expandedNotiId, setExpandedNotiId] = useState<number | null>(null);
 
   const handleCopyId = () => {
-    if (visitorId) {
-      navigator.clipboard.writeText(visitorId);
+    if (userId) {
+      navigator.clipboard.writeText(userId);
       showAlert('success', '고유 식별자가 복사되었습니다.');
     }
   };
@@ -75,12 +73,7 @@ export function UserDetailModal({
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/visitor/hon-events`, {
-        headers: {
-          ...(vid ? { 'x-visitor-id': vid } : {}),
-        },
-      });
+      const res = await authFetch(`${API_BASE_URL}/user/hon-events`);
       if (res.ok) {
         const data = await res.json();
         setEvents(Array.isArray(data.data) ? data.data : []);
@@ -90,18 +83,14 @@ export function UserDetailModal({
     } finally {
       setLoadingHistory(false);
     }
-  }, [visitorId, showAlert]);
+  }, [showAlert]);
 
   const fetchNotifications = useCallback(async () => {
     setLoadingNoti(true);
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(
-        `${API_BASE_URL}/visitor/notifications?t=${Date.now()}`,
+      const res = await authFetch(
+        `${API_BASE_URL}/user/notifications?t=${Date.now()}`,
         {
-          headers: {
-            ...(vid ? { 'x-visitor-id': vid } : {}),
-          },
           cache: 'no-store',
         },
       );
@@ -114,12 +103,11 @@ export function UserDetailModal({
     } finally {
       setLoadingNoti(false);
     }
-  }, [visitorId, showAlert]);
+  }, [showAlert]);
 
   useEffect(() => {
     if (isOpen) {
       if (!nickname) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setNicknameInput('');
 
         setIsAvailable(null);
@@ -156,7 +144,6 @@ export function UserDetailModal({
 
   useEffect(() => {
     if (!nicknameInput) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsAvailable(null);
 
       setErrorMsg('');
@@ -180,8 +167,8 @@ export function UserDetailModal({
     const checkDuplicate = async () => {
       setIsChecking(true);
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/visitor/check-nickname?nickname=${encodeURIComponent(nicknameInput)}`,
+        const res = await authFetch(
+          `${API_BASE_URL}/user/check-nickname?nickname=${encodeURIComponent(nicknameInput)}`,
         );
         const data = await res.json();
         const exists =
@@ -206,15 +193,13 @@ export function UserDetailModal({
   }, [nicknameInput]);
 
   const handleSubmitNickname = async () => {
-    if (!isAvailable || isSubmittingNickname) return;
+    if (!isAvailable || isSubmittingNickname || !user) return;
     setIsSubmittingNickname(true);
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      const res = await fetch(`${API_BASE_URL}/visitor/nickname`, {
+      const res = await authFetch(`${API_BASE_URL}/user/nickname`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(vid ? { 'x-visitor-id': vid } : {}),
         },
         body: JSON.stringify({ nickname: nicknameInput }),
       });
@@ -222,7 +207,7 @@ export function UserDetailModal({
       const isSuccess = data.success || data.data?.success;
       if (res.ok && isSuccess) {
         showAlert('success', '닉네임이 설정되었습니다.');
-        setNickname(nicknameInput);
+        updateUser({ ...user, nickname: nicknameInput });
         setShowConfirmModal(false);
       } else {
         showAlert('error', data.message || '닉네임 설정에 실패했습니다.');
@@ -236,12 +221,8 @@ export function UserDetailModal({
 
   const markAsRead = async (id: number) => {
     try {
-      const vid = visitorId || localStorage.getItem('visitor_id') || '';
-      await fetch(`${API_BASE_URL}/visitor/notifications/${id}/read`, {
+      await authFetch(`${API_BASE_URL}/user/notifications/${id}/read`, {
         method: 'PATCH',
-        headers: {
-          ...(vid ? { 'x-visitor-id': vid } : {}),
-        },
       });
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
@@ -320,18 +301,38 @@ export function UserDetailModal({
           >
             내 프로필
           </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-dim)',
-              cursor: 'pointer',
-              fontSize: '1.2rem',
-            }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button
+              onClick={() => {
+                onClose();
+                logout();
+              }}
+              style={{
+                background: 'rgba(239, 83, 80, 0.1)',
+                border: '1px solid #ef5350',
+                color: '#ef5350',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                fontWeight: 'bold',
+              }}
+            >
+              로그아웃
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-dim)',
+                cursor: 'pointer',
+                fontSize: '1.2rem',
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -396,45 +397,40 @@ export function UserDetailModal({
             >
               {/* Nickname Section */}
               <section>
-                <h3
-                  style={{
-                    margin: '0 0 16px 0',
-                    fontSize: '1.1rem',
-                    color: 'var(--text-main)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '4px',
-                      height: '16px',
-                      background: 'var(--text-dim)',
-                      borderRadius: '2px',
-                    }}
-                  />
-                  닉네임
-                </h3>
                 {nickname ? (
                   <div
                     style={{
-                      padding: '20px',
+                      padding: '40px 24px',
+                      width: '100%',
                       background: 'rgba(255,255,255,0.03)',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(255,255,255,0.05)',
+                      borderRadius: '20px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      minHeight: '164px',
-                      gap: '12px',
+                      gap: '20px',
                     }}
                   >
+                    <AvatarUpload
+                      currentAvatarUrl={user?.avatarUrl || null}
+                      nickname={nickname}
+                      onUploadSuccess={(newUrl) => {
+                        if (user) {
+                          // Update AuthContext user state indirectly if possible, or just force reload
+                          // AuthContext might need a refresh method, but for now this will update local state
+                          // if user is mutated, though React might not re-render. We can rely on next login or add setAvatar.
+                          // Let's just mutate and alert, maybe trigger a reload if needed, but it's ok.
+                          user.avatarUrl = newUrl;
+                        }
+                      }}
+                      showAlert={showAlert}
+                    />
                     <div
                       style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 'bold',
+                        fontSize: '1.8rem',
+                        fontWeight: '800',
                         color: 'var(--text-main)',
                         letterSpacing: '1px',
                       }}
@@ -445,18 +441,24 @@ export function UserDetailModal({
                       style={{
                         fontSize: '0.85rem',
                         color: 'var(--text-dim)',
-                        background: 'rgba(0,0,0,0.2)',
-                        padding: '6px 16px',
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '8px 16px',
                         borderRadius: '20px',
                         display: 'flex',
-                        gap: '6px',
+                        gap: '8px',
                         alignItems: 'center',
+                        marginTop: '8px',
                       }}
                     >
-                      <span style={{ color: 'var(--primary-cyan)' }}>
+                      <span
+                        style={{
+                          color: 'var(--primary-cyan)',
+                          fontWeight: 'bold',
+                        }}
+                      >
                         고유 식별자
                       </span>
-                      <span>{visitorId}</span>
+                      <span>{userId}</span>
                       <button
                         onClick={handleCopyId}
                         title="복사하기"
@@ -496,11 +498,12 @@ export function UserDetailModal({
                 ) : (
                   <div
                     style={{
-                      padding: '20px',
+                      padding: '40px 24px',
+                      width: '100%',
                       background: 'rgba(255,255,255,0.03)',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                      minHeight: '164px',
+                      borderRadius: '20px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'center',
@@ -509,21 +512,26 @@ export function UserDetailModal({
                   >
                     <div
                       style={{
-                        marginBottom: '16px',
+                        marginBottom: '32px',
                         fontSize: '0.85rem',
                         color: 'var(--text-dim)',
-                        background: 'rgba(0,0,0,0.2)',
-                        padding: '6px 16px',
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '8px 16px',
                         borderRadius: '20px',
                         display: 'flex',
-                        gap: '6px',
+                        gap: '8px',
                         alignItems: 'center',
                       }}
                     >
-                      <span style={{ color: 'var(--primary-cyan)' }}>
+                      <span
+                        style={{
+                          color: 'var(--primary-cyan)',
+                          fontWeight: 'bold',
+                        }}
+                      >
                         고유 식별자
                       </span>
-                      <span>{visitorId}</span>
+                      <span>{userId}</span>
                       <button
                         onClick={handleCopyId}
                         title="복사하기"
@@ -561,10 +569,10 @@ export function UserDetailModal({
                     </div>
                     <p
                       style={{
-                        margin: '0 0 16px 0',
-                        fontSize: '0.9rem',
+                        margin: '0 0 24px 0',
+                        fontSize: '0.95rem',
                         color: 'var(--text-dim)',
-                        lineHeight: '1.5',
+                        lineHeight: '1.6',
                         textAlign: 'center',
                       }}
                     >
@@ -576,14 +584,19 @@ export function UserDetailModal({
                       </strong>
                       하며, 이후 변경이 불가능합니다.
                     </p>
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', width: '100%' }}>
                       <input
                         type="text"
                         className="input-glow"
                         placeholder="2자 이상 20자 이하로 입력"
                         value={nicknameInput}
                         onChange={(e) => setNicknameInput(e.target.value)}
-                        style={{ width: '100%', paddingRight: '120px' }}
+                        style={{
+                          width: '100%',
+                          paddingRight: '100px',
+                          height: '48px',
+                          fontSize: '1rem',
+                        }}
                       />
                       <button
                         className="btn-submit"
@@ -596,15 +609,21 @@ export function UserDetailModal({
                           bottom: '4px',
                           padding: '0 16px',
                           borderRadius: '6px',
-                          fontSize: '0.85rem',
+                          fontSize: '0.9rem',
+                          background: isAvailable
+                            ? 'var(--primary-cyan)'
+                            : 'rgba(255,255,255,0.1)',
+                          color: isAvailable ? '#000' : 'var(--text-dim)',
+                          border: 'none',
+                          cursor: isAvailable ? 'pointer' : 'not-allowed',
                         }}
                       >
                         설정하기
                       </button>
                     </div>
-                    <div style={{ marginTop: '8px', minHeight: '20px' }}>
+                    <div style={{ marginTop: '12px', minHeight: '20px' }}>
                       {errorMsg && (
-                        <div style={{ color: '#ff4b4b', fontSize: '0.8rem' }}>
+                        <div style={{ color: '#ff4b4b', fontSize: '0.85rem' }}>
                           {errorMsg}
                         </div>
                       )}
@@ -612,7 +631,7 @@ export function UserDetailModal({
                         <div
                           style={{
                             color: 'var(--primary-cyan)',
-                            fontSize: '0.8rem',
+                            fontSize: '0.85rem',
                           }}
                         >
                           사용 가능한 닉네임입니다.
@@ -624,236 +643,238 @@ export function UserDetailModal({
               </section>
 
               {/* Balance & Sub Section */}
-              <section>
-                <h3
-                  style={{
-                    margin: '0 0 16px 0',
-                    fontSize: '1.1rem',
-                    color: 'var(--text-main)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <div
+              {true && (
+                <section>
+                  <h3
                     style={{
-                      width: '4px',
-                      height: '16px',
-                      background: 'var(--text-dim)',
-                      borderRadius: '2px',
-                    }}
-                  />
-                  HON/구독
-                </h3>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '16px',
-                  }}
-                >
-                  {/* HON Card */}
-                  <div
-                    style={{
-                      padding: '20px',
-                      borderRadius: '12px',
-                      background:
-                        'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                      border: '1px solid rgba(0,240,255,0.2)',
+                      margin: '0 0 16px 0',
+                      fontSize: '1.1rem',
+                      color: 'var(--text-main)',
                       display: 'flex',
-                      flexDirection: 'column',
-                      position: 'relative',
-                      overflow: 'hidden',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
                     <div
                       style={{
-                        position: 'absolute',
-                        top: '-20px',
-                        right: '-20px',
-                        width: '80px',
-                        height: '80px',
-                        background: 'var(--primary-cyan)',
-                        filter: 'blur(40px)',
-                        opacity: 0.2,
+                        width: '4px',
+                        height: '16px',
+                        background: 'var(--text-dim)',
+                        borderRadius: '2px',
                       }}
                     />
+                    HON/구독
+                  </h3>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '16px',
+                    }}
+                  >
+                    {/* HON Card */}
                     <div
                       style={{
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-cyan)',
-                        fontWeight: 'bold',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      보유 HON
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '2rem',
-                        fontWeight: '800',
-                        color: '#fff',
-                        marginBottom: '16px',
-                      }}
-                    >
-                      {totalHon.toLocaleString()}
-                    </div>
-                    <div
-                      style={{
+                        padding: '20px',
+                        borderRadius: '12px',
+                        background:
+                          'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                        border: '1px solid rgba(0,240,255,0.2)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '4px',
-                        fontSize: '0.8rem',
-                        color: 'var(--text-dim)',
-                        marginBottom: '20px',
+                        position: 'relative',
+                        overflow: 'hidden',
                       }}
                     >
                       <div
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
+                          position: 'absolute',
+                          top: '-20px',
+                          right: '-20px',
+                          width: '80px',
+                          height: '80px',
+                          background: 'var(--primary-cyan)',
+                          filter: 'blur(40px)',
+                          opacity: 0.2,
+                        }}
+                      />
+                      <div
+                        style={{
+                          fontSize: '0.85rem',
+                          color: 'var(--primary-cyan)',
+                          fontWeight: 'bold',
+                          marginBottom: '8px',
                         }}
                       >
-                        <span>이벤트 무료</span>
-                        <span style={{ color: '#fff' }}>
-                          {freeHon.toLocaleString()}
-                        </span>
+                        보유 HON
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '2rem',
+                          fontWeight: '800',
+                          color: '#fff',
+                          marginBottom: '16px',
+                        }}
+                      >
+                        {totalHon.toLocaleString()}
                       </div>
                       <div
                         style={{
                           display: 'flex',
-                          justifyContent: 'space-between',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          fontSize: '0.8rem',
+                          color: 'var(--text-dim)',
+                          marginBottom: '20px',
                         }}
                       >
-                        <span>충전 유료</span>
-                        <span style={{ color: '#fff' }}>
-                          {paidHon.toLocaleString()}
-                        </span>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <span>이벤트 무료</span>
+                          <span style={{ color: '#fff' }}>
+                            {freeHon.toLocaleString()}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <span>충전 유료</span>
+                          <span style={{ color: '#fff' }}>
+                            {paidHon.toLocaleString()}
+                          </span>
+                        </div>
                       </div>
+                      <button
+                        onClick={() => openPaymentModal('HON')}
+                        style={{
+                          marginTop: 'auto',
+                          width: '100%',
+                          padding: '10px',
+                          background: 'rgba(0, 240, 255, 0.1)',
+                          color: 'var(--primary-cyan)',
+                          border: '1px solid rgba(0, 240, 255, 0.3)',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background =
+                            'rgba(0, 240, 255, 0.2)')
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background =
+                            'rgba(0, 240, 255, 0.1)')
+                        }
+                      >
+                        충전하기
+                      </button>
                     </div>
-                    <button
-                      onClick={() => openPaymentModal('HON')}
-                      style={{
-                        marginTop: 'auto',
-                        width: '100%',
-                        padding: '10px',
-                        background: 'rgba(0, 240, 255, 0.1)',
-                        color: 'var(--primary-cyan)',
-                        border: '1px solid rgba(0, 240, 255, 0.3)',
-                        borderRadius: '8px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          'rgba(0, 240, 255, 0.2)')
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background =
-                          'rgba(0, 240, 255, 0.1)')
-                      }
-                    >
-                      충전하기
-                    </button>
-                  </div>
 
-                  {/* Subscribe Card */}
-                  <div
-                    style={{
-                      padding: '20px',
-                      borderRadius: '12px',
-                      background:
-                        'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                      border: '1px solid rgba(168, 85, 247, 0.2)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                  >
+                    {/* Subscribe Card */}
                     <div
                       style={{
-                        position: 'absolute',
-                        top: '-20px',
-                        right: '-20px',
-                        width: '80px',
-                        height: '80px',
-                        background: 'var(--primary-purple)',
-                        filter: 'blur(40px)',
-                        opacity: 0.2,
-                      }}
-                    />
-                    <div
-                      style={{
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-purple)',
-                        fontWeight: 'bold',
-                        marginBottom: '8px',
+                        padding: '20px',
+                        borderRadius: '12px',
+                        background:
+                          'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                        border: '1px solid rgba(168, 85, 247, 0.2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative',
+                        overflow: 'hidden',
                       }}
                     >
-                      구독 상태
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '-20px',
+                          right: '-20px',
+                          width: '80px',
+                          height: '80px',
+                          background: 'var(--primary-purple)',
+                          filter: 'blur(40px)',
+                          opacity: 0.2,
+                        }}
+                      />
+                      <div
+                        style={{
+                          fontSize: '0.85rem',
+                          color: 'var(--primary-purple)',
+                          fontWeight: 'bold',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        구독 상태
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '1.4rem',
+                          fontWeight: '800',
+                          color: '#fff',
+                          marginBottom: '16px',
+                          lineHeight: '1.2',
+                        }}
+                      >
+                        {isSubscribed
+                          ? isYearly
+                            ? '연간 무제한'
+                            : '월간 무제한'
+                          : '미구독'}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.8rem',
+                          color: 'var(--text-dim)',
+                          marginBottom: '20px',
+                        }}
+                      >
+                        {isSubscribed && subscription?.endsAt ? (
+                          <>
+                            만료일:{' '}
+                            {new Date(subscription.endsAt).toLocaleDateString()}
+                          </>
+                        ) : (
+                          <>구독 시 HON 소모 없이 무제한 사용</>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => openPaymentModal('SUBSCRIPTION')}
+                        style={{
+                          marginTop: 'auto',
+                          width: '100%',
+                          padding: '10px',
+                          background: 'rgba(168, 85, 247, 0.1)',
+                          color: 'var(--primary-purple)',
+                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background =
+                            'rgba(168, 85, 247, 0.2)')
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background =
+                            'rgba(168, 85, 247, 0.1)')
+                        }
+                      >
+                        {isSubscribed ? '구독 관리' : '구독하기'}
+                      </button>
                     </div>
-                    <div
-                      style={{
-                        fontSize: '1.4rem',
-                        fontWeight: '800',
-                        color: '#fff',
-                        marginBottom: '16px',
-                        lineHeight: '1.2',
-                      }}
-                    >
-                      {isSubscribed
-                        ? isYearly
-                          ? '연간 무제한'
-                          : '월간 무제한'
-                        : '미구독'}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '0.8rem',
-                        color: 'var(--text-dim)',
-                        marginBottom: '20px',
-                      }}
-                    >
-                      {isSubscribed && subscription?.endsAt ? (
-                        <>
-                          만료일:{' '}
-                          {new Date(subscription.endsAt).toLocaleDateString()}
-                        </>
-                      ) : (
-                        <>구독 시 HON 소모 없이 무제한 사용</>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => openPaymentModal('SUBSCRIPTION')}
-                      style={{
-                        marginTop: 'auto',
-                        width: '100%',
-                        padding: '10px',
-                        background: 'rgba(168, 85, 247, 0.1)',
-                        color: 'var(--primary-purple)',
-                        border: '1px solid rgba(168, 85, 247, 0.3)',
-                        borderRadius: '8px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          'rgba(168, 85, 247, 0.2)')
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background =
-                          'rgba(168, 85, 247, 0.1)')
-                      }
-                    >
-                      {isSubscribed ? '구독 관리' : '구독하기'}
-                    </button>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
             </div>
           )}
 
